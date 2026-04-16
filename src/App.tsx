@@ -8,6 +8,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import ComingSoon from "@/pages/ComingSoon";
 import CampaignsPage from "@/pages/Campaigns";
+import ClientsPage from "@/pages/ClientsPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
