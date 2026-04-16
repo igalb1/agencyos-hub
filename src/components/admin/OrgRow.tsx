@@ -34,7 +34,7 @@ interface OrgRowProps {
   onDelete: (id: string) => void;
 }
 
-export function OrgRowComponent({ org, onUpdate }: OrgRowProps) {
+export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
   const { toast } = useToast();
   const [editingPlan, setEditingPlan] = useState(false);
   const [editingTrial, setEditingTrial] = useState(false);
