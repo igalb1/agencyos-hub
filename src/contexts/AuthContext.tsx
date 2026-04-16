@@ -2,11 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface OrgData { id: string; name: string; logo_url: string | null; trial_ends_at: string; is_active: boolean; plan: string }
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: { full_name: string | null; avatar_url: string | null } | null;
-  organization: { id: string; name: string; logo_url: string | null; trial_ends_at: string; is_active: boolean } | null;
+  organization: OrgData | null;
   loading: boolean;
   trialExpired: boolean;
   signOut: () => Promise<void>;
@@ -70,10 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (membership) {
       const { data: org } = await supabase
         .from('organizations')
-        .select('id, name, logo_url, trial_ends_at, is_active')
+        .select('id, name, logo_url, trial_ends_at, is_active, plan')
         .eq('id', membership.organization_id)
         .single();
-      if (org) setOrganization(org as any);
+      if (org) setOrganization(org as OrgData);
     }
   };
 
