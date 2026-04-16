@@ -58,6 +58,7 @@ export default function CampaignsPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
 
+  const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
@@ -65,8 +66,12 @@ export default function CampaignsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
 
+  const handleCampaignCreated = (campaign: Campaign) => {
+    setCampaigns(prev => [...prev, campaign]);
+  };
+
   const filtered = useMemo(() => {
-    return mockCampaigns.filter(c => {
+    return campaigns.filter(c => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
       if (platformFilter !== 'all' && c.platform !== platformFilter) return false;
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;

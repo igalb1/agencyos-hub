@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { mockClients, mockProjects } from '@/lib/mock-data';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import { Lang } from '@/lib/i18n';
-import { Lang } from '@/lib/i18n';
 import { toast } from 'sonner';
 
 interface NewCampaignDialogProps {
