@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useState } from 'react';
 import {
-  Facebook, Search, Music2, Linkedin, BarChart3,
+  Globe, Search, Music2, BriefcaseBusiness, BarChart3,
   Mail, MessageSquare, FileText, Zap, ExternalLink
 } from 'lucide-react';
 
