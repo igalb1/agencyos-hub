@@ -17,6 +17,7 @@ import CampaignsPage from "@/pages/Campaigns";
 import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import AdsPage from "@/pages/AdsPage";
+import SettingsPage from "@/pages/SettingsPage";
 import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
@@ -53,6 +54,7 @@ function ProtectedRoutes() {
         <Route path="/performance" element={<PerformancePage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         
         <Route path="*" element={<NotFound />} />
