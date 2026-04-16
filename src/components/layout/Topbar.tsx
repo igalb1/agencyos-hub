@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { t } from '@/lib/i18n';
-import { Bell, Menu, Search, LogOut } from 'lucide-react';
+import { Bell, Menu, Search, LogOut, Upload } from 'lucide-react';
+import ImportDataDialog from '@/components/import/ImportDataDialog';
 
 export default function Topbar() {
   const { lang, sidebarOpen, setSidebarOpen } = useApp();
   const { profile, organization, signOut } = useAuth();
+  const [importOpen, setImportOpen] = useState(false);
 
   return (
     <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
@@ -28,6 +31,14 @@ export default function Topbar() {
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => setImportOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium transition-colors"
+          title="ייבוא נתונים מאקסל / CSV"
+        >
+          <Upload size={16} />
+          <span className="hidden md:inline">ייבוא נתונים</span>
+        </button>
         <button className="relative p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
           <Bell size={20} />
           <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
@@ -42,6 +53,7 @@ export default function Topbar() {
           <LogOut size={18} />
         </button>
       </div>
+      <ImportDataDialog open={importOpen} onOpenChange={setImportOpen} />
     </header>
   );
 }
