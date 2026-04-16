@@ -4,6 +4,8 @@ import { t } from '@/lib/i18n';
 import { mockCampaigns, mockAds } from '@/lib/mock-data';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
+import EditableCell from '@/components/campaigns/EditableCell';
+import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -70,6 +72,11 @@ export default function CampaignsPage() {
     setCampaigns(prev => [...prev, campaign]);
   };
 
+  const updateCampaign = (id: string, field: keyof Campaign, value: number | string) => {
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+    toast.success(lang === 'he' ? 'הערך עודכן' : 'Value updated');
+  };
+
   const filtered = useMemo(() => {
     return campaigns.filter(c => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -77,7 +84,7 @@ export default function CampaignsPage() {
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
       return true;
     });
-  }, [search, platformFilter, statusFilter]);
+  }, [campaigns, search, platformFilter, statusFilter]);
 
   const grouped = useMemo(() => groupCampaigns(filtered), [filtered]);
 
@@ -233,8 +240,14 @@ export default function CampaignsPage() {
                           {/* Name + Platform */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-base shrink-0">{platformIcons[campaign.platform]}</span>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">{campaign.name}</p>
+                            <div className="min-w-0 flex-1">
+                              <EditableCell
+                                value={campaign.name}
+                                type="text"
+                                formatDisplay={v => String(v)}
+                                onSave={v => updateCampaign(campaign.id, 'name', v)}
+                                className="text-start font-medium"
+                              />
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span
                                   className="text-[10px] font-medium px-1.5 py-0.5 rounded"
@@ -251,12 +264,20 @@ export default function CampaignsPage() {
 
                           {/* Desktop columns - hidden on small */}
                           <div className="hidden lg:block text-end">
-                            <p className="text-sm text-foreground">{fmtCurrency(campaign.budget)}</p>
-                            <p className="text-[10px] text-muted-foreground">{t('budget', lang)}</p>
+                            <EditableCell
+                              value={campaign.budget}
+                              type="number"
+                              formatDisplay={v => fmtCurrency(Number(v))}
+                              onSave={v => updateCampaign(campaign.id, 'budget', v)}
+                            />
                           </div>
                           <div className="hidden lg:block text-end">
-                            <p className="text-sm text-foreground">{fmtCurrency(campaign.spend)}</p>
-                            <p className="text-[10px] text-muted-foreground">{t('spend', lang)}</p>
+                            <EditableCell
+                              value={campaign.spend}
+                              type="number"
+                              formatDisplay={v => fmtCurrency(Number(v))}
+                              onSave={v => updateCampaign(campaign.id, 'spend', v)}
+                            />
                           </div>
                           {/* Budget bar */}
                           <div className="hidden lg:block">
@@ -278,8 +299,12 @@ export default function CampaignsPage() {
                             </span>
                           </div>
                           <div className="hidden lg:block text-end">
-                            <p className="text-sm text-foreground">{fmtNum(campaign.leads)}</p>
-                            <p className="text-[10px] text-muted-foreground">{t('leads', lang)}</p>
+                            <EditableCell
+                              value={campaign.leads}
+                              type="number"
+                              formatDisplay={v => fmtNum(Number(v))}
+                              onSave={v => updateCampaign(campaign.id, 'leads', v)}
+                            />
                           </div>
                           <div className="hidden lg:block text-end">
                             <p className="text-sm text-foreground">{cpl}</p>
@@ -290,8 +315,12 @@ export default function CampaignsPage() {
                             <p className="text-[10px] text-muted-foreground">CTR</p>
                           </div>
                           <div className="hidden lg:block text-end">
-                            <p className="text-sm text-foreground">{fmtNum(campaign.conversions)}</p>
-                            <p className="text-[10px] text-muted-foreground">{lang === 'he' ? 'המרות' : 'Conv.'}</p>
+                            <EditableCell
+                              value={campaign.conversions}
+                              type="number"
+                              formatDisplay={v => fmtNum(Number(v))}
+                              onSave={v => updateCampaign(campaign.id, 'conversions', v)}
+                            />
                           </div>
 
                           {/* Expand toggle */}
