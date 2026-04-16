@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -16,6 +16,11 @@ export function useGoogleAdsConnect() {
   const [connection, setConnection] = useState<GoogleAdsConnection | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+
+  // Detect if user is returning from Google OAuth
+  const isReturningFromOAuth = useMemo(() => {
+    return searchParams.has('google_ads_success') || searchParams.has('google_ads_error') || searchParams.has('code');
+  }, [searchParams]);
 
   const fetchConnection = useCallback(async () => {
     if (!user) { setLoading(false); return; }
@@ -102,5 +107,5 @@ export function useGoogleAdsConnect() {
     toast.success('Google Ads disconnected');
   };
 
-  return { connection, loading, connecting, connect, disconnect };
+  return { connection, loading, connecting, isReturningFromOAuth, connect, disconnect };
 }
