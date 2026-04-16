@@ -293,6 +293,14 @@ export default function TasksPage() {
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-medium text-primary">
                       {task.assignee.charAt(0)}
                     </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => setEditingTask(task)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                     <Select value={task.status} onValueChange={(v) => moveTask(task.id, v as TaskStatus)}>
                       <SelectTrigger className="w-[100px] h-7 text-xs">
                         <SelectValue />
