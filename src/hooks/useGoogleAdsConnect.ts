@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 
 interface GoogleAdsConnection {
   is_connected: boolean;
@@ -11,6 +12,7 @@ interface GoogleAdsConnection {
 
 export function useGoogleAdsConnect() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [connection, setConnection] = useState<GoogleAdsConnection | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -29,21 +31,31 @@ export function useGoogleAdsConnect() {
 
   useEffect(() => { fetchConnection(); }, [fetchConnection]);
 
-  // Listen for OAuth popup messages
+  // Handle OAuth redirect results
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'google-ads-success') {
-        toast.success(event.data.accountName || 'Google Ads connected');
-        fetchConnection();
-        setConnecting(false);
-      } else if (event.data?.type === 'google-ads-error') {
-        toast.error('Failed to connect Google Ads');
-        setConnecting(false);
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [fetchConnection]);
+    const success = searchParams.get('google_ads_success');
+    const error = searchParams.get('google_ads_error');
+    const account = searchParams.get('account');
+
+    if (success) {
+      toast.success(account || 'Google Ads connected successfully');
+      fetchConnection();
+      // Clean URL params
+      searchParams.delete('google_ads_success');
+      searchParams.delete('account');
+      setSearchParams(searchParams, { replace: true });
+    } else if (error) {
+      const messages: Record<string, string> = {
+        token_exchange_failed: 'Failed to exchange token with Google',
+        save_failed: 'Failed to save connection',
+        missing_params: 'Missing parameters from Google',
+        access_denied: 'Access denied by user',
+      };
+      toast.error(messages[error] || `Connection failed: ${error}`);
+      searchParams.delete('google_ads_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, fetchConnection]);
 
   const connect = async () => {
     if (!user) return;
@@ -70,11 +82,8 @@ export function useGoogleAdsConnect() {
       const result = await response.json();
       if (result.error) throw new Error(result.error);
 
-      // Open OAuth popup
-      const width = 500, height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      window.open(result.url, 'google-ads-oauth', `width=${width},height=${height},left=${left},top=${top}`);
+      // Redirect in same window (not popup) to avoid CSP issues
+      window.location.href = result.url;
     } catch (err) {
       console.error('Connect error:', err);
       toast.error('Failed to initiate connection');

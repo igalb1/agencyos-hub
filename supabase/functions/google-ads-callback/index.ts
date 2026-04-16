@@ -7,21 +7,20 @@ Deno.serve(async (req) => {
     const stateParam = url.searchParams.get("state");
     const error = url.searchParams.get("error");
 
-    if (error) {
-      return new Response(`<html><body><script>window.opener?.postMessage({type:'google-ads-error',error:'${error}'},'*');window.close();</script><p>Authorization failed. You can close this window.</p></body></html>`, {
-        headers: { "Content-Type": "text/html" },
-      });
-    }
-
-    if (!code || !stateParam) {
-      return new Response("Missing code or state", { status: 400 });
+    if (!stateParam) {
+      return new Response("Missing state", { status: 400 });
     }
 
     const state = JSON.parse(atob(stateParam));
     const { user_id, redirect_url } = state;
+    const baseRedirect = redirect_url || "https://localhost:3000/integrations";
 
-    if (!user_id) {
-      return new Response("Invalid state", { status: 400 });
+    if (error) {
+      return Response.redirect(`${baseRedirect}?google_ads_error=${error}`, 302);
+    }
+
+    if (!code || !user_id) {
+      return Response.redirect(`${baseRedirect}?google_ads_error=missing_params`, 302);
     }
 
     const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID")!;
@@ -45,12 +44,10 @@ Deno.serve(async (req) => {
 
     if (!tokenResponse.ok) {
       console.error("Token exchange failed:", tokens);
-      return new Response(`<html><body><script>window.opener?.postMessage({type:'google-ads-error',error:'token_exchange_failed'},'*');window.close();</script><p>Failed to connect. You can close this window.</p></body></html>`, {
-        headers: { "Content-Type": "text/html" },
-      });
+      return Response.redirect(`${baseRedirect}?google_ads_error=token_exchange_failed`, 302);
     }
 
-    // Get account info using the access token
+    // Get account info
     const developerToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN")!;
     let accountName = "Google Ads Account";
     let accountId = "";
@@ -102,24 +99,13 @@ Deno.serve(async (req) => {
 
     if (upsertError) {
       console.error("Upsert error:", upsertError);
-      return new Response(`<html><body><script>window.opener?.postMessage({type:'google-ads-error',error:'save_failed'},'*');window.close();</script><p>Failed to save. You can close this window.</p></body></html>`, {
-        headers: { "Content-Type": "text/html" },
-      });
+      return Response.redirect(`${baseRedirect}?google_ads_error=save_failed`, 302);
     }
 
-    // Success - redirect back or close popup
-    const successHtml = `<html><body><script>
-      window.opener?.postMessage({type:'google-ads-success',accountName:'${accountName.replace(/'/g, "\\'")}'},'*');
-      window.close();
-    </script><p>Connected successfully! You can close this window.</p></body></html>`;
-
-    return new Response(successHtml, {
-      headers: { "Content-Type": "text/html" },
-    });
+    // Success - redirect back to app
+    return Response.redirect(`${baseRedirect}?google_ads_success=true&account=${encodeURIComponent(accountName)}`, 302);
   } catch (error: unknown) {
     console.error("Callback error:", error);
-    return new Response(`<html><body><script>window.opener?.postMessage({type:'google-ads-error',error:'unknown'},'*');window.close();</script><p>An error occurred. You can close this window.</p></body></html>`, {
-      headers: { "Content-Type": "text/html" },
-    });
+    return Response.redirect(`https://localhost:3000/integrations?google_ads_error=unknown`, 302);
   }
 });
