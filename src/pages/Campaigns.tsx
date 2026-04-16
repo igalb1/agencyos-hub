@@ -127,13 +127,29 @@ export default function CampaignsPage() {
             {filtered.length} {lang === 'he' ? 'קמפיינים' : 'campaigns'} · {fmtCurrency(totalBudget)} {t('budget', lang)} · {fmtCurrency(totalSpend)} {t('spend', lang)}
           </p>
         </div>
-        <button
-          onClick={() => setShowNewDialog(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} />
-          {lang === 'he' ? 'קמפיין חדש' : 'New Campaign'}
-        </button>
+        <div className="flex items-center gap-2">
+          <AnimatePresence>
+            {selected.size > 0 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={deleteSelected}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors"
+              >
+                <Trash2 size={16} />
+                {lang === 'he' ? `מחק (${selected.size})` : `Delete (${selected.size})`}
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <button
+            onClick={() => setShowNewDialog(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} />
+            {lang === 'he' ? 'קמפיין חדש' : 'New Campaign'}
+          </button>
+        </div>
       </div>
 
       {/* Search & Filters */}
