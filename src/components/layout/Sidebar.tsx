@@ -4,7 +4,7 @@ import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, FolderKanban, Megaphone, Image, GanttChart,
-  CheckSquare, BarChart3, Plug, FileText, CalendarDays, Sparkles,
+  CheckSquare, BarChart3, Plug, FileText, CalendarDays,
   Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ const navItems = [
   { key: 'integrations' as const, icon: Plug, path: '/integrations' },
   { key: 'reports' as const, icon: FileText, path: '/reports' },
   { key: 'calendar' as const, icon: CalendarDays, path: '/calendar' },
-  { key: 'creative' as const, icon: Sparkles, path: '/creative' },
+  
 ];
 
 export default function Sidebar() {
