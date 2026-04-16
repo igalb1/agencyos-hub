@@ -102,7 +102,7 @@ export default function AdminPage() {
   };
 
   const filteredOrgs = orgs.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
-  const filteredProfiles = profiles.filter(p => (p.full_name || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredProfiles = profiles.filter(p => (p.full_name || '').toLowerCase().includes(search.toLowerCase()) || (p.email || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6" dir={lang === 'he' ? 'rtl' : 'ltr'}>
