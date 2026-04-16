@@ -6,9 +6,9 @@ import { t } from '@/lib/i18n';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, Building2, CreditCard, Search, ToggleLeft, ToggleRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Shield, Users, Building2, CreditCard, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { OrgRowComponent } from '@/components/admin/OrgRow';
 
 interface OrgRow {
   id: string;
