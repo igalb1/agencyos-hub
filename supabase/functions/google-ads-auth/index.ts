@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { signState, validateRedirectUrl, getAllowedRedirectOrigins } from "../_shared/oauth-state.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,18 +42,27 @@ Deno.serve(async (req) => {
     }
 
     const { redirect_url } = await req.json();
-    if (!redirect_url) {
+    if (!redirect_url || typeof redirect_url !== "string") {
       return new Response(JSON.stringify({ error: "redirect_url is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Build state with user_id for callback verification
-    const state = btoa(JSON.stringify({
+    // Validate redirect_url against allowlist to prevent open redirect attacks
+    const safeRedirect = validateRedirectUrl(redirect_url, getAllowedRedirectOrigins());
+    if (!safeRedirect) {
+      return new Response(JSON.stringify({ error: "Invalid redirect_url" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Sign state with HMAC so the callback can verify it wasn't tampered with
+    const state = await signState({
       user_id: claimsData.claims.sub,
-      redirect_url,
-    }));
+      redirect_url: safeRedirect,
+    });
 
     const params = new URLSearchParams({
       client_id: clientId,

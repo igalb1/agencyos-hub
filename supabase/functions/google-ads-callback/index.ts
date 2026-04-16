@@ -1,4 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { verifyState, validateRedirectUrl, getAllowedRedirectOrigins } from "../_shared/oauth-state.ts";
+
+const SAFE_FALLBACK_REDIRECT = "https://agencyos-hub.lovable.app/integrations";
 
 Deno.serve(async (req) => {
   try {
@@ -11,15 +14,22 @@ Deno.serve(async (req) => {
       return new Response("Missing state", { status: 400 });
     }
 
-    const state = JSON.parse(atob(stateParam));
-    const { user_id, redirect_url } = state;
-    const baseRedirect = redirect_url || "https://localhost:3000/integrations";
-
-    if (error) {
-      return Response.redirect(`${baseRedirect}?google_ads_error=${error}`, 302);
+    // Verify HMAC-signed state — rejects forged or tampered states
+    const state = await verifyState<{ user_id: string; redirect_url: string }>(stateParam);
+    if (!state || !state.user_id || !state.redirect_url) {
+      return new Response("Invalid state", { status: 400 });
     }
 
-    if (!code || !user_id) {
+    // Re-validate redirect against allowlist before using it
+    const baseRedirect =
+      validateRedirectUrl(state.redirect_url, getAllowedRedirectOrigins()) ?? SAFE_FALLBACK_REDIRECT;
+    const { user_id } = state;
+
+    if (error) {
+      return Response.redirect(`${baseRedirect}?google_ads_error=${encodeURIComponent(error)}`, 302);
+    }
+
+    if (!code) {
       return Response.redirect(`${baseRedirect}?google_ads_error=missing_params`, 302);
     }
 
@@ -43,7 +53,7 @@ Deno.serve(async (req) => {
     const tokens = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error("Token exchange failed:", tokens);
+      console.error("Token exchange failed");
       return Response.redirect(`${baseRedirect}?google_ads_error=token_exchange_failed`, 302);
     }
 
@@ -106,6 +116,6 @@ Deno.serve(async (req) => {
     return Response.redirect(`${baseRedirect}?google_ads_success=true&account=${encodeURIComponent(accountName)}`, 302);
   } catch (error: unknown) {
     console.error("Callback error:", error);
-    return Response.redirect(`https://localhost:3000/integrations?google_ads_error=unknown`, 302);
+    return Response.redirect(`${SAFE_FALLBACK_REDIRECT}?google_ads_error=unknown`, 302);
   }
 });
