@@ -6,8 +6,9 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: { full_name: string | null; avatar_url: string | null } | null;
-  organization: { id: string; name: string; logo_url: string | null } | null;
+  organization: { id: string; name: string; logo_url: string | null; trial_ends_at: string; is_active: boolean } | null;
   loading: boolean;
+  trialExpired: boolean;
   signOut: () => Promise<void>;
 }
 
