@@ -173,6 +173,14 @@ export default function SettingsPage() {
                 <span className="text-muted-foreground">{isRtl ? 'סיום תקופת ניסיון' : 'Trial Ends'}</span>
                 <span className="font-medium">{new Date(organization.trial_ends_at).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US')}</span>
               </div>
+              <Separator className="my-2" />
+              <Button asChild variant="outline" className="w-full gap-2">
+                <Link to="/settings/billing">
+                  <CreditCard size={16} />
+                  {isRtl ? 'חיוב, מנוי וחשבוניות' : 'Billing, subscription & invoices'}
+                  <ChevronLeft size={16} className={isRtl ? '' : 'rotate-180'} />
+                </Link>
+              </Button>
             </>
           )}
         </CardContent>
