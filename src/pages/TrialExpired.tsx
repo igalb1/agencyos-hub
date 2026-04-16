@@ -3,34 +3,7 @@ import { usePaddleCheckout } from '@/hooks/usePaddleCheckout';
 import { PaymentTestModeBanner } from '@/components/PaymentTestModeBanner';
 import { Button } from '@/components/ui/button';
 import { Clock, LogOut, Check, Loader2 } from 'lucide-react';
-
-const plans = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    priceId: 'starter_monthly',
-    price: '$99',
-    description: 'עד 10 לקוחות',
-    features: ['ניהול עד 10 לקוחות', 'פרויקטים ללא הגבלה', 'קמפיינים ומודעות', 'דוחות בסיסיים'],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    priceId: 'pro_monthly',
-    price: '$199',
-    description: 'עד 30 לקוחות',
-    features: ['ניהול עד 30 לקוחות', 'הכל ב-Starter', 'דוחות מתקדמים', 'אינטגרציות'],
-    popular: true,
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    priceId: 'business_monthly',
-    price: '$399',
-    description: 'ללא הגבלה',
-    features: ['לקוחות ללא הגבלה', 'הכל ב-Pro', 'תמיכה מועדפת', 'API גישה'],
-  },
-];
+import { PLANS as plans } from '@/lib/plans';
 
 export default function TrialExpired() {
   const { user, organization, signOut } = useAuth();

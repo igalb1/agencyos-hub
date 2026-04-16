@@ -11,7 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { User, Palette, Languages, Shield, Save } from 'lucide-react';
+import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function SettingsPage() {
   const { lang, setLang, theme, setTheme } = useApp();
