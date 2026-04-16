@@ -70,10 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (membership) {
       const { data: org } = await supabase
         .from('organizations')
-        .select('id, name, logo_url')
+        .select('id, name, logo_url, trial_ends_at, is_active')
         .eq('id', membership.organization_id)
         .single();
-      if (org) setOrganization(org);
+      if (org) setOrganization(org as any);
     }
   };
 
@@ -85,8 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganization(null);
   };
 
+  const trialExpired = organization
+    ? (!organization.is_active || new Date(organization.trial_ends_at) < new Date()) && organization.plan === 'free'
+    : false;
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, organization, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, organization, loading, trialExpired, signOut }}>
       {children}
     </AuthContext.Provider>
   );
