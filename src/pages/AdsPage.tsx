@@ -5,7 +5,7 @@ import { mockAds, mockClients } from '@/lib/mock-data';
 import { Ad } from '@/lib/types';
 import { fmtCurrency, fmtNum, calcCtr } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
-import { Search, Image, Video, SlidersHorizontal, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Search, Image, Video, SlidersHorizontal, ChevronDown, ChevronLeft, Play, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -51,6 +51,7 @@ export default function AdsPage() {
   const [mediaFilter, setMediaFilter] = useState<string>('all');
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
   const [collapsedCampaigns, setCollapsedCampaigns] = useState<Set<string>>(new Set());
+  const [previewAd, setPreviewAd] = useState<Ad | null>(null);
 
   const filtered = ads.filter(ad => {
     if (search && !ad.name.toLowerCase().includes(search.toLowerCase()) && !ad.clientName.toLowerCase().includes(search.toLowerCase()) && !ad.campaignName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -267,7 +268,8 @@ export default function AdsPage() {
                                 className="overflow-hidden"
                               >
                                 {/* Table header */}
-                                <div className="hidden lg:grid grid-cols-[2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-t border-border/20">
+                                <div className="hidden lg:grid grid-cols-[40px_2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-t border-border/20">
+                                  <span></span>
                                   <span>{lang === 'he' ? 'מודעה' : 'Ad'}</span>
                                   <span className="text-center">{lang === 'he' ? 'סוג' : 'Type'}</span>
                                   <span className="text-end">{t('spend', lang)}</span>
@@ -281,8 +283,27 @@ export default function AdsPage() {
                                 {campaignAds.map((ad, i) => (
                                   <div
                                     key={ad.id}
-                                    className="grid grid-cols-1 lg:grid-cols-[2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2.5 hover:bg-muted/15 transition-colors items-center border-t border-border/10"
+                                    className="grid grid-cols-1 lg:grid-cols-[40px_2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2.5 hover:bg-muted/15 transition-colors items-center border-t border-border/10"
                                   >
+                                    {/* Thumbnail */}
+                                    <button
+                                      onClick={() => setPreviewAd(ad)}
+                                      className="hidden lg:block w-9 h-9 rounded-md overflow-hidden bg-muted/30 relative group shrink-0 cursor-pointer"
+                                    >
+                                      {ad.mediaUrl ? (
+                                        <img src={ad.mediaUrl} alt={ad.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          {ad.mediaType === 'video' ? <Video size={14} className="text-muted-foreground" /> : <Image size={14} className="text-muted-foreground" />}
+                                        </div>
+                                      )}
+                                      {ad.mediaType === 'video' && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <Play size={14} className="text-white" />
+                                        </div>
+                                      )}
+                                    </button>
+
                                     <p className="text-sm text-foreground truncate">{ad.name}</p>
 
                                     <div className="hidden lg:flex justify-center">
@@ -347,6 +368,53 @@ export default function AdsPage() {
           </div>
         )}
       </div>
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {previewAd && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setPreviewAd(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-2xl w-full mx-4 glass-card rounded-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setPreviewAd(null)}
+                className="absolute top-3 end-3 z-10 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              >
+                <X size={16} />
+              </button>
+              {previewAd.mediaUrl ? (
+                <img src={previewAd.mediaUrl} alt={previewAd.name} className="w-full max-h-[60vh] object-contain bg-black/20" />
+              ) : (
+                <div className="w-full h-64 flex items-center justify-center bg-muted/20">
+                  {previewAd.mediaType === 'video' ? <Video size={48} className="text-muted-foreground" /> : <Image size={48} className="text-muted-foreground" />}
+                </div>
+              )}
+              <div className="p-4 space-y-1">
+                <p className="text-sm font-semibold text-foreground">{previewAd.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {previewAd.campaignName} · {previewAd.platform} · {previewAd.mediaType === 'video' ? (lang === 'he' ? 'וידאו' : 'Video') : (lang === 'he' ? 'תמונה' : 'Image')}
+                </p>
+                <div className="flex gap-4 pt-2 text-xs text-muted-foreground">
+                  <span>{fmtCurrency(previewAd.spend)} {t('spend', lang)}</span>
+                  <span>{fmtNum(previewAd.clicks)} {lang === 'he' ? 'קליקים' : 'clicks'}</span>
+                  <span>{calcCtr(previewAd.clicks, previewAd.impressions)}% CTR</span>
+                  <span>{fmtNum(previewAd.leads)} {t('leads', lang)}</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

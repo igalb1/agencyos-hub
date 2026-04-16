@@ -45,6 +45,7 @@ export interface Ad {
   leads: number;
   conversions: number;
   mediaType: 'image' | 'video';
+  mediaUrl?: string;
 }
 
 export interface Project {
