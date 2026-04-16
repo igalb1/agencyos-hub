@@ -47,5 +47,18 @@ export interface Ad {
   mediaType: 'image' | 'video';
 }
 
+export interface Project {
+  id: string;
+  clientId: string;
+  clientName: string;
+  name: string;
+  status: 'active' | 'planning' | 'completed';
+  budget: number;
+  spend: number;
+  campaigns: number;
+  startDate: string;
+  endDate: string;
+}
+
 export type Platform = 'Meta' | 'Google' | 'TikTok' | 'LinkedIn';
 export type CampaignStatus = 'Live' | 'Planned' | 'Paused';

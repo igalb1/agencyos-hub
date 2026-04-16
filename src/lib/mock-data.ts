@@ -1,4 +1,4 @@
-import { Client, Campaign, Ad } from './types';
+import { Client, Campaign, Ad, Project } from './types';
 
 export const mockClients: Client[] = [
   { id: '1', name: 'TechFlow', industry: 'SaaS', color: '#00D4FF', budget: 50000, spend: 32000, leads: 420, status: 'active' },
@@ -6,6 +6,14 @@ export const mockClients: Client[] = [
   { id: '3', name: 'UrbanFit', industry: 'Health', color: '#A78BFA', budget: 25000, spend: 18500, leads: 195, status: 'active' },
   { id: '4', name: 'SkyMedia', industry: 'Media', color: '#F59E0B', budget: 40000, spend: 15000, leads: 88, status: 'paused' },
   { id: '5', name: 'DataPulse', industry: 'Analytics', color: '#EF4444', budget: 60000, spend: 45000, leads: 530, status: 'active' },
+];
+
+export const mockProjects: Project[] = [
+  { id: 'p1', clientId: '1', clientName: 'TechFlow', name: 'Brand Launch', status: 'active', budget: 43000, spend: 29700, campaigns: 3, startDate: '2026-01-01', endDate: '2026-04-30' },
+  { id: 'p2', clientId: '1', clientName: 'TechFlow', name: 'Product Hunt', status: 'active', budget: 8000, spend: 3200, campaigns: 1, startDate: '2026-03-01', endDate: '2026-04-15' },
+  { id: 'p3', clientId: '2', clientName: 'GreenLeaf', name: 'Summer Sale 2026', status: 'planning', budget: 22000, spend: 9800, campaigns: 2, startDate: '2026-03-15', endDate: '2026-06-30' },
+  { id: 'p4', clientId: '3', clientName: 'UrbanFit', name: 'App Install Q2', status: 'active', budget: 18000, spend: 14000, campaigns: 2, startDate: '2026-03-01', endDate: '2026-05-15' },
+  { id: 'p5', clientId: '5', clientName: 'DataPulse', name: 'B2B Outreach', status: 'active', budget: 43000, spend: 34500, campaigns: 2, startDate: '2026-01-15', endDate: '2026-06-15' },
 ];
 
 export const mockCampaigns: Campaign[] = [
