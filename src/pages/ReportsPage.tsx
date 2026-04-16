@@ -62,6 +62,23 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   }, []);
 
+  const exportPDF = useCallback((title: string, headers: string[], rows: string[][]) => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+    doc.setFontSize(10);
+    doc.text(new Date().toLocaleDateString(), 14, 28);
+    autoTable(doc, {
+      head: [headers],
+      body: rows,
+      startY: 34,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [0, 212, 255], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 250] },
+    });
+    doc.save(`${title.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+  }, []);
+
   const handleExportOverview = () => {
     exportCSV('overview-report.csv',
       ['Metric', 'Value'],
