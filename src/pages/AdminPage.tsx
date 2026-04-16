@@ -65,17 +65,8 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  const toggleOrgActive = async (org: OrgRow) => {
-    const { error } = await supabase
-      .from('organizations')
-      .update({ is_active: !org.is_active })
-      .eq('id', org.id);
-    if (error) {
-      toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
-    } else {
-      setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, is_active: !o.is_active } : o));
-      toast({ title: org.is_active ? 'הארגון הושבת' : 'הארגון הופעל' });
-    }
+  const updateOrg = (updated: OrgRow) => {
+    setOrgs(prev => prev.map(o => o.id === updated.id ? updated : o));
   };
 
   if (!isSuperAdmin) return <Navigate to="/" replace />;
