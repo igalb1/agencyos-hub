@@ -7,6 +7,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import ComingSoon from "@/pages/ComingSoon";
+import CampaignsPage from "@/pages/Campaigns";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -23,7 +24,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/clients" element={<ComingSoon title="Clients" />} />
               <Route path="/projects" element={<ComingSoon title="Projects" />} />
-              <Route path="/campaigns" element={<ComingSoon title="Campaigns" />} />
+              <Route path="/campaigns" element={<CampaignsPage />} />
               <Route path="/ads" element={<ComingSoon title="Ads" />} />
               <Route path="/timeline" element={<ComingSoon title="Timeline" />} />
               <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
