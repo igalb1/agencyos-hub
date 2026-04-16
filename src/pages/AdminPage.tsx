@@ -220,7 +220,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {filteredProfiles.length === 0 && (
-                    <tr><td colSpan={2} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
+                    <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
                   )}
                 </tbody>
               </table>
