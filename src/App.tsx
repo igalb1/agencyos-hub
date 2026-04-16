@@ -48,7 +48,7 @@ function ProtectedRoutes() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/performance" element={<ComingSoon title="Performance" />} />
+        <Route path="/performance" element={<PerformancePage />} />
         <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
         <Route path="/reports" element={<ComingSoon title="Reports" />} />
         <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
