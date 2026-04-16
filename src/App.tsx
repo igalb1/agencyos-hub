@@ -7,7 +7,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
-import ComingSoon from "@/pages/ComingSoon";
+import IntegrationsPage from "@/pages/IntegrationsPage";
 import TimelinePage from "@/pages/TimelinePage";
 import TasksPage from "@/pages/TasksPage";
 import PerformancePage from "@/pages/PerformancePage";
@@ -51,7 +51,7 @@ function ProtectedRoutes() {
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/performance" element={<PerformancePage />} />
-        <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
+        <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         
