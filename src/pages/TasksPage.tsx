@@ -107,7 +107,6 @@ export default function TasksPage() {
   }), [tasks]);
 
   const TaskCard = ({ task }: { task: Task }) => {
-    const StatusIcon = statusConfig[task.status].icon;
     const isOverdue = new Date(task.due) < new Date() && task.status !== 'Done';
 
     return (
@@ -128,6 +127,11 @@ export default function TasksPage() {
               </button>
             </div>
           </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Badge className={cn("text-[10px] px-1.5 py-0 h-4", priorityConfig[task.priority].color)}>
+                {priorityConfig[task.priority].label[lang]}
+              </Badge>
               <span className={cn("text-[10px]", isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground')}>
                 {new Date(task.due).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })}
               </span>
@@ -136,7 +140,6 @@ export default function TasksPage() {
               {task.assignee.charAt(0)}
             </div>
           </div>
-          {/* Quick status change */}
           {viewMode === 'board' && (
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {columns.filter(s => s !== task.status).map(s => (
