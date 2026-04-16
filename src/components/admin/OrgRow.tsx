@@ -31,6 +31,7 @@ const PLANS = ['free', 'starter', 'pro', 'business'] as const;
 interface OrgRowProps {
   org: OrgRow;
   onUpdate: (updated: OrgRow) => void;
+  onDelete: (id: string) => void;
 }
 
 export function OrgRowComponent({ org, onUpdate }: OrgRowProps) {
