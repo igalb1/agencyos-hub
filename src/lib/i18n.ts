@@ -13,6 +13,7 @@ export const translations = {
   integrations: { he: 'אינטגרציות', en: 'Integrations' },
   reports: { he: 'דוחות', en: 'Reports' },
   calendar: { he: 'לוח שנה', en: 'Calendar' },
+  settings: { he: 'הגדרות', en: 'Settings' },
   creative: { he: 'קריאייטיב', en: 'Creative' },
   // KPIs
   totalBudget: { he: 'תקציב כולל', en: 'Total Budget' },
@@ -22,7 +23,6 @@ export const translations = {
   // General
   search: { he: 'חיפוש...', en: 'Search...' },
   notifications: { he: 'התראות', en: 'Notifications' },
-  settings: { he: 'הגדרות', en: 'Settings' },
   comingSoon: { he: 'בקרוב', en: 'Coming Soon' },
   budget: { he: 'תקציב', en: 'Budget' },
   spend: { he: 'הוצאה', en: 'Spend' },
