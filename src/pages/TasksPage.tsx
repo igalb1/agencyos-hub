@@ -1,13 +1,14 @@
 import { useApp } from '@/contexts/AppContext';
 import { mockTasks } from '@/lib/mock-data';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 type TaskPriority = 'High' | 'Medium' | 'Low';
@@ -62,9 +63,26 @@ export default function TasksPage() {
     return grouped;
   }, [filteredTasks]);
 
-  const moveTask = (taskId: string, newStatus: TaskStatus) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-  };
+  const moveTask = useCallback((taskId: string, newStatus: TaskStatus, newIndex?: number) => {
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t);
+      if (newIndex !== undefined) {
+        const task = updated.find(t => t.id === taskId)!;
+        const without = updated.filter(t => t.id !== taskId);
+        const inColumn = without.filter(t => t.status === newStatus);
+        const others = without.filter(t => t.status !== newStatus);
+        inColumn.splice(newIndex, 0, task);
+        return [...others, ...inColumn];
+      }
+      return updated;
+    });
+  }, []);
+
+  const onDragEnd = useCallback((result: DropResult) => {
+    const { draggableId, destination } = result;
+    if (!destination) return;
+    moveTask(draggableId, destination.droppableId as TaskStatus, destination.index);
+  }, [moveTask]);
 
   const stats = useMemo(() => ({
     total: tasks.length,
@@ -173,35 +191,62 @@ export default function TasksPage() {
 
       {/* Board View */}
       {viewMode === 'board' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {columns.map(status => {
-            const StatusIcon = statusConfig[status].icon;
-            const columnTasks = tasksByStatus[status];
-            return (
-              <div key={status} className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <StatusIcon size={16} className={statusConfig[status].color} />
-                  <span className="text-sm font-semibold text-foreground">
-                    {statusConfig[status].label[lang]}
-                  </span>
-                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                    {columnTasks.length}
-                  </span>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {columns.map(status => {
+              const StatusIcon = statusConfig[status].icon;
+              const columnTasks = tasksByStatus[status];
+              return (
+                <div key={status} className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <StatusIcon size={16} className={statusConfig[status].color} />
+                    <span className="text-sm font-semibold text-foreground">
+                      {statusConfig[status].label[lang]}
+                    </span>
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                      {columnTasks.length}
+                    </span>
+                  </div>
+                  <Droppable droppableId={status}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "space-y-2 min-h-[100px] p-2 rounded-lg border transition-colors",
+                          snapshot.isDraggingOver
+                            ? "bg-primary/10 border-primary/30"
+                            : "bg-muted/30 border-border/30"
+                        )}
+                      >
+                        {columnTasks.map((task, index) => (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={cn(snapshot.isDragging && "opacity-90")}
+                              >
+                                <TaskCard task={task} />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {columnTasks.length === 0 && !snapshot.isDraggingOver && (
+                          <p className="text-xs text-muted-foreground text-center py-8">
+                            {lang === 'he' ? 'אין משימות' : 'No tasks'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
                 </div>
-                <div className="space-y-2 min-h-[100px] p-2 rounded-lg bg-muted/30 border border-border/30">
-                  {columnTasks.map(task => (
-                    <TaskCard key={task.id} task={task} />
-                  ))}
-                  {columnTasks.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-8">
-                      {lang === 'he' ? 'אין משימות' : 'No tasks'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
       ) : (
         /* List View */
         <Card className="bg-card/60 backdrop-blur-sm border-border/50">
