@@ -188,6 +188,7 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           name: string
+          payment_status: string
           plan: string
           trial_ends_at: string
           updated_at: string
@@ -198,6 +199,7 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name: string
+          payment_status?: string
           plan?: string
           trial_ends_at?: string
           updated_at?: string
@@ -208,6 +210,7 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          payment_status?: string
           plan?: string
           trial_ends_at?: string
           updated_at?: string
@@ -532,6 +535,15 @@ export type Database = {
       }
     }
     Functions: {
+      get_effective_plan: {
+        Args: { _user_id: string }
+        Returns: {
+          has_access: boolean
+          payment_status: string
+          period_end: string
+          plan: string
+        }[]
+      }
       get_integration_tokens:
         | {
             Args: { _provider: string; _user_id: string }
