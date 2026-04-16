@@ -145,10 +145,28 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
       </td>
       <td className="p-3 text-muted-foreground">{new Date(org.created_at).toLocaleDateString('he-IL')}</td>
       <td className="p-3">
-        <Button variant="ghost" size="sm" onClick={toggleActive} title={org.is_active ? 'השבת' : 'הפעל'}>
-          {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={toggleActive} title={org.is_active ? 'השבת' : 'הפעל'}>
+            {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" title="מחק ארגון">
+                <Trash2 size={16} className="text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>מחיקת ארגון</AlertDialogTitle>
+                <AlertDialogDescription>
+                  האם אתה בטוח שברצונך למחוק את "{org.name}"? פעולה זו אינה ניתנת לביטול.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteOrg} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">מחק</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </td>
-    </tr>
-  );
-}
