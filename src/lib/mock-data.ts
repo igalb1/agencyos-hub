@@ -1,4 +1,4 @@
-import { Client, Campaign, Ad } from './types';
+import { Client, Campaign, Ad, Project } from './types';
 
 export const mockClients: Client[] = [
   { id: '1', name: 'TechFlow', industry: 'SaaS', color: '#00D4FF', budget: 50000, spend: 32000, leads: 420, status: 'active' },
