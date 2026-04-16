@@ -2,12 +2,15 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface OrgData { id: string; name: string; logo_url: string | null; trial_ends_at: string; is_active: boolean; plan: string }
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: { full_name: string | null; avatar_url: string | null } | null;
-  organization: { id: string; name: string; logo_url: string | null } | null;
+  organization: OrgData | null;
   loading: boolean;
+  trialExpired: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -69,10 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (membership) {
       const { data: org } = await supabase
         .from('organizations')
-        .select('id, name, logo_url')
+        .select('id, name, logo_url, trial_ends_at, is_active, plan')
         .eq('id', membership.organization_id)
         .single();
-      if (org) setOrganization(org);
+      if (org) setOrganization(org as OrgData);
     }
   };
 
@@ -84,8 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganization(null);
   };
 
+  const trialExpired = organization
+    ? (!organization.is_active || new Date(organization.trial_ends_at) < new Date()) && organization.plan === 'free'
+    : false;
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, organization, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, organization, loading, trialExpired, signOut }}>
       {children}
     </AuthContext.Provider>
   );
