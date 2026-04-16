@@ -119,12 +119,15 @@ export default function TasksPage() {
               <p className="text-sm font-medium text-foreground leading-snug">{task.title}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{task.clientName}</p>
             </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button onClick={(e) => { e.stopPropagation(); setEditingTask(task); }} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                <Pencil size={12} />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                <Trash2 size={12} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Badge className={cn("text-[10px] px-1.5 py-0 h-4", priorityConfig[task.priority].color)}>
-                {priorityConfig[task.priority].label[lang]}
-              </Badge>
               <span className={cn("text-[10px]", isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground')}>
                 {new Date(task.due).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })}
               </span>
