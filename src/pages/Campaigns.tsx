@@ -368,6 +368,7 @@ export default function CampaignsPage() {
           </div>
         )}
       </div>
+      <NewCampaignDialog open={showNewDialog} onOpenChange={setShowNewDialog} lang={lang} />
     </div>
   );
 }
