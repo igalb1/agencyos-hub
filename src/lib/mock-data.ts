@@ -8,6 +8,14 @@ export const mockClients: Client[] = [
   { id: '5', name: 'DataPulse', industry: 'Analytics', color: '#EF4444', budget: 60000, spend: 45000, leads: 530, status: 'active' },
 ];
 
+export const mockProjects: Project[] = [
+  { id: 'p1', clientId: '1', clientName: 'TechFlow', name: 'Brand Launch', status: 'active', budget: 43000, spend: 29700, campaigns: 3, startDate: '2026-01-01', endDate: '2026-04-30' },
+  { id: 'p2', clientId: '1', clientName: 'TechFlow', name: 'Product Hunt', status: 'active', budget: 8000, spend: 3200, campaigns: 1, startDate: '2026-03-01', endDate: '2026-04-15' },
+  { id: 'p3', clientId: '2', clientName: 'GreenLeaf', name: 'Summer Sale 2026', status: 'planning', budget: 22000, spend: 9800, campaigns: 2, startDate: '2026-03-15', endDate: '2026-06-30' },
+  { id: 'p4', clientId: '3', clientName: 'UrbanFit', name: 'App Install Q2', status: 'active', budget: 18000, spend: 14000, campaigns: 2, startDate: '2026-03-01', endDate: '2026-05-15' },
+  { id: 'p5', clientId: '5', clientName: 'DataPulse', name: 'B2B Outreach', status: 'active', budget: 43000, spend: 34500, campaigns: 2, startDate: '2026-01-15', endDate: '2026-06-15' },
+];
+
 export const mockCampaigns: Campaign[] = [
   { id: '1', clientId: '1', clientName: 'TechFlow', projectId: 'p1', projectName: 'Brand Launch', name: 'Brand Awareness Q1', platform: 'Meta', status: 'Live', budget: 15000, spend: 12500, leads: 180, impressions: 520000, clicks: 8400, conversions: 95, startDate: '2026-01-01', endDate: '2026-03-31', budgetAlertThreshold: 80 },
   { id: '2', clientId: '1', clientName: 'TechFlow', projectId: 'p1', projectName: 'Brand Launch', name: 'Google Search SaaS', platform: 'Google', status: 'Live', budget: 20000, spend: 14000, leads: 240, impressions: 310000, clicks: 12500, conversions: 160, startDate: '2026-02-01', endDate: '2026-04-30', budgetAlertThreshold: 85 },
