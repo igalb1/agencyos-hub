@@ -63,9 +63,26 @@ export default function TasksPage() {
     return grouped;
   }, [filteredTasks]);
 
-  const moveTask = (taskId: string, newStatus: TaskStatus) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-  };
+  const moveTask = useCallback((taskId: string, newStatus: TaskStatus, newIndex?: number) => {
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t);
+      if (newIndex !== undefined) {
+        const task = updated.find(t => t.id === taskId)!;
+        const without = updated.filter(t => t.id !== taskId);
+        const inColumn = without.filter(t => t.status === newStatus);
+        const others = without.filter(t => t.status !== newStatus);
+        inColumn.splice(newIndex, 0, task);
+        return [...others, ...inColumn];
+      }
+      return updated;
+    });
+  }, []);
+
+  const onDragEnd = useCallback((result: DropResult) => {
+    const { draggableId, destination } = result;
+    if (!destination) return;
+    moveTask(draggableId, destination.droppableId as TaskStatus, destination.index);
+  }, [moveTask]);
 
   const stats = useMemo(() => ({
     total: tasks.length,
