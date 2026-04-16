@@ -63,6 +63,7 @@ export default function CampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [showNewDialog, setShowNewDialog] = useState(false);
 
   const filtered = useMemo(() => {
     return mockCampaigns.filter(c => {
