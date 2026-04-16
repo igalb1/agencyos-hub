@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
         console.log('Transaction completed:', event.data.id, 'env:', env);
         break;
       case EventName.TransactionPaymentFailed:
-        console.log('Payment failed:', event.data.id, 'env:', env);
+        await handlePaymentFailed(event.data, env);
         break;
       default:
         console.log('Unhandled event:', event.eventType);
@@ -48,6 +48,22 @@ Deno.serve(async (req) => {
   }
 });
 
+const planMap: Record<string, string> = {
+  starter_plan: 'starter',
+  pro_plan: 'pro',
+  business_plan: 'business',
+};
+
+async function findOrgId(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+  return data?.organization_id ?? null;
+}
+
 async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
   const { id, customerId, items, status, currentBillingPeriod, customData } = data;
 
@@ -61,53 +77,35 @@ async function handleSubscriptionCreated(data: any, env: PaddleEnv) {
   const priceId = item.price.importMeta?.externalId || item.price.id;
   const productId = item.product.importMeta?.externalId || item.product.id;
 
-  // Upsert subscription
   await supabase.from('subscriptions').upsert({
     user_id: userId,
     paddle_subscription_id: id,
     paddle_customer_id: customerId,
     product_id: productId,
     price_id: priceId,
-    status: status,
+    status,
     current_period_start: currentBillingPeriod?.startsAt,
     current_period_end: currentBillingPeriod?.endsAt,
     environment: env,
     updated_at: new Date().toISOString(),
-  }, {
-    onConflict: 'user_id,environment',
-  });
-
-  // Update organization plan
-  const planMap: Record<string, string> = {
-    starter_plan: 'starter',
-    pro_plan: 'pro',
-    business_plan: 'business',
-  };
+  }, { onConflict: 'user_id,environment' });
 
   const plan = planMap[productId] || 'starter';
-
-  // Get user's org
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', userId)
-    .limit(1)
-    .single();
-
-  if (membership) {
+  const orgId = await findOrgId(userId);
+  if (orgId) {
     await supabase
       .from('organizations')
-      .update({ plan, is_active: true })
-      .eq('id', membership.organization_id);
+      .update({ plan, is_active: true, payment_status: 'active' })
+      .eq('id', orgId);
   }
 }
 
 async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
-  const { id, status, currentBillingPeriod, scheduledChange } = data;
+  const { id, status, currentBillingPeriod, scheduledChange, items } = data;
 
   await supabase.from('subscriptions')
     .update({
-      status: status,
+      status,
       current_period_start: currentBillingPeriod?.startsAt,
       current_period_end: currentBillingPeriod?.endsAt,
       cancel_at_period_end: scheduledChange?.action === 'cancel',
@@ -115,22 +113,48 @@ async function handleSubscriptionUpdated(data: any, env: PaddleEnv) {
     })
     .eq('paddle_subscription_id', id)
     .eq('environment', env);
-}
 
-async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
-  const { id } = data;
-
-  // Get subscription to find user
   const { data: sub } = await supabase
     .from('subscriptions')
     .select('user_id')
     .eq('paddle_subscription_id', id)
     .eq('environment', env)
-    .single();
+    .maybeSingle();
+
+  if (!sub) return;
+  const orgId = await findOrgId(sub.user_id);
+  if (!orgId) return;
+
+  // Plan change (upgrade/downgrade)
+  const item = items?.[0];
+  const productId = item?.product?.importMeta?.externalId || item?.product?.id;
+  const newPlan = productId ? planMap[productId] : null;
+
+  const paymentStatus =
+    status === 'past_due' ? 'past_due'
+    : scheduledChange?.action === 'cancel' ? 'canceled_grace'
+    : 'active';
+
+  const update: Record<string, any> = { payment_status: paymentStatus };
+  if (newPlan && status === 'active') update.plan = newPlan;
+
+  await supabase.from('organizations').update(update).eq('id', orgId);
+}
+
+async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
+  const { id, currentBillingPeriod } = data;
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('paddle_subscription_id', id)
+    .eq('environment', env)
+    .maybeSingle();
 
   await supabase.from('subscriptions')
     .update({
       status: 'canceled',
+      current_period_end: currentBillingPeriod?.endsAt,
       updated_at: new Date().toISOString(),
     })
     .eq('paddle_subscription_id', id)
@@ -138,18 +162,34 @@ async function handleSubscriptionCanceled(data: any, env: PaddleEnv) {
 
   // Revert org plan to free (access continues until period end via frontend check)
   if (sub) {
-    const { data: membership } = await supabase
-      .from('organization_members')
-      .select('organization_id')
-      .eq('user_id', sub.user_id)
-      .limit(1)
-      .single();
-
-    if (membership) {
+    const orgId = await findOrgId(sub.user_id);
+    if (orgId) {
       await supabase
         .from('organizations')
-        .update({ plan: 'free' })
-        .eq('id', membership.organization_id);
+        .update({ payment_status: 'canceled_grace' })
+        .eq('id', orgId);
     }
+  }
+}
+
+async function handlePaymentFailed(data: any, env: PaddleEnv) {
+  console.log('Payment failed:', data.id, 'env:', env);
+  const subId = data.subscriptionId;
+  if (!subId) return;
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('paddle_subscription_id', subId)
+    .eq('environment', env)
+    .maybeSingle();
+
+  if (!sub) return;
+  const orgId = await findOrgId(sub.user_id);
+  if (orgId) {
+    await supabase
+      .from('organizations')
+      .update({ payment_status: 'past_due' })
+      .eq('id', orgId);
   }
 }
