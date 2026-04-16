@@ -14,12 +14,13 @@ import ProjectsPage from "@/pages/ProjectsPage";
 import AdsPage from "@/pages/AdsPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
+import TrialExpired from "@/pages/TrialExpired";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { session, loading } = useAuth();
+  const { session, loading, trialExpired } = useAuth();
 
   if (loading) {
     return (
@@ -30,6 +31,7 @@ function ProtectedRoutes() {
   }
 
   if (!session) return <Navigate to="/auth" replace />;
+  if (trialExpired) return <TrialExpired />;
 
   return (
     <AppLayout>
