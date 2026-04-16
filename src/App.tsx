@@ -12,6 +12,7 @@ import CampaignsPage from "@/pages/Campaigns";
 import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import AdsPage from "@/pages/AdsPage";
+import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
 import TrialExpired from "@/pages/TrialExpired";
@@ -41,6 +42,7 @@ function ProtectedRoutes() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/ads" element={<AdsPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="/timeline" element={<ComingSoon title="Timeline" />} />
         <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
         <Route path="/performance" element={<ComingSoon title="Performance" />} />
