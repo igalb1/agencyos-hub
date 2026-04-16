@@ -91,21 +91,15 @@ Deno.serve(async (req) => {
       ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
       : null;
 
-    const { error: upsertError } = await supabase
-      .from("user_integrations")
-      .upsert(
-        {
-          user_id,
-          provider: "google_ads",
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          token_expires_at: expiresAt,
-          account_id: accountId,
-          account_name: accountName,
-          is_connected: true,
-        },
-        { onConflict: "user_id,provider" }
-      );
+    const { error: upsertError } = await supabase.rpc("set_integration_tokens", {
+      _user_id: user_id,
+      _provider: "google_ads",
+      _access_token: tokens.access_token,
+      _refresh_token: tokens.refresh_token,
+      _account_id: accountId,
+      _account_name: accountName,
+      _token_expires_at: expiresAt,
+    });
 
     if (upsertError) {
       console.error("Upsert error:", upsertError);
