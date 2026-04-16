@@ -180,6 +180,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_email: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
