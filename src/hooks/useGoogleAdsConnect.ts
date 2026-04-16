@@ -107,5 +107,5 @@ export function useGoogleAdsConnect() {
     toast.success('Google Ads disconnected');
   };
 
-  return { connection, loading, connecting, connect, disconnect };
+  return { connection, loading, connecting, isReturningFromOAuth, connect, disconnect };
 }
