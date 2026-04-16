@@ -5,7 +5,7 @@ import { mockAds, mockClients } from '@/lib/mock-data';
 import { Ad } from '@/lib/types';
 import { fmtCurrency, fmtNum, calcCtr } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
-import { Search, Image, Video, SlidersHorizontal, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Search, Image, Video, SlidersHorizontal, ChevronDown, ChevronLeft, Play, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
