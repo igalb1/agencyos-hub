@@ -25,7 +25,7 @@ export function useGoogleAdsConnect() {
   const fetchConnection = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     const { data } = await supabase
-      .from('user_integrations')
+      .from('user_integrations_safe')
       .select('is_connected, account_name, account_id')
       .eq('user_id', user.id)
       .eq('provider', 'google_ads')
