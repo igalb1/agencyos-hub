@@ -6,7 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Download, FileText, TrendingUp, Users, Megaphone } from 'lucide-react';
+import { Download, FileText, TrendingUp, Users, Megaphone, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -18,11 +21,19 @@ export default function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>('overview');
   const [filterClient, setFilterClient] = useState<string>('all');
 
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
   const clients = useMemo(() => Array.from(new Set(mockClients.map(c => c.name))), []);
 
-  const filteredCampaigns = useMemo(() =>
-    filterClient === 'all' ? mockCampaigns : mockCampaigns.filter(c => c.clientName === filterClient),
-    [filterClient]);
+  const filteredCampaigns = useMemo(() => {
+    return mockCampaigns.filter(c => {
+      if (filterClient !== 'all' && c.clientName !== filterClient) return false;
+      if (dateFrom && new Date(c.endDate) < dateFrom) return false;
+      if (dateTo && new Date(c.startDate) > dateTo) return false;
+      return true;
+    });
+  }, [filterClient, dateFrom, dateTo]);
 
   const filteredAds = useMemo(() => {
     const ids = new Set(filteredCampaigns.map(c => c.id));
@@ -185,7 +196,34 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-foreground">{isHe ? 'דוחות' : 'Reports'}</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-start font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                {dateFrom ? format(dateFrom, 'dd/MM/yy') : (isHe ? 'מתאריך' : 'From')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("w-[140px] justify-start text-start font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                {dateTo ? format(dateTo, 'dd/MM/yy') : (isHe ? 'עד תאריך' : 'To')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} className="text-xs text-muted-foreground">
+              {isHe ? 'נקה' : 'Clear'}
+            </Button>
+          )}
           <Select value={filterClient} onValueChange={setFilterClient}>
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
