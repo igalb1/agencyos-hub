@@ -51,6 +51,7 @@ export default function AdsPage() {
   const [mediaFilter, setMediaFilter] = useState<string>('all');
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
   const [collapsedCampaigns, setCollapsedCampaigns] = useState<Set<string>>(new Set());
+  const [previewAd, setPreviewAd] = useState<Ad | null>(null);
 
   const filtered = ads.filter(ad => {
     if (search && !ad.name.toLowerCase().includes(search.toLowerCase()) && !ad.clientName.toLowerCase().includes(search.toLowerCase()) && !ad.campaignName.toLowerCase().includes(search.toLowerCase())) return false;
