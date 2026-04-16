@@ -426,6 +426,7 @@ export type Database = {
       user_integrations: {
         Row: {
           access_token: string | null
+          access_token_encrypted: string | null
           account_id: string | null
           account_name: string | null
           created_at: string
@@ -433,12 +434,14 @@ export type Database = {
           is_connected: boolean
           provider: string
           refresh_token: string | null
+          refresh_token_encrypted: string | null
           token_expires_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           access_token?: string | null
+          access_token_encrypted?: string | null
           account_id?: string | null
           account_name?: string | null
           created_at?: string
@@ -446,12 +449,14 @@ export type Database = {
           is_connected?: boolean
           provider: string
           refresh_token?: string | null
+          refresh_token_encrypted?: string | null
           token_expires_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           access_token?: string | null
+          access_token_encrypted?: string | null
           account_id?: string | null
           account_name?: string | null
           created_at?: string
@@ -459,6 +464,7 @@ export type Database = {
           is_connected?: boolean
           provider?: string
           refresh_token?: string | null
+          refresh_token_encrypted?: string | null
           token_expires_at?: string | null
           updated_at?: string
           user_id?: string
@@ -488,9 +494,55 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_integrations_safe: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          created_at: string | null
+          id: string | null
+          is_connected: boolean | null
+          provider: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_connected?: boolean | null
+          provider?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_connected?: boolean | null
+          provider?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_integration_tokens: {
+        Args: { _provider: string; _user_id: string }
+        Returns: {
+          access_token: string
+          account_id: string
+          account_name: string
+          refresh_token: string
+          token_expires_at: string
+        }[]
+      }
+      get_integrations_encryption_key: { Args: never; Returns: string }
       get_user_email: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
       has_active_subscription: {
@@ -502,6 +554,18 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      set_integration_tokens: {
+        Args: {
+          _access_token: string
+          _account_id: string
+          _account_name: string
+          _provider: string
+          _refresh_token: string
+          _token_expires_at: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin"
