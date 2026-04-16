@@ -16,6 +16,8 @@ const defaultColors = ['#00D4FF', '#22C55E', '#A78BFA', '#F59E0B', '#EF4444', '#
 
 export default function ClientsPage() {
   const { lang } = useApp();
+  const { plan } = useEffectivePlan();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>(mockClients);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
@@ -23,6 +25,19 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [limitDialogOpen, setLimitDialogOpen] = useState(false);
+
+  const maxClients = getPlanClientLimit(plan);
+  const atLimit = clients.length >= maxClients;
+
+  const handleNewClient = () => {
+    if (atLimit) {
+      setLimitDialogOpen(true);
+      return;
+    }
+    setEditingClient(null);
+    setModalOpen(true);
+  };
 
   const filtered = clients.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.industry.toLowerCase().includes(search.toLowerCase())) return false;
@@ -68,13 +83,18 @@ export default function ClientsPage() {
             {filtered.length} {lang === 'he' ? 'לקוחות' : 'clients'} · {fmtCurrency(totalBudget)} {t('budget', lang)} · {fmtNum(totalLeads)} {t('leads', lang)}
           </p>
         </div>
-        <button
-          onClick={() => { setEditingClient(null); setModalOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} />
-          {lang === 'he' ? 'לקוח חדש' : 'New Client'}
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {clients.length}{Number.isFinite(maxClients) ? `/${maxClients}` : ''} {lang === 'he' ? 'לקוחות' : 'clients'}
+          </span>
+          <button
+            onClick={handleNewClient}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {atLimit ? <Lock size={16} /> : <Plus size={16} />}
+            {lang === 'he' ? 'לקוח חדש' : 'New Client'}
+          </button>
+        </div>
       </div>
 
       {/* Search & Status Filter */}
