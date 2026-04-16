@@ -48,9 +48,18 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const addTask = useCallback((task: Task) => {
     setTasks(prev => [task, ...prev]);
+  }, []);
+
+  const updateTask = useCallback((updated: Task) => {
+    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+  }, []);
+
+  const deleteTask = useCallback((taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
   }, []);
 
   const filteredTasks = useMemo(() => {
