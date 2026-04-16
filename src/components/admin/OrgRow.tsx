@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ToggleLeft, ToggleRight, Pencil, CalendarIcon, Check, X } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Pencil, CalendarIcon, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -30,9 +31,10 @@ const PLANS = ['free', 'starter', 'pro', 'business'] as const;
 interface OrgRowProps {
   org: OrgRow;
   onUpdate: (updated: OrgRow) => void;
+  onDelete: (id: string) => void;
 }
 
-export function OrgRowComponent({ org, onUpdate }: OrgRowProps) {
+export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
   const { toast } = useToast();
   const [editingPlan, setEditingPlan] = useState(false);
   const [editingTrial, setEditingTrial] = useState(false);
@@ -78,6 +80,18 @@ export function OrgRowComponent({ org, onUpdate }: OrgRowProps) {
       toast({ title: 'תקופת ניסיון עודכנה' });
     }
     setEditingTrial(false);
+  };
+
+  const deleteOrg = async () => {
+    // Delete members first, then org
+    await supabase.from('organization_members').delete().eq('organization_id', org.id);
+    const { error } = await supabase.from('organizations').delete().eq('id', org.id);
+    if (error) {
+      toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
+    } else {
+      onDelete(org.id);
+      toast({ title: 'הארגון נמחק' });
+    }
   };
 
   return (
@@ -131,9 +145,30 @@ export function OrgRowComponent({ org, onUpdate }: OrgRowProps) {
       </td>
       <td className="p-3 text-muted-foreground">{new Date(org.created_at).toLocaleDateString('he-IL')}</td>
       <td className="p-3">
-        <Button variant="ghost" size="sm" onClick={toggleActive} title={org.is_active ? 'השבת' : 'הפעל'}>
-          {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={toggleActive} title={org.is_active ? 'השבת' : 'הפעל'}>
+            {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" title="מחק ארגון">
+                <Trash2 size={16} className="text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>מחיקת ארגון</AlertDialogTitle>
+                <AlertDialogDescription>
+                  האם אתה בטוח שברצונך למחוק את "{org.name}"? פעולה זו אינה ניתנת לביטול.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteOrg} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">מחק</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </td>
     </tr>
   );

@@ -22,6 +22,7 @@ interface OrgRow {
 interface ProfileRow {
   user_id: string;
   full_name: string | null;
+  email: string | null;
   created_at: string;
 }
 
@@ -60,13 +61,27 @@ export default function AdminPage() {
       supabase.from('subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
     if (orgRes.data) setOrgs(orgRes.data as OrgRow[]);
-    if (profRes.data) setProfiles(profRes.data as ProfileRow[]);
     if (subRes.data) setSubs(subRes.data as SubRow[]);
+
+    // Fetch emails for profiles
+    if (profRes.data) {
+      const profilesWithEmail = await Promise.all(
+        profRes.data.map(async (p) => {
+          const { data } = await supabase.rpc('get_user_email', { _user_id: p.user_id });
+          return { ...p, email: data || null } as ProfileRow;
+        })
+      );
+      setProfiles(profilesWithEmail);
+    }
     setLoading(false);
   };
 
   const updateOrg = (updated: OrgRow) => {
     setOrgs(prev => prev.map(o => o.id === updated.id ? updated : o));
+  };
+
+  const deleteOrg = (id: string) => {
+    setOrgs(prev => prev.filter(o => o.id !== id));
   };
 
   if (!isSuperAdmin) return <Navigate to="/" replace />;
@@ -87,7 +102,7 @@ export default function AdminPage() {
   };
 
   const filteredOrgs = orgs.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
-  const filteredProfiles = profiles.filter(p => (p.full_name || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredProfiles = profiles.filter(p => (p.full_name || '').toLowerCase().includes(search.toLowerCase()) || (p.email || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6" dir={lang === 'he' ? 'rtl' : 'ltr'}>
@@ -176,7 +191,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {filteredOrgs.map(org => (
-                    <OrgRowComponent key={org.id} org={org} onUpdate={updateOrg} />
+                    <OrgRowComponent key={org.id} org={org} onUpdate={updateOrg} onDelete={deleteOrg} />
                   ))}
                   {filteredOrgs.length === 0 && (
                     <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">לא נמצאו ארגונים</td></tr>
@@ -192,6 +207,7 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-start p-3 font-medium text-muted-foreground">שם</th>
+                    <th className="text-start p-3 font-medium text-muted-foreground">אימייל</th>
                     <th className="text-start p-3 font-medium text-muted-foreground">נוצר</th>
                   </tr>
                 </thead>
@@ -199,11 +215,12 @@ export default function AdminPage() {
                   {filteredProfiles.map(p => (
                     <tr key={p.user_id} className="border-b border-border/50 hover:bg-muted/30">
                       <td className="p-3 font-medium text-foreground">{p.full_name || '—'}</td>
+                      <td className="p-3 text-muted-foreground">{p.email || '—'}</td>
                       <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString('he-IL')}</td>
                     </tr>
                   ))}
                   {filteredProfiles.length === 0 && (
-                    <tr><td colSpan={2} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
+                    <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
                   )}
                 </tbody>
               </table>
