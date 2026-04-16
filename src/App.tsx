@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import ComingSoon from "@/pages/ComingSoon";
 import TimelinePage from "@/pages/TimelinePage";
 import TasksPage from "@/pages/TasksPage";
+import PerformancePage from "@/pages/PerformancePage";
 import CampaignsPage from "@/pages/Campaigns";
 import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
@@ -47,7 +48,7 @@ function ProtectedRoutes() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/performance" element={<ComingSoon title="Performance" />} />
+        <Route path="/performance" element={<PerformancePage />} />
         <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
         <Route path="/reports" element={<ComingSoon title="Reports" />} />
         <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
