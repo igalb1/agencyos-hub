@@ -5,15 +5,19 @@ import { mockClients } from '@/lib/mock-data';
 import { Client } from '@/lib/types';
 import { fmtCurrency, fmtNum } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
-import { Plus, Search, Pencil, Trash2, MoreHorizontal, X } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, MoreHorizontal, X, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useEffectivePlan, getPlanClientLimit } from '@/hooks/useEffectivePlan';
+import { useNavigate } from 'react-router-dom';
 
 const industries = ['SaaS', 'E-Commerce', 'Health', 'Media', 'Analytics', 'Finance', 'Education', 'Real Estate'];
 const defaultColors = ['#00D4FF', '#22C55E', '#A78BFA', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
 
 export default function ClientsPage() {
   const { lang } = useApp();
+  const { plan } = useEffectivePlan();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>(mockClients);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
@@ -21,6 +25,19 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [limitDialogOpen, setLimitDialogOpen] = useState(false);
+
+  const maxClients = getPlanClientLimit(plan);
+  const atLimit = clients.length >= maxClients;
+
+  const handleNewClient = () => {
+    if (atLimit) {
+      setLimitDialogOpen(true);
+      return;
+    }
+    setEditingClient(null);
+    setModalOpen(true);
+  };
 
   const filtered = clients.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.industry.toLowerCase().includes(search.toLowerCase())) return false;
@@ -66,13 +83,18 @@ export default function ClientsPage() {
             {filtered.length} {lang === 'he' ? 'לקוחות' : 'clients'} · {fmtCurrency(totalBudget)} {t('budget', lang)} · {fmtNum(totalLeads)} {t('leads', lang)}
           </p>
         </div>
-        <button
-          onClick={() => { setEditingClient(null); setModalOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} />
-          {lang === 'he' ? 'לקוח חדש' : 'New Client'}
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {clients.length}{Number.isFinite(maxClients) ? `/${maxClients}` : ''} {lang === 'he' ? 'לקוחות' : 'clients'}
+          </span>
+          <button
+            onClick={handleNewClient}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {atLimit ? <Lock size={16} /> : <Plus size={16} />}
+            {lang === 'he' ? 'לקוח חדש' : 'New Client'}
+          </button>
+        </div>
       </div>
 
       {/* Search & Status Filter */}
@@ -259,6 +281,50 @@ export default function ClientsPage() {
             onConfirm={() => handleDelete(deleteConfirm)}
             onCancel={() => setDeleteConfirm(null)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {limitDialogOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setLimitDialogOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                  <Lock size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">{lang === 'he' ? 'הגעת למגבלה' : 'Plan limit reached'}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {lang === 'he'
+                      ? `תוכנית ${plan} תומכת בעד ${maxClients} לקוחות. שדרג כדי להוסיף עוד.`
+                      : `Your ${plan} plan allows up to ${maxClients} clients. Upgrade to add more.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => { setLimitDialogOpen(false); navigate('/settings/billing'); }}
+                  className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
+                  {lang === 'he' ? 'שדרג תוכנית' : 'Upgrade plan'}
+                </button>
+                <button
+                  onClick={() => setLimitDialogOpen(false)}
+                  className="flex-1 py-2.5 rounded-lg bg-muted text-muted-foreground text-sm font-medium hover:text-foreground"
+                >
+                  {lang === 'he' ? 'ביטול' : 'Cancel'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
