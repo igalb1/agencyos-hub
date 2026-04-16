@@ -84,7 +84,7 @@ export default function CampaignsPage() {
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
       return true;
     });
-  }, [search, platformFilter, statusFilter]);
+  }, [campaigns, search, platformFilter, statusFilter]);
 
   const grouped = useMemo(() => groupCampaigns(filtered), [filtered]);
 
