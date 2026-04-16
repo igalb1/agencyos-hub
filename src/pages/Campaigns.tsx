@@ -236,7 +236,8 @@ export default function CampaignsPage() {
                 </div>
 
                 {/* Table header - visible on desktop only */}
-                <div className="hidden lg:grid grid-cols-[minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20">
+                <div className="hidden lg:grid grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20">
+                  <span></span>
                   <span>{lang === 'he' ? 'שם' : 'Name'}</span>
                   <span className="text-end">{t('budget', lang)}</span>
                   <span className="text-end">{t('spend', lang)}</span>
