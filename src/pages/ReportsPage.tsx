@@ -128,19 +128,57 @@ export default function ReportsPage() {
     );
   };
 
+  // Shared data getters for both CSV and PDF
+  const getOverviewData = () => ({
+    headers: ['Metric', 'Value'],
+    rows: [
+      ['Total Budget', `$${summary.totalBudget}`], ['Total Spend', `$${summary.totalSpend}`],
+      ['Budget Usage', `${(summary.totalBudget > 0 ? (summary.totalSpend / summary.totalBudget * 100) : 0).toFixed(1)}%`],
+      ['Impressions', String(summary.totalImpressions)], ['Clicks', String(summary.totalClicks)],
+      ['Leads', String(summary.totalLeads)], ['Conversions', String(summary.totalConversions)],
+      ['CTR', `${(summary.totalImpressions > 0 ? (summary.totalClicks / summary.totalImpressions * 100) : 0).toFixed(2)}%`],
+      ['CPL', `$${(summary.totalLeads > 0 ? (summary.totalSpend / summary.totalLeads) : 0).toFixed(2)}`],
+    ],
+  });
+
+  const getCampaignsData = () => ({
+    headers: ['Campaign', 'Client', 'Platform', 'Status', 'Budget', 'Spend', 'Leads', 'CTR', 'CPC', 'CPL'],
+    rows: filteredCampaigns.map(c => [
+      c.name, c.clientName, c.platform, c.status, String(c.budget), String(c.spend), String(c.leads),
+      `${(c.impressions > 0 ? (c.clicks / c.impressions * 100) : 0).toFixed(2)}%`,
+      `$${(c.clicks > 0 ? (c.spend / c.clicks) : 0).toFixed(2)}`,
+      `$${(c.leads > 0 ? (c.spend / c.leads) : 0).toFixed(2)}`,
+    ]),
+  });
+
+  const getClientsData = () => ({
+    headers: ['Client', 'Industry', 'Status', 'Budget', 'Spend', 'Leads'],
+    rows: filteredClients.map(c => [c.name, c.industry, c.status, String(c.budget), String(c.spend), String(c.leads)]),
+  });
+
+  const getAdsData = () => ({
+    headers: ['Ad', 'Campaign', 'Platform', 'Status', 'Spend', 'Clicks', 'Conv.', 'CTR', 'CVR'],
+    rows: filteredAds.map(a => [
+      a.name, a.campaignName, a.platform, a.status, String(a.spend), String(a.clicks), String(a.conversions),
+      `${(a.impressions > 0 ? (a.clicks / a.impressions * 100) : 0).toFixed(2)}%`,
+      `${(a.clicks > 0 ? (a.conversions / a.clicks * 100) : 0).toFixed(1)}%`,
+    ]),
+  });
+
+  const dataGetters: Record<ReportType, () => { headers: string[]; rows: string[][] }> = {
+    overview: getOverviewData, campaigns: getCampaignsData, clients: getClientsData, ads: getAdsData,
+  };
+
+  const reportTitles: Record<ReportType, string> = {
+    overview: 'Overview Report', campaigns: 'Campaigns Report', clients: 'Clients Report', ads: 'Ads Report',
+  };
+
   const reportCards = [
     { type: 'overview' as const, icon: TrendingUp, title: isHe ? 'סקירה כללית' : 'Overview', desc: isHe ? 'סיכום ביצועים כולל' : 'Overall performance summary' },
     { type: 'campaigns' as const, icon: Megaphone, title: isHe ? 'קמפיינים' : 'Campaigns', desc: isHe ? 'פירוט לפי קמפיין' : 'Campaign-level breakdown' },
     { type: 'clients' as const, icon: Users, title: isHe ? 'לקוחות' : 'Clients', desc: isHe ? 'ביצועים לפי לקוח' : 'Client performance' },
     { type: 'ads' as const, icon: FileText, title: isHe ? 'מודעות' : 'Ads', desc: isHe ? 'ביצועי מודעות' : 'Ad performance' },
   ];
-
-  const exportFn: Record<ReportType, () => void> = {
-    overview: handleExportOverview,
-    campaigns: handleExportCampaigns,
-    clients: handleExportClients,
-    ads: handleExportAds,
-  };
 
   return (
     <div className="space-y-6">
