@@ -216,11 +216,30 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* Export Button */}
-      <div className="flex justify-end">
-        <Button onClick={exportFn[reportType]} className="gap-2" size="sm">
+      {/* Export Buttons */}
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            const { headers, rows } = dataGetters[reportType]();
+            exportPDF(reportTitles[reportType], headers, rows);
+          }}
+        >
+          <FileText size={16} />
+          PDF
+        </Button>
+        <Button
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            const { headers, rows } = dataGetters[reportType]();
+            exportCSV(`${reportTitles[reportType].replace(/\s+/g, '-').toLowerCase()}.csv`, headers, rows);
+          }}
+        >
           <Download size={16} />
-          {isHe ? 'ייצוא CSV' : 'Export CSV'}
+          CSV
         </Button>
       </div>
 
