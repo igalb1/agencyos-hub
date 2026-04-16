@@ -6,7 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Download, FileText, TrendingUp, Users, Megaphone } from 'lucide-react';
+import { Download, FileText, TrendingUp, Users, Megaphone, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -18,11 +21,19 @@ export default function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>('overview');
   const [filterClient, setFilterClient] = useState<string>('all');
 
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
   const clients = useMemo(() => Array.from(new Set(mockClients.map(c => c.name))), []);
 
-  const filteredCampaigns = useMemo(() =>
-    filterClient === 'all' ? mockCampaigns : mockCampaigns.filter(c => c.clientName === filterClient),
-    [filterClient]);
+  const filteredCampaigns = useMemo(() => {
+    return mockCampaigns.filter(c => {
+      if (filterClient !== 'all' && c.clientName !== filterClient) return false;
+      if (dateFrom && new Date(c.endDate) < dateFrom) return false;
+      if (dateTo && new Date(c.startDate) > dateTo) return false;
+      return true;
+    });
+  }, [filterClient, dateFrom, dateTo]);
 
   const filteredAds = useMemo(() => {
     const ids = new Set(filteredCampaigns.map(c => c.id));
