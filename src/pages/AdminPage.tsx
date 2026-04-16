@@ -191,7 +191,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {filteredOrgs.map(org => (
-                    <OrgRowComponent key={org.id} org={org} onUpdate={updateOrg} />
+                    <OrgRowComponent key={org.id} org={org} onUpdate={updateOrg} onDelete={deleteOrg} />
                   ))}
                   {filteredOrgs.length === 0 && (
                     <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">לא נמצאו ארגונים</td></tr>
