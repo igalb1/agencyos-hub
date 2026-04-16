@@ -13,6 +13,7 @@ export const translations = {
   integrations: { he: 'אינטגרציות', en: 'Integrations' },
   reports: { he: 'דוחות', en: 'Reports' },
   calendar: { he: 'לוח שנה', en: 'Calendar' },
+  settings: { he: 'הגדרות', en: 'Settings' },
   creative: { he: 'קריאייטיב', en: 'Creative' },
   // KPIs
   totalBudget: { he: 'תקציב כולל', en: 'Total Budget' },
