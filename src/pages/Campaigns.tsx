@@ -99,7 +99,10 @@ export default function CampaignsPage() {
             {filtered.length} {lang === 'he' ? 'קמפיינים' : 'campaigns'} · {fmtCurrency(totalBudget)} {t('budget', lang)} · {fmtCurrency(totalSpend)} {t('spend', lang)}
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => setShowNewDialog(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
           <Plus size={16} />
           {lang === 'he' ? 'קמפיין חדש' : 'New Campaign'}
         </button>
