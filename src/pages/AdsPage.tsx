@@ -268,7 +268,8 @@ export default function AdsPage() {
                                 className="overflow-hidden"
                               >
                                 {/* Table header */}
-                                <div className="hidden lg:grid grid-cols-[2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-t border-border/20">
+                                <div className="hidden lg:grid grid-cols-[40px_2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-t border-border/20">
+                                  <span></span>
                                   <span>{lang === 'he' ? 'מודעה' : 'Ad'}</span>
                                   <span className="text-center">{lang === 'he' ? 'סוג' : 'Type'}</span>
                                   <span className="text-end">{t('spend', lang)}</span>
@@ -282,8 +283,27 @@ export default function AdsPage() {
                                 {campaignAds.map((ad, i) => (
                                   <div
                                     key={ad.id}
-                                    className="grid grid-cols-1 lg:grid-cols-[2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2.5 hover:bg-muted/15 transition-colors items-center border-t border-border/10"
+                                    className="grid grid-cols-1 lg:grid-cols-[40px_2fr_70px_1fr_1fr_1fr_80px_80px_90px] gap-x-3 px-5 ps-14 py-2.5 hover:bg-muted/15 transition-colors items-center border-t border-border/10"
                                   >
+                                    {/* Thumbnail */}
+                                    <button
+                                      onClick={() => setPreviewAd(ad)}
+                                      className="hidden lg:block w-9 h-9 rounded-md overflow-hidden bg-muted/30 relative group shrink-0 cursor-pointer"
+                                    >
+                                      {ad.mediaUrl ? (
+                                        <img src={ad.mediaUrl} alt={ad.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          {ad.mediaType === 'video' ? <Video size={14} className="text-muted-foreground" /> : <Image size={14} className="text-muted-foreground" />}
+                                        </div>
+                                      )}
+                                      {ad.mediaType === 'video' && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <Play size={14} className="text-white" />
+                                        </div>
+                                      )}
+                                    </button>
+
                                     <p className="text-sm text-foreground truncate">{ad.name}</p>
 
                                     <div className="hidden lg:flex justify-center">
