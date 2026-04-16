@@ -1,10 +1,11 @@
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, FolderKanban, Megaphone, Image, GanttChart,
   CheckSquare, BarChart3, Plug, FileText, CalendarDays, Sparkles,
-  Sun, Moon, Languages, ChevronLeft, ChevronRight, X
+  Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -25,6 +26,7 @@ const navItems = [
 
 export default function Sidebar() {
   const { lang, setLang, theme, setTheme, sidebarOpen, setSidebarOpen } = useApp();
+  const { isSuperAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isRtl = lang === 'he';
@@ -88,6 +90,20 @@ export default function Sidebar() {
               </button>
             );
           })}
+          {isSuperAdmin && (
+            <button
+              onClick={() => { navigate('/admin'); setSidebarOpen(window.innerWidth >= 1024); }}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all mt-2 border-t border-border pt-3",
+                location.pathname === '/admin'
+                  ? "bg-destructive/10 text-destructive"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Shield size={20} className="shrink-0" />
+              {sidebarOpen && <span>Super Admin</span>}
+            </button>
+          )}
         </nav>
 
         {/* Footer controls */}
