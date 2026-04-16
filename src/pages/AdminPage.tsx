@@ -61,8 +61,18 @@ export default function AdminPage() {
       supabase.from('subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
     if (orgRes.data) setOrgs(orgRes.data as OrgRow[]);
-    if (profRes.data) setProfiles(profRes.data as ProfileRow[]);
     if (subRes.data) setSubs(subRes.data as SubRow[]);
+
+    // Fetch emails for profiles
+    if (profRes.data) {
+      const profilesWithEmail = await Promise.all(
+        profRes.data.map(async (p) => {
+          const { data } = await supabase.rpc('get_user_email', { _user_id: p.user_id });
+          return { ...p, email: data || null } as ProfileRow;
+        })
+      );
+      setProfiles(profilesWithEmail);
+    }
     setLoading(false);
   };
 
