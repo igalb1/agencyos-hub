@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical, Pencil, Trash2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import NewTaskDialog from '@/components/tasks/NewTaskDialog';
+import EditTaskDialog from '@/components/tasks/EditTaskDialog';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 type TaskPriority = 'High' | 'Medium' | 'Low';
@@ -47,9 +48,18 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const addTask = useCallback((task: Task) => {
     setTasks(prev => [task, ...prev]);
+  }, []);
+
+  const updateTask = useCallback((updated: Task) => {
+    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+  }, []);
+
+  const deleteTask = useCallback((taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
   }, []);
 
   const filteredTasks = useMemo(() => {
@@ -97,7 +107,6 @@ export default function TasksPage() {
   }), [tasks]);
 
   const TaskCard = ({ task }: { task: Task }) => {
-    const StatusIcon = statusConfig[task.status].icon;
     const isOverdue = new Date(task.due) < new Date() && task.status !== 'Done';
 
     return (
@@ -108,6 +117,14 @@ export default function TasksPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground leading-snug">{task.title}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{task.clientName}</p>
+            </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button onClick={(e) => { e.stopPropagation(); setEditingTask(task); }} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                <Pencil size={12} />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                <Trash2 size={12} />
+              </button>
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
@@ -123,7 +140,6 @@ export default function TasksPage() {
               {task.assignee.charAt(0)}
             </div>
           </div>
-          {/* Quick status change */}
           {viewMode === 'board' && (
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {columns.filter(s => s !== task.status).map(s => (
@@ -277,6 +293,14 @@ export default function TasksPage() {
                     <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-medium text-primary">
                       {task.assignee.charAt(0)}
                     </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => setEditingTask(task)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                     <Select value={task.status} onValueChange={(v) => moveTask(task.id, v as TaskStatus)}>
                       <SelectTrigger className="w-[100px] h-7 text-xs">
                         <SelectValue />
@@ -295,6 +319,7 @@ export default function TasksPage() {
         </Card>
       )}
       <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} onAdd={addTask} lang={lang} />
+      <EditTaskDialog open={!!editingTask} onOpenChange={(o) => !o && setEditingTask(null)} task={editingTask} onSave={updateTask} onDelete={deleteTask} lang={lang} />
     </div>
   );
 }
