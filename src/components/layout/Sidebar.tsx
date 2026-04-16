@@ -21,7 +21,7 @@ const navItems = [
   { key: 'integrations' as const, icon: Plug, path: '/integrations' },
   { key: 'reports' as const, icon: FileText, path: '/reports' },
   { key: 'calendar' as const, icon: CalendarDays, path: '/calendar' },
-  { key: 'creative' as const, icon: Sparkles, path: '/creative' },
+  
 ];
 
 export default function Sidebar() {

@@ -54,7 +54,7 @@ function ProtectedRoutes() {
         <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/creative" element={<ComingSoon title="Creative" />} />
+        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
