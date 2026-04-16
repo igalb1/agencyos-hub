@@ -17,6 +17,11 @@ export function useGoogleAdsConnect() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
 
+  // Detect if user is returning from Google OAuth
+  const isReturningFromOAuth = useMemo(() => {
+    return searchParams.has('google_ads_success') || searchParams.has('google_ads_error') || searchParams.has('code');
+  }, [searchParams]);
+
   const fetchConnection = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     const { data } = await supabase
