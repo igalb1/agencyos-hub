@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { mockClients, mockProjects } from '@/lib/mock-data';
-import { Platform, CampaignStatus } from '@/lib/types';
+import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import { Lang } from '@/lib/i18n';
 import { toast } from 'sonner';
 
@@ -13,12 +13,13 @@ interface NewCampaignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lang: Lang;
+  onCampaignCreated: (campaign: Campaign) => void;
 }
 
 const platforms: Platform[] = ['Meta', 'Google', 'TikTok', 'LinkedIn'];
 const statuses: CampaignStatus[] = ['Live', 'Planned', 'Paused'];
 
-export default function NewCampaignDialog({ open, onOpenChange, lang }: NewCampaignDialogProps) {
+export default function NewCampaignDialog({ open, onOpenChange, lang, onCampaignCreated }: NewCampaignDialogProps) {
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
   const [projectId, setProjectId] = useState('');
@@ -36,6 +37,28 @@ export default function NewCampaignDialog({ open, onOpenChange, lang }: NewCampa
       toast.error(lang === 'he' ? 'נא למלא את כל השדות' : 'Please fill all required fields');
       return;
     }
+    const client = mockClients.find(c => c.id === clientId);
+    const project = mockProjects.find(p => p.id === projectId);
+    const newCampaign: Campaign = {
+      id: `new-${Date.now()}`,
+      clientId,
+      clientName: client?.name || '',
+      projectId,
+      projectName: project?.name || '',
+      name,
+      platform,
+      status,
+      budget: Number(budget),
+      spend: 0,
+      leads: 0,
+      impressions: 0,
+      clicks: 0,
+      conversions: 0,
+      startDate: startDate || new Date().toISOString().slice(0, 10),
+      endDate: endDate || new Date().toISOString().slice(0, 10),
+      budgetAlertThreshold: 80,
+    };
+    onCampaignCreated(newCampaign);
     toast.success(lang === 'he' ? `קמפיין "${name}" נוצר בהצלחה` : `Campaign "${name}" created successfully`);
     onOpenChange(false);
     resetForm();
