@@ -207,6 +207,7 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-start p-3 font-medium text-muted-foreground">שם</th>
+                    <th className="text-start p-3 font-medium text-muted-foreground">אימייל</th>
                     <th className="text-start p-3 font-medium text-muted-foreground">נוצר</th>
                   </tr>
                 </thead>
@@ -214,6 +215,7 @@ export default function AdminPage() {
                   {filteredProfiles.map(p => (
                     <tr key={p.user_id} className="border-b border-border/50 hover:bg-muted/30">
                       <td className="p-3 font-medium text-foreground">{p.full_name || '—'}</td>
+                      <td className="p-3 text-muted-foreground">{p.email || '—'}</td>
                       <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString('he-IL')}</td>
                     </tr>
                   ))}
