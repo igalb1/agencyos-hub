@@ -80,6 +80,10 @@ export default function AdminPage() {
     setOrgs(prev => prev.map(o => o.id === updated.id ? updated : o));
   };
 
+  const deleteOrg = (id: string) => {
+    setOrgs(prev => prev.filter(o => o.id !== id));
+  };
+
   if (!isSuperAdmin) return <Navigate to="/" replace />;
 
   const planColors: Record<string, string> = {
