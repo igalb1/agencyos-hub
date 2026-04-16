@@ -72,6 +72,11 @@ export default function CampaignsPage() {
     setCampaigns(prev => [...prev, campaign]);
   };
 
+  const updateCampaign = (id: string, field: keyof Campaign, value: number | string) => {
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+    toast.success(lang === 'he' ? 'הערך עודכן' : 'Value updated');
+  };
+
   const filtered = useMemo(() => {
     return campaigns.filter(c => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
