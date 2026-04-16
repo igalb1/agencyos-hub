@@ -4,6 +4,8 @@ import { t } from '@/lib/i18n';
 import { mockCampaigns, mockAds } from '@/lib/mock-data';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
+import EditableCell from '@/components/campaigns/EditableCell';
+import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
