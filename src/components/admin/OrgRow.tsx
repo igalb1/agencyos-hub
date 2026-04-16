@@ -170,3 +170,6 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
           </AlertDialog>
         </div>
       </td>
+    </tr>
+  );
+}
