@@ -23,7 +23,6 @@ export const translations = {
   // General
   search: { he: 'חיפוש...', en: 'Search...' },
   notifications: { he: 'התראות', en: 'Notifications' },
-  settings: { he: 'הגדרות', en: 'Settings' },
   comingSoon: { he: 'בקרוב', en: 'Coming Soon' },
   budget: { he: 'תקציב', en: 'Budget' },
   spend: { he: 'הוצאה', en: 'Spend' },
