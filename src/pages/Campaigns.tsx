@@ -7,7 +7,7 @@ import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
 import EditableCell from '@/components/campaigns/EditableCell';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +67,22 @@ export default function CampaignsPage() {
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const deleteSelected = () => {
+    setCampaigns(prev => prev.filter(c => !selected.has(c.id)));
+    toast.success(lang === 'he' ? `${selected.size} קמפיינים נמחקו` : `${selected.size} campaigns deleted`);
+    setSelected(new Set());
+  };
 
   const handleCampaignCreated = (campaign: Campaign) => {
     setCampaigns(prev => [...prev, campaign]);
@@ -111,13 +127,29 @@ export default function CampaignsPage() {
             {filtered.length} {lang === 'he' ? 'קמפיינים' : 'campaigns'} · {fmtCurrency(totalBudget)} {t('budget', lang)} · {fmtCurrency(totalSpend)} {t('spend', lang)}
           </p>
         </div>
-        <button
-          onClick={() => setShowNewDialog(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={16} />
-          {lang === 'he' ? 'קמפיין חדש' : 'New Campaign'}
-        </button>
+        <div className="flex items-center gap-2">
+          <AnimatePresence>
+            {selected.size > 0 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={deleteSelected}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors"
+              >
+                <Trash2 size={16} />
+                {lang === 'he' ? `מחק (${selected.size})` : `Delete (${selected.size})`}
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <button
+            onClick={() => setShowNewDialog(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} />
+            {lang === 'he' ? 'קמפיין חדש' : 'New Campaign'}
+          </button>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -204,7 +236,8 @@ export default function CampaignsPage() {
                 </div>
 
                 {/* Table header - visible on desktop only */}
-                <div className="hidden lg:grid grid-cols-[minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20">
+                <div className="hidden lg:grid grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20">
+                  <span></span>
                   <span>{lang === 'he' ? 'שם' : 'Name'}</span>
                   <span className="text-end">{t('budget', lang)}</span>
                   <span className="text-end">{t('spend', lang)}</span>
@@ -233,10 +266,21 @@ export default function CampaignsPage() {
                       <div key={campaign.id}>
                         <div
                           className={cn(
-                            "grid grid-cols-[1fr_auto] lg:grid-cols-[minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            "grid grid-cols-[1fr_auto] lg:grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            selected.has(campaign.id) && "bg-primary/5"
                           )}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
+                          {/* Checkbox */}
+                          <div className="hidden lg:flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(campaign.id)}
+                              onChange={() => {}}
+                              onClick={e => toggleSelect(campaign.id, e)}
+                              className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                            />
+                          </div>
                           {/* Name + Platform */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-base shrink-0">{platformIcons[campaign.platform]}</span>
