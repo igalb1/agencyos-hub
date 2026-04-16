@@ -319,6 +319,7 @@ export default function TasksPage() {
         </Card>
       )}
       <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} onAdd={addTask} lang={lang} />
+      <EditTaskDialog open={!!editingTask} onOpenChange={(o) => !o && setEditingTask(null)} task={editingTask} onSave={updateTask} onDelete={deleteTask} lang={lang} />
     </div>
   );
 }
