@@ -11,6 +11,7 @@ import ComingSoon from "@/pages/ComingSoon";
 import TimelinePage from "@/pages/TimelinePage";
 import TasksPage from "@/pages/TasksPage";
 import PerformancePage from "@/pages/PerformancePage";
+import ReportsPage from "@/pages/ReportsPage";
 import CampaignsPage from "@/pages/Campaigns";
 import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
@@ -50,7 +51,7 @@ function ProtectedRoutes() {
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/performance" element={<PerformancePage />} />
         <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
-        <Route path="/reports" element={<ComingSoon title="Reports" />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
         <Route path="/creative" element={<ComingSoon title="Creative" />} />
         <Route path="*" element={<NotFound />} />
