@@ -368,6 +368,53 @@ export default function AdsPage() {
           </div>
         )}
       </div>
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {previewAd && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            onClick={() => setPreviewAd(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-2xl w-full mx-4 glass-card rounded-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setPreviewAd(null)}
+                className="absolute top-3 end-3 z-10 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              >
+                <X size={16} />
+              </button>
+              {previewAd.mediaUrl ? (
+                <img src={previewAd.mediaUrl} alt={previewAd.name} className="w-full max-h-[60vh] object-contain bg-black/20" />
+              ) : (
+                <div className="w-full h-64 flex items-center justify-center bg-muted/20">
+                  {previewAd.mediaType === 'video' ? <Video size={48} className="text-muted-foreground" /> : <Image size={48} className="text-muted-foreground" />}
+                </div>
+              )}
+              <div className="p-4 space-y-1">
+                <p className="text-sm font-semibold text-foreground">{previewAd.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {previewAd.campaignName} · {previewAd.platform} · {previewAd.mediaType === 'video' ? (lang === 'he' ? 'וידאו' : 'Video') : (lang === 'he' ? 'תמונה' : 'Image')}
+                </p>
+                <div className="flex gap-4 pt-2 text-xs text-muted-foreground">
+                  <span>{fmtCurrency(previewAd.spend)} {t('spend', lang)}</span>
+                  <span>{fmtNum(previewAd.clicks)} {lang === 'he' ? 'קליקים' : 'clicks'}</span>
+                  <span>{calcCtr(previewAd.clicks, previewAd.impressions)}% CTR</span>
+                  <span>{fmtNum(previewAd.leads)} {t('leads', lang)}</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
