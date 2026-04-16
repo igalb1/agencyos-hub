@@ -3,7 +3,10 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
+import { AppProvider } from "@/contexts/AppContext";
+import AppLayout from "@/components/layout/AppLayout";
+import Dashboard from "@/pages/Dashboard";
+import ComingSoon from "@/pages/ComingSoon";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -13,13 +16,27 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppProvider>
+        <BrowserRouter>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/clients" element={<ComingSoon title="Clients" />} />
+              <Route path="/projects" element={<ComingSoon title="Projects" />} />
+              <Route path="/campaigns" element={<ComingSoon title="Campaigns" />} />
+              <Route path="/ads" element={<ComingSoon title="Ads" />} />
+              <Route path="/timeline" element={<ComingSoon title="Timeline" />} />
+              <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
+              <Route path="/performance" element={<ComingSoon title="Performance" />} />
+              <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
+              <Route path="/reports" element={<ComingSoon title="Reports" />} />
+              <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
+              <Route path="/creative" element={<ComingSoon title="Creative" />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppLayout>
+        </BrowserRouter>
+      </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
