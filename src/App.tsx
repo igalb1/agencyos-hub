@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import ComingSoon from "@/pages/ComingSoon";
+import TimelinePage from "@/pages/TimelinePage";
+import TasksPage from "@/pages/TasksPage";
 import CampaignsPage from "@/pages/Campaigns";
 import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
@@ -43,8 +45,8 @@ function ProtectedRoutes() {
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/ads" element={<AdsPage />} />
         <Route path="/admin" element={<AdminPage />} />
-        <Route path="/timeline" element={<ComingSoon title="Timeline" />} />
-        <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/tasks" element={<TasksPage />} />
         <Route path="/performance" element={<ComingSoon title="Performance" />} />
         <Route path="/integrations" element={<ComingSoon title="Integrations" />} />
         <Route path="/reports" element={<ComingSoon title="Reports" />} />
