@@ -91,6 +91,12 @@ Deno.serve(async (req) => {
       ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
       : null;
 
+    const encryptionKey = Deno.env.get("INTEGRATIONS_ENCRYPTION_KEY");
+    if (!encryptionKey) {
+      console.error("INTEGRATIONS_ENCRYPTION_KEY not configured");
+      return Response.redirect(`${baseRedirect}?google_ads_error=encryption_key_missing`, 302);
+    }
+
     const { error: upsertError } = await supabase.rpc("set_integration_tokens", {
       _user_id: user_id,
       _provider: "google_ads",
@@ -99,6 +105,7 @@ Deno.serve(async (req) => {
       _account_id: accountId,
       _account_name: accountName,
       _token_expires_at: expiresAt,
+      _encryption_key: encryptionKey,
     });
 
     if (upsertError) {
