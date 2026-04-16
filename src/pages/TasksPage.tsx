@@ -191,35 +191,62 @@ export default function TasksPage() {
 
       {/* Board View */}
       {viewMode === 'board' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {columns.map(status => {
-            const StatusIcon = statusConfig[status].icon;
-            const columnTasks = tasksByStatus[status];
-            return (
-              <div key={status} className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <StatusIcon size={16} className={statusConfig[status].color} />
-                  <span className="text-sm font-semibold text-foreground">
-                    {statusConfig[status].label[lang]}
-                  </span>
-                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                    {columnTasks.length}
-                  </span>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {columns.map(status => {
+              const StatusIcon = statusConfig[status].icon;
+              const columnTasks = tasksByStatus[status];
+              return (
+                <div key={status} className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <StatusIcon size={16} className={statusConfig[status].color} />
+                    <span className="text-sm font-semibold text-foreground">
+                      {statusConfig[status].label[lang]}
+                    </span>
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                      {columnTasks.length}
+                    </span>
+                  </div>
+                  <Droppable droppableId={status}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "space-y-2 min-h-[100px] p-2 rounded-lg border transition-colors",
+                          snapshot.isDraggingOver
+                            ? "bg-primary/10 border-primary/30"
+                            : "bg-muted/30 border-border/30"
+                        )}
+                      >
+                        {columnTasks.map((task, index) => (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={cn(snapshot.isDragging && "opacity-90")}
+                              >
+                                <TaskCard task={task} />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {columnTasks.length === 0 && !snapshot.isDraggingOver && (
+                          <p className="text-xs text-muted-foreground text-center py-8">
+                            {lang === 'he' ? 'אין משימות' : 'No tasks'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
                 </div>
-                <div className="space-y-2 min-h-[100px] p-2 rounded-lg bg-muted/30 border border-border/30">
-                  {columnTasks.map(task => (
-                    <TaskCard key={task.id} task={task} />
-                  ))}
-                  {columnTasks.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-8">
-                      {lang === 'he' ? 'אין משימות' : 'No tasks'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
       ) : (
         /* List View */
         <Card className="bg-card/60 backdrop-blur-sm border-border/50">
