@@ -3,6 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
 import { mockCampaigns, mockAds } from '@/lib/mock-data';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
+import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,6 +63,7 @@ export default function CampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [showNewDialog, setShowNewDialog] = useState(false);
 
   const filtered = useMemo(() => {
     return mockCampaigns.filter(c => {
@@ -97,7 +99,10 @@ export default function CampaignsPage() {
             {filtered.length} {lang === 'he' ? 'קמפיינים' : 'campaigns'} · {fmtCurrency(totalBudget)} {t('budget', lang)} · {fmtCurrency(totalSpend)} {t('spend', lang)}
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => setShowNewDialog(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
           <Plus size={16} />
           {lang === 'he' ? 'קמפיין חדש' : 'New Campaign'}
         </button>
@@ -363,6 +368,7 @@ export default function CampaignsPage() {
           </div>
         )}
       </div>
+      <NewCampaignDialog open={showNewDialog} onOpenChange={setShowNewDialog} lang={lang} />
     </div>
   );
 }
