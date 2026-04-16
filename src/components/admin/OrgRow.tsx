@@ -82,6 +82,18 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
     setEditingTrial(false);
   };
 
+  const deleteOrg = async () => {
+    // Delete members first, then org
+    await supabase.from('organization_members').delete().eq('organization_id', org.id);
+    const { error } = await supabase.from('organizations').delete().eq('id', org.id);
+    if (error) {
+      toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
+    } else {
+      onDelete(org.id);
+      toast({ title: 'הארגון נמחק' });
+    }
+  };
+
   return (
     <tr className="border-b border-border/50 hover:bg-muted/30">
       <td className="p-3 font-medium text-foreground">{org.name}</td>
