@@ -283,6 +283,50 @@ export default function ClientsPage() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {limitDialogOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setLimitDialogOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                  <Lock size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">{lang === 'he' ? 'הגעת למגבלה' : 'Plan limit reached'}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {lang === 'he'
+                      ? `תוכנית ${plan} תומכת בעד ${maxClients} לקוחות. שדרג כדי להוסיף עוד.`
+                      : `Your ${plan} plan allows up to ${maxClients} clients. Upgrade to add more.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => { setLimitDialogOpen(false); navigate('/settings/billing'); }}
+                  className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
+                  {lang === 'he' ? 'שדרג תוכנית' : 'Upgrade plan'}
+                </button>
+                <button
+                  onClick={() => setLimitDialogOpen(false)}
+                  className="flex-1 py-2.5 rounded-lg bg-muted text-muted-foreground text-sm font-medium hover:text-foreground"
+                >
+                  {lang === 'he' ? 'ביטול' : 'Cancel'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
