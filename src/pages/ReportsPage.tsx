@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Download, FileSpreadsheet, FileText, TrendingUp, Users, Megaphone, FolderKanban } from 'lucide-react';
+import { Download, FileText, TrendingUp, Users, Megaphone } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type ReportType = 'overview' | 'campaigns' | 'clients' | 'ads';
 
