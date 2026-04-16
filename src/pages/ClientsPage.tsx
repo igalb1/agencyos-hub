@@ -5,9 +5,11 @@ import { mockClients } from '@/lib/mock-data';
 import { Client } from '@/lib/types';
 import { fmtCurrency, fmtNum } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
-import { Plus, Search, Pencil, Trash2, MoreHorizontal, X } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, MoreHorizontal, X, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useEffectivePlan, getPlanClientLimit } from '@/hooks/useEffectivePlan';
+import { useNavigate } from 'react-router-dom';
 
 const industries = ['SaaS', 'E-Commerce', 'Health', 'Media', 'Analytics', 'Finance', 'Education', 'Real Estate'];
 const defaultColors = ['#00D4FF', '#22C55E', '#A78BFA', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
