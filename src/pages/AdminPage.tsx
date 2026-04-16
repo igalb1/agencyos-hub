@@ -6,9 +6,9 @@ import { t } from '@/lib/i18n';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, Building2, CreditCard, Search, ToggleLeft, ToggleRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Shield, Users, Building2, CreditCard, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { OrgRowComponent } from '@/components/admin/OrgRow';
 
 interface OrgRow {
   id: string;
@@ -65,17 +65,8 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  const toggleOrgActive = async (org: OrgRow) => {
-    const { error } = await supabase
-      .from('organizations')
-      .update({ is_active: !org.is_active })
-      .eq('id', org.id);
-    if (error) {
-      toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
-    } else {
-      setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, is_active: !o.is_active } : o));
-      toast({ title: org.is_active ? 'הארגון הושבת' : 'הארגון הופעל' });
-    }
+  const updateOrg = (updated: OrgRow) => {
+    setOrgs(prev => prev.map(o => o.id === updated.id ? updated : o));
   };
 
   if (!isSuperAdmin) return <Navigate to="/" replace />;
@@ -185,24 +176,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {filteredOrgs.map(org => (
-                    <tr key={org.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="p-3 font-medium text-foreground">{org.name}</td>
-                      <td className="p-3">
-                        <Badge className={planColors[org.plan] || planColors.free}>{org.plan}</Badge>
-                      </td>
-                      <td className="p-3">
-                        <Badge className={org.is_active ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}>
-                          {org.is_active ? 'פעיל' : 'מושבת'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-muted-foreground">{new Date(org.trial_ends_at).toLocaleDateString('he-IL')}</td>
-                      <td className="p-3 text-muted-foreground">{new Date(org.created_at).toLocaleDateString('he-IL')}</td>
-                      <td className="p-3">
-                        <Button variant="ghost" size="sm" onClick={() => toggleOrgActive(org)} title={org.is_active ? 'השבת' : 'הפעל'}>
-                          {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
-                        </Button>
-                      </td>
-                    </tr>
+                    <OrgRowComponent key={org.id} org={org} onUpdate={updateOrg} />
                   ))}
                   {filteredOrgs.length === 0 && (
                     <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">לא נמצאו ארגונים</td></tr>
