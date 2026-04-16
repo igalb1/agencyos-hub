@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import ComingSoon from "@/pages/ComingSoon";
 import TimelinePage from "@/pages/TimelinePage";
 import TasksPage from "@/pages/TasksPage";
+import PerformancePage from "@/pages/PerformancePage";
 import CampaignsPage from "@/pages/Campaigns";
 import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
