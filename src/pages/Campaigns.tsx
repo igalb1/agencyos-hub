@@ -266,10 +266,21 @@ export default function CampaignsPage() {
                       <div key={campaign.id}>
                         <div
                           className={cn(
-                            "grid grid-cols-[1fr_auto] lg:grid-cols-[minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            "grid grid-cols-[1fr_auto] lg:grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            selected.has(campaign.id) && "bg-primary/5"
                           )}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
+                          {/* Checkbox */}
+                          <div className="hidden lg:flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(campaign.id)}
+                              onChange={() => {}}
+                              onClick={e => toggleSelect(campaign.id, e)}
+                              className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                            />
+                          </div>
                           {/* Name + Platform */}
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-base shrink-0">{platformIcons[campaign.platform]}</span>
