@@ -9,6 +9,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import NewTaskDialog from '@/components/tasks/NewTaskDialog';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 type TaskPriority = 'High' | 'Medium' | 'Low';
@@ -45,6 +46,11 @@ export default function TasksPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
+
+  const addTask = useCallback((task: Task) => {
+    setTasks(prev => [task, ...prev]);
+  }, []);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -150,7 +156,7 @@ export default function TasksPage() {
               : `${stats.total} tasks · ${stats.done} done · ${stats.overdue} overdue`}
           </p>
         </div>
-        <Button className="gap-2" size="sm">
+        <Button className="gap-2" size="sm" onClick={() => setNewTaskOpen(true)}>
           <Plus size={16} />
           {lang === 'he' ? 'משימה חדשה' : 'New Task'}
         </Button>
@@ -288,6 +294,7 @@ export default function TasksPage() {
           </CardContent>
         </Card>
       )}
+      <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} onAdd={addTask} lang={lang} />
     </div>
   );
 }
