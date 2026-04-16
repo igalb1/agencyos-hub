@@ -11,6 +11,7 @@ interface AuthContextType {
   organization: OrgData | null;
   loading: boolean;
   trialExpired: boolean;
+  isSuperAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthContextType['profile']>(null);
   const [organization, setOrganization] = useState<AuthContextType['organization']>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,10 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTimeout(() => {
           fetchProfile(session.user.id);
           fetchOrganization(session.user.id);
+          fetchRole(session.user.id);
         }, 0);
       } else {
         setProfile(null);
         setOrganization(null);
+        setIsSuperAdmin(false);
       }
     });
 
@@ -45,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id);
         fetchOrganization(session.user.id);
+        fetchRole(session.user.id);
       }
       setLoading(false);
     });
@@ -79,20 +84,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchRole = async (userId: string) => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'super_admin')
+      .maybeSingle();
+    setIsSuperAdmin(!!data);
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
     setProfile(null);
     setOrganization(null);
+    setIsSuperAdmin(false);
   };
 
-  const trialExpired = organization
+  const trialExpired = organization && !isSuperAdmin
     ? (!organization.is_active || new Date(organization.trial_ends_at) < new Date()) && organization.plan === 'free'
     : false;
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, organization, loading, trialExpired, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, organization, loading, trialExpired, isSuperAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );
