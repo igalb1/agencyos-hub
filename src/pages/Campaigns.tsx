@@ -67,6 +67,22 @@ export default function CampaignsPage() {
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const deleteSelected = () => {
+    setCampaigns(prev => prev.filter(c => !selected.has(c.id)));
+    toast.success(lang === 'he' ? `${selected.size} קמפיינים נמחקו` : `${selected.size} campaigns deleted`);
+    setSelected(new Set());
+  };
 
   const handleCampaignCreated = (campaign: Campaign) => {
     setCampaigns(prev => [...prev, campaign]);
