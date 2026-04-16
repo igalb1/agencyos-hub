@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical, Pencil, Trash2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import NewTaskDialog from '@/components/tasks/NewTaskDialog';
+import EditTaskDialog from '@/components/tasks/EditTaskDialog';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 type TaskPriority = 'High' | 'Medium' | 'Low';
