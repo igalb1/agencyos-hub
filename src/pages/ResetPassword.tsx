@@ -53,7 +53,7 @@ export default function ResetPassword() {
   if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">קישור לא תקין</p>
+        <p className="text-muted-foreground">{checked ? 'קישור לא תקין או שפג תוקפו' : 'טוען...'}</p>
       </div>
     );
   }
