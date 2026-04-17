@@ -71,6 +71,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // 1. Restore session from storage FIRST
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        fetchOrganization(session.user.id);
+        fetchRole(session.user.id);
+      }
+      setLoading(false);
+    });
+
+    // 2. Then listen for subsequent auth changes (sign in/out/token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -87,17 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsSuperAdmin(false);
         setHasAccess(null);
       }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchOrganization(session.user.id);
-        fetchRole(session.user.id);
-      }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
