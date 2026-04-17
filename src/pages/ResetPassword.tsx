@@ -11,6 +11,7 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [checked, setChecked] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
