@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${RESEND_KEY}`,
       },
       body: JSON.stringify({
-        from: "AgencyOS <onboarding@resend.dev>",
+        from: "AgencyOS <invites@agencyos.solutions>",
         to: [email],
         subject: `הוזמנת להצטרף ל-${orgName} ב-AgencyOS`,
         html,
