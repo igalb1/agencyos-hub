@@ -9,36 +9,25 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { mockClients } from '@/lib/mock-data';
-
-type TaskStatus = 'To Do' | 'In Progress' | 'Done';
-type TaskPriority = 'High' | 'Medium' | 'Low';
-
-interface Task {
-  id: string;
-  title: string;
-  clientName: string;
-  assignee: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  due: string;
-}
+import type { UiTask, UiTaskPriority, UiTaskStatus } from '@/hooks/useTasks';
+import type { Client } from '@/lib/types';
 
 interface EditTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task: Task | null;
-  onSave: (task: Task) => void;
+  task: UiTask | null;
+  onSave: (task: UiTask) => void;
   onDelete: (taskId: string) => void;
   lang: 'he' | 'en';
+  clients: Client[];
 }
 
-export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDelete, lang }: EditTaskDialogProps) {
+export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDelete, lang, clients }: EditTaskDialogProps) {
   const [title, setTitle] = useState('');
-  const [clientName, setClientName] = useState('');
+  const [clientId, setClientId] = useState('');
   const [assignee, setAssignee] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('Medium');
-  const [status, setStatus] = useState<TaskStatus>('To Do');
+  const [priority, setPriority] = useState<UiTaskPriority>('Medium');
+  const [status, setStatus] = useState<UiTaskStatus>('To Do');
   const [dueDate, setDueDate] = useState<Date>();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -47,21 +36,23 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDel
   useEffect(() => {
     if (task) {
       setTitle(task.title);
-      setClientName(task.clientName);
+      setClientId(task.clientId ?? '');
       setAssignee(task.assignee);
       setPriority(task.priority);
       setStatus(task.status);
-      setDueDate(new Date(task.due));
+      setDueDate(task.due ? new Date(task.due) : undefined);
       setConfirmDelete(false);
     }
   }, [task]);
 
   const handleSave = () => {
-    if (!task || !title.trim() || !clientName || !assignee.trim() || !dueDate) return;
+    if (!task || !title.trim() || !clientId || !assignee.trim() || !dueDate) return;
+    const client = clients.find(c => c.id === clientId);
     onSave({
       ...task,
       title: title.trim(),
-      clientName,
+      clientId,
+      clientName: client?.name ?? '',
       assignee: assignee.trim(),
       priority,
       status,
@@ -80,7 +71,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDel
     onOpenChange(false);
   };
 
-  const isValid = title.trim() && clientName && assignee.trim() && dueDate;
+  const isValid = title.trim() && clientId && assignee.trim() && dueDate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,10 +86,10 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDel
           </div>
           <div className="space-y-1.5">
             <Label>{isHe ? 'לקוח' : 'Client'}</Label>
-            <Select value={clientName} onValueChange={setClientName}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={clientId} onValueChange={setClientId}>
+              <SelectTrigger><SelectValue placeholder={isHe ? 'בחר לקוח' : 'Select client'} /></SelectTrigger>
               <SelectContent>
-                {mockClients.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -109,7 +100,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDel
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{isHe ? 'עדיפות' : 'Priority'}</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <Select value={priority} onValueChange={(v) => setPriority(v as UiTaskPriority)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="High">{isHe ? 'גבוהה' : 'High'}</SelectItem>
@@ -120,7 +111,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSave, onDel
             </div>
             <div className="space-y-1.5">
               <Label>{isHe ? 'סטטוס' : 'Status'}</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+              <Select value={status} onValueChange={(v) => setStatus(v as UiTaskStatus)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="To Do">{isHe ? 'לביצוע' : 'To Do'}</SelectItem>

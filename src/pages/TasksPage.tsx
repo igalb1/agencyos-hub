@@ -1,5 +1,4 @@
 import { useApp } from '@/contexts/AppContext';
-import { mockTasks } from '@/lib/mock-data';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,56 +10,61 @@ import { CheckCircle2, Circle, Clock, Plus, Search, GripVertical, Pencil, Trash2
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import NewTaskDialog from '@/components/tasks/NewTaskDialog';
 import EditTaskDialog from '@/components/tasks/EditTaskDialog';
+import { useOrgData } from '@/hooks/useOrgData';
+import { useTasks, type UiTask, type UiTaskStatus, type UiTaskPriority } from '@/hooks/useTasks';
+import { toast } from 'sonner';
 
-type TaskStatus = 'To Do' | 'In Progress' | 'Done';
-type TaskPriority = 'High' | 'Medium' | 'Low';
 type ViewMode = 'board' | 'list';
 
-interface Task {
-  id: string;
-  title: string;
-  clientName: string;
-  assignee: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  due: string;
-}
-
-const priorityConfig: Record<TaskPriority, { color: string; label: Record<string, string> }> = {
+const priorityConfig: Record<UiTaskPriority, { color: string; label: Record<string, string> }> = {
   High: { color: 'bg-destructive text-destructive-foreground', label: { he: 'גבוהה', en: 'High' } },
   Medium: { color: 'bg-amber-500 text-white', label: { he: 'בינונית', en: 'Medium' } },
   Low: { color: 'bg-muted text-muted-foreground', label: { he: 'נמוכה', en: 'Low' } },
 };
 
-const statusConfig: Record<TaskStatus, { icon: typeof Circle; color: string; label: Record<string, string> }> = {
+const statusConfig: Record<UiTaskStatus, { icon: typeof Circle; color: string; label: Record<string, string> }> = {
   'To Do': { icon: Circle, color: 'text-muted-foreground', label: { he: 'לביצוע', en: 'To Do' } },
   'In Progress': { icon: Clock, color: 'text-amber-500', label: { he: 'בתהליך', en: 'In Progress' } },
   'Done': { icon: CheckCircle2, color: 'text-emerald-500', label: { he: 'הושלם', en: 'Done' } },
 };
 
-const columns: TaskStatus[] = ['To Do', 'In Progress', 'Done'];
+const columns: UiTaskStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function TasksPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const { clients } = useOrgData();
+  const clientLookup = useMemo(() => {
+    const m = new Map<string, string>();
+    clients.forEach(c => m.set(c.id, c.name));
+    return m;
+  }, [clients]);
+  const { tasks, upsertTask, updateStatus, deleteTask } = useTasks(clientLookup);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [newTaskOpen, setNewTaskOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<UiTask | null>(null);
 
-  const addTask = useCallback((task: Task) => {
-    setTasks(prev => [task, ...prev]);
-  }, []);
+  const handleAdd = useCallback(async (task: UiTask) => {
+    try { await upsertTask(task); toast.success(lang === 'he' ? 'המשימה נוספה' : 'Task added'); }
+    catch (e: any) { toast.error(e?.message || (lang === 'he' ? 'שגיאה' : 'Error')); }
+  }, [upsertTask, lang]);
 
-  const updateTask = useCallback((updated: Task) => {
-    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
-  }, []);
+  const handleUpdate = useCallback(async (task: UiTask) => {
+    try { await upsertTask(task); toast.success(lang === 'he' ? 'המשימה עודכנה' : 'Task updated'); }
+    catch (e: any) { toast.error(e?.message || (lang === 'he' ? 'שגיאה' : 'Error')); }
+  }, [upsertTask, lang]);
 
-  const deleteTask = useCallback((taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-  }, []);
+  const handleDelete = useCallback(async (id: string) => {
+    try { await deleteTask(id); toast.success(lang === 'he' ? 'המשימה נמחקה' : 'Task deleted'); }
+    catch (e: any) { toast.error(e?.message || (lang === 'he' ? 'שגיאה' : 'Error')); }
+  }, [deleteTask, lang]);
+
+  const moveTask = useCallback(async (taskId: string, newStatus: UiTaskStatus) => {
+    try { await updateStatus(taskId, newStatus); }
+    catch (e: any) { toast.error(e?.message || (lang === 'he' ? 'שגיאה' : 'Error')); }
+  }, [updateStatus, lang]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -74,40 +78,25 @@ export default function TasksPage() {
   }, [tasks, searchQuery, filterPriority]);
 
   const tasksByStatus = useMemo(() => {
-    const grouped: Record<TaskStatus, Task[]> = { 'To Do': [], 'In Progress': [], Done: [] };
+    const grouped: Record<UiTaskStatus, UiTask[]> = { 'To Do': [], 'In Progress': [], Done: [] };
     filteredTasks.forEach(t => grouped[t.status]?.push(t));
     return grouped;
   }, [filteredTasks]);
 
-  const moveTask = useCallback((taskId: string, newStatus: TaskStatus, newIndex?: number) => {
-    setTasks(prev => {
-      const updated = prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t);
-      if (newIndex !== undefined) {
-        const task = updated.find(t => t.id === taskId)!;
-        const without = updated.filter(t => t.id !== taskId);
-        const inColumn = without.filter(t => t.status === newStatus);
-        const others = without.filter(t => t.status !== newStatus);
-        inColumn.splice(newIndex, 0, task);
-        return [...others, ...inColumn];
-      }
-      return updated;
-    });
-  }, []);
-
   const onDragEnd = useCallback((result: DropResult) => {
     const { draggableId, destination } = result;
     if (!destination) return;
-    moveTask(draggableId, destination.droppableId as TaskStatus, destination.index);
+    moveTask(draggableId, destination.droppableId as UiTaskStatus);
   }, [moveTask]);
 
   const stats = useMemo(() => ({
     total: tasks.length,
     done: tasks.filter(t => t.status === 'Done').length,
-    overdue: tasks.filter(t => new Date(t.due) < new Date() && t.status !== 'Done').length,
+    overdue: tasks.filter(t => t.due && new Date(t.due) < new Date() && t.status !== 'Done').length,
   }), [tasks]);
 
-  const TaskCard = ({ task }: { task: Task }) => {
-    const isOverdue = new Date(task.due) < new Date() && task.status !== 'Done';
+  const TaskCard = ({ task }: { task: UiTask }) => {
+    const isOverdue = !!task.due && new Date(task.due) < new Date() && task.status !== 'Done';
 
     return (
       <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all group">
@@ -122,7 +111,7 @@ export default function TasksPage() {
               <button onClick={(e) => { e.stopPropagation(); setEditingTask(task); }} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                 <Pencil size={12} />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                 <Trash2 size={12} />
               </button>
             </div>
@@ -132,13 +121,17 @@ export default function TasksPage() {
               <Badge className={cn("text-[10px] px-1.5 py-0 h-4", priorityConfig[task.priority].color)}>
                 {priorityConfig[task.priority].label[lang]}
               </Badge>
-              <span className={cn("text-[10px]", isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground')}>
-                {new Date(task.due).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })}
-              </span>
+              {task.due && (
+                <span className={cn("text-[10px]", isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground')}>
+                  {new Date(task.due).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })}
+                </span>
+              )}
             </div>
-            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-medium text-primary">
-              {task.assignee.charAt(0)}
-            </div>
+            {task.assignee && (
+              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-medium text-primary">
+                {task.assignee.charAt(0)}
+              </div>
+            )}
           </div>
           {viewMode === 'board' && (
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -276,7 +269,7 @@ export default function TasksPage() {
             <div className="divide-y divide-border/50">
               {filteredTasks.map(task => {
                 const StatusIcon = statusConfig[task.status].icon;
-                const isOverdue = new Date(task.due) < new Date() && task.status !== 'Done';
+                const isOverdue = !!task.due && new Date(task.due) < new Date() && task.status !== 'Done';
                 return (
                   <div key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
                     <StatusIcon size={18} className={statusConfig[task.status].color} />
@@ -287,21 +280,25 @@ export default function TasksPage() {
                     <Badge className={cn("text-[10px] px-1.5 py-0 h-4", priorityConfig[task.priority].color)}>
                       {priorityConfig[task.priority].label[lang]}
                     </Badge>
-                    <span className={cn("text-xs", isOverdue ? 'text-destructive' : 'text-muted-foreground')}>
-                      {new Date(task.due).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })}
-                    </span>
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-medium text-primary">
-                      {task.assignee.charAt(0)}
-                    </div>
+                    {task.due && (
+                      <span className={cn("text-xs", isOverdue ? 'text-destructive' : 'text-muted-foreground')}>
+                        {new Date(task.due).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
+                    {task.assignee && (
+                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-medium text-primary">
+                        {task.assignee.charAt(0)}
+                      </div>
+                    )}
                     <div className="flex gap-1 shrink-0">
                       <button onClick={() => setEditingTask(task)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                         <Pencil size={14} />
                       </button>
-                      <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                      <button onClick={() => handleDelete(task.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                         <Trash2 size={14} />
                       </button>
                     </div>
-                    <Select value={task.status} onValueChange={(v) => moveTask(task.id, v as TaskStatus)}>
+                    <Select value={task.status} onValueChange={(v) => moveTask(task.id, v as UiTaskStatus)}>
                       <SelectTrigger className="w-[100px] h-7 text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -318,8 +315,8 @@ export default function TasksPage() {
           </CardContent>
         </Card>
       )}
-      <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} onAdd={addTask} lang={lang} />
-      <EditTaskDialog open={!!editingTask} onOpenChange={(o) => !o && setEditingTask(null)} task={editingTask} onSave={updateTask} onDelete={deleteTask} lang={lang} />
+      <NewTaskDialog open={newTaskOpen} onOpenChange={setNewTaskOpen} onAdd={handleAdd} lang={lang} clients={clients} />
+      <EditTaskDialog open={!!editingTask} onOpenChange={(o) => !o && setEditingTask(null)} task={editingTask} onSave={handleUpdate} onDelete={handleDelete} lang={lang} clients={clients} />
     </div>
   );
 }

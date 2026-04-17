@@ -9,50 +9,42 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { mockClients } from '@/lib/mock-data';
-
-type TaskPriority = 'High' | 'Medium' | 'Low';
-
-interface NewTaskData {
-  id: string;
-  title: string;
-  clientName: string;
-  assignee: string;
-  status: 'To Do';
-  priority: TaskPriority;
-  due: string;
-}
+import type { UiTask, UiTaskPriority } from '@/hooks/useTasks';
+import type { Client } from '@/lib/types';
 
 interface NewTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (task: NewTaskData) => void;
+  onAdd: (task: UiTask) => void;
   lang: 'he' | 'en';
+  clients: Client[];
 }
 
-export default function NewTaskDialog({ open, onOpenChange, onAdd, lang }: NewTaskDialogProps) {
+export default function NewTaskDialog({ open, onOpenChange, onAdd, lang, clients }: NewTaskDialogProps) {
   const [title, setTitle] = useState('');
-  const [clientName, setClientName] = useState('');
+  const [clientId, setClientId] = useState('');
   const [assignee, setAssignee] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('Medium');
+  const [priority, setPriority] = useState<UiTaskPriority>('Medium');
   const [dueDate, setDueDate] = useState<Date>();
 
   const isHe = lang === 'he';
 
   const reset = () => {
     setTitle('');
-    setClientName('');
+    setClientId('');
     setAssignee('');
     setPriority('Medium');
     setDueDate(undefined);
   };
 
   const handleSubmit = () => {
-    if (!title.trim() || !clientName || !assignee.trim() || !dueDate) return;
+    if (!title.trim() || !clientId || !assignee.trim() || !dueDate) return;
+    const client = clients.find(c => c.id === clientId);
     onAdd({
-      id: crypto.randomUUID(),
+      id: '',
       title: title.trim(),
-      clientName,
+      clientId,
+      clientName: client?.name ?? '',
       assignee: assignee.trim(),
       status: 'To Do',
       priority,
@@ -62,7 +54,7 @@ export default function NewTaskDialog({ open, onOpenChange, onAdd, lang }: NewTa
     onOpenChange(false);
   };
 
-  const isValid = title.trim() && clientName && assignee.trim() && dueDate;
+  const isValid = title.trim() && clientId && assignee.trim() && dueDate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -71,7 +63,6 @@ export default function NewTaskDialog({ open, onOpenChange, onAdd, lang }: NewTa
           <DialogTitle>{isHe ? 'משימה חדשה' : 'New Task'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          {/* Title */}
           <div className="space-y-1.5">
             <Label>{isHe ? 'שם המשימה' : 'Task Name'}</Label>
             <Input
@@ -82,22 +73,20 @@ export default function NewTaskDialog({ open, onOpenChange, onAdd, lang }: NewTa
             />
           </div>
 
-          {/* Client */}
           <div className="space-y-1.5">
             <Label>{isHe ? 'לקוח' : 'Client'}</Label>
-            <Select value={clientName} onValueChange={setClientName}>
+            <Select value={clientId} onValueChange={setClientId}>
               <SelectTrigger>
                 <SelectValue placeholder={isHe ? 'בחר לקוח' : 'Select client'} />
               </SelectTrigger>
               <SelectContent>
-                {mockClients.map(c => (
-                  <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                {clients.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Assignee */}
           <div className="space-y-1.5">
             <Label>{isHe ? 'אחראי' : 'Assignee'}</Label>
             <Input
@@ -108,10 +97,9 @@ export default function NewTaskDialog({ open, onOpenChange, onAdd, lang }: NewTa
             />
           </div>
 
-          {/* Priority */}
           <div className="space-y-1.5">
             <Label>{isHe ? 'עדיפות' : 'Priority'}</Label>
-            <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+            <Select value={priority} onValueChange={(v) => setPriority(v as UiTaskPriority)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -123,7 +111,6 @@ export default function NewTaskDialog({ open, onOpenChange, onAdd, lang }: NewTa
             </Select>
           </div>
 
-          {/* Due Date */}
           <div className="space-y-1.5">
             <Label>{isHe ? 'תאריך יעד' : 'Due Date'}</Label>
             <Popover>
