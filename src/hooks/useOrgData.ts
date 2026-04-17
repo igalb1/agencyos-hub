@@ -210,7 +210,8 @@ export function useOrgData() {
       projectId: 'project_id',
     };
     const dbField = dbFieldMap[field] ?? field;
-    const { error } = await supabase.from('campaigns').update({ [dbField]: value }).eq('id', id);
+    const update: Record<string, unknown> = { [dbField]: value };
+    const { error } = await supabase.from('campaigns').update(update as never).eq('id', id);
     if (error) throw error;
     await fetchAll();
   }, [fetchAll]);
