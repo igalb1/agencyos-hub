@@ -149,6 +149,53 @@ export type Database = {
           },
         ]
       }
+      organization_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          role?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -535,6 +582,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invitation: { Args: { _token: string }; Returns: Json }
       get_effective_plan: {
         Args: { _user_id: string }
         Returns: {
@@ -570,10 +618,39 @@ export type Database = {
             }[]
           }
       get_integrations_encryption_key: { Args: never; Returns: string }
+      get_invitation_by_token: {
+        Args: { _token: string }
+        Returns: {
+          accepted_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by_name: string
+          organization_id: string
+          organization_name: string
+          role: string
+        }[]
+      }
+      get_org_members_with_details: {
+        Args: { _org_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          joined_at: string
+          member_id: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_user_email: { Args: { _user_id: string }; Returns: string }
       get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
+        Returns: boolean
+      }
+      is_org_admin: {
+        Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
       is_org_member: {
