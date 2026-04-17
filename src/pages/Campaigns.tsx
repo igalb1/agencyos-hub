@@ -61,9 +61,9 @@ export default function CampaignsPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
 
-  const { campaigns: dbCampaigns, loaded } = useOrgData();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  useEffect(() => { if (loaded) setCampaigns(dbCampaigns); }, [loaded, dbCampaigns]);
+  const { campaigns: dbCampaigns, clients: dbClients, loaded, upsertCampaign, updateCampaignField, deleteCampaigns } = useOrgData();
+  const campaigns = dbCampaigns;
+  void loaded;
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
@@ -81,19 +81,33 @@ export default function CampaignsPage() {
     });
   };
 
-  const deleteSelected = () => {
-    setCampaigns(prev => prev.filter(c => !selected.has(c.id)));
-    toast.success(lang === 'he' ? `${selected.size} קמפיינים נמחקו` : `${selected.size} campaigns deleted`);
-    setSelected(new Set());
+  const deleteSelected = async () => {
+    const ids = Array.from(selected);
+    try {
+      await deleteCampaigns(ids);
+      toast.success(lang === 'he' ? `${ids.length} קמפיינים נמחקו` : `${ids.length} campaigns deleted`);
+      setSelected(new Set());
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה במחיקה' : 'Error deleting'));
+    }
   };
 
-  const handleCampaignCreated = (campaign: Campaign) => {
-    setCampaigns(prev => [...prev, campaign]);
+  const handleCampaignCreated = async (campaign: Campaign) => {
+    try {
+      await upsertCampaign(campaign);
+      // toast already shown by dialog; refetch happens inside upsertCampaign
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה בשמירת קמפיין' : 'Error saving campaign'));
+    }
   };
 
-  const updateCampaign = (id: string, field: keyof Campaign, value: number | string) => {
-    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
-    toast.success(lang === 'he' ? 'הערך עודכן' : 'Value updated');
+  const updateCampaign = async (id: string, field: keyof Campaign, value: number | string) => {
+    try {
+      await updateCampaignField(id, field as string, value);
+      toast.success(lang === 'he' ? 'הערך עודכן' : 'Value updated');
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה בעדכון' : 'Error updating'));
+    }
   };
 
   const filtered = useMemo(() => {

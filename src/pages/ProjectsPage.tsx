@@ -18,9 +18,8 @@ const statusConfig = {
 
 export default function ProjectsPage() {
   const { lang } = useApp();
-  const { projects: dbProjects, loaded } = useOrgData();
-  const [projects, setProjects] = useState<Project[]>([]);
-  useEffect(() => { if (loaded) setProjects(dbProjects); }, [loaded, dbProjects]);
+  const { projects: dbProjects, clients: dbClients, loaded, upsertProject, deleteProject } = useOrgData();
+  const projects = dbProjects;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'planning' | 'completed'>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,29 +35,36 @@ export default function ProjectsPage() {
   // Group by client
   const grouped = filtered.reduce<Record<string, { clientName: string; clientColor: string; projects: Project[] }>>((acc, p) => {
     if (!acc[p.clientId]) {
-      const client = mockClients.find(c => c.id === p.clientId);
-      acc[p.clientId] = { clientName: p.clientName, clientColor: client?.color || '#00D4FF', projects: [] };
+      const client = dbClients.find(c => c.id === p.clientId);
+      acc[p.clientId] = { clientName: p.clientName || client?.name || '—', clientColor: client?.color || '#00D4FF', projects: [] };
     }
     acc[p.clientId].projects.push(p);
     return acc;
   }, {});
 
-  const handleSave = (project: Project) => {
-    if (editingProject) {
-      setProjects(prev => prev.map(p => p.id === project.id ? project : p));
-      toast.success(lang === 'he' ? 'הפרויקט עודכן בהצלחה' : 'Project updated successfully');
-    } else {
-      setProjects(prev => [...prev, { ...project, id: crypto.randomUUID() }]);
-      toast.success(lang === 'he' ? 'הפרויקט נוסף בהצלחה' : 'Project added successfully');
+  const handleSave = async (project: Project) => {
+    try {
+      await upsertProject(project);
+      toast.success(
+        editingProject
+          ? (lang === 'he' ? 'הפרויקט עודכן בהצלחה' : 'Project updated successfully')
+          : (lang === 'he' ? 'הפרויקט נוסף בהצלחה' : 'Project added successfully')
+      );
+      setModalOpen(false);
+      setEditingProject(null);
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה בשמירת פרויקט' : 'Error saving project'));
     }
-    setModalOpen(false);
-    setEditingProject(null);
   };
 
-  const handleDelete = (id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
-    setDeleteConfirm(null);
-    toast.success(lang === 'he' ? 'הפרויקט נמחק' : 'Project deleted');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProject(id);
+      setDeleteConfirm(null);
+      toast.success(lang === 'he' ? 'הפרויקט נמחק' : 'Project deleted');
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה במחיקה' : 'Error deleting'));
+    }
   };
 
   const totalBudget = filtered.reduce((s, p) => s + p.budget, 0);
