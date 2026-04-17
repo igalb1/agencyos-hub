@@ -63,7 +63,6 @@ function ProtectedRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/billing" element={<BillingPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
-        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
@@ -73,7 +72,7 @@ function ProtectedRoutes() {
 function AuthRoute() {
   const { session, loading } = useAuth();
   if (loading) return null;
-  if (session) return <Navigate to="/" replace />;
+  if (session) return <Navigate to="/dashboard" replace />;
   return <AuthPage />;
 }
 
@@ -86,9 +85,33 @@ const App = () => (
         <AppProvider>
           <BrowserRouter>
             <Routes>
+              {/* Public marketing & legal pages */}
+              <Route path="/" element={<Index />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/refund" element={<RefundPage />} />
+
+              {/* Auth */}
               <Route path="/auth" element={<AuthRoute />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/*" element={<ProtectedRoutes />} />
+
+              {/* Authenticated app — everything else */}
+              <Route path="/dashboard/*" element={<ProtectedRoutes />} />
+              <Route path="/clients/*" element={<ProtectedRoutes />} />
+              <Route path="/projects/*" element={<ProtectedRoutes />} />
+              <Route path="/campaigns/*" element={<ProtectedRoutes />} />
+              <Route path="/ads/*" element={<ProtectedRoutes />} />
+              <Route path="/admin/*" element={<ProtectedRoutes />} />
+              <Route path="/timeline/*" element={<ProtectedRoutes />} />
+              <Route path="/tasks/*" element={<ProtectedRoutes />} />
+              <Route path="/performance/*" element={<ProtectedRoutes />} />
+              <Route path="/integrations/*" element={<ProtectedRoutes />} />
+              <Route path="/reports/*" element={<ProtectedRoutes />} />
+              <Route path="/settings/*" element={<ProtectedRoutes />} />
+              <Route path="/calendar/*" element={<ProtectedRoutes />} />
+
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </AppProvider>
