@@ -71,8 +71,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // 1. Restore session from storage FIRST
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Enforce "Remember me": if user opted out and this is a fresh browser session
+    // (sessionStorage is empty after browser close), sign them out before restoring.
+    const rememberMe = localStorage.getItem('agencyos_remember_me');
+    const sessionAlive = sessionStorage.getItem('agencyos_session_alive');
+    const shouldClearSession = rememberMe === 'false' && !sessionAlive;
+    sessionStorage.setItem('agencyos_session_alive', '1');
+
+    const init = async () => {
+      if (shouldClearSession) {
+        await supabase.auth.signOut();
+      }
+      // 1. Restore session from storage FIRST
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
