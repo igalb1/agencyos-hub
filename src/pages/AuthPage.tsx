@@ -17,6 +17,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -29,6 +30,12 @@ export default function AuthPage() {
     if (error) {
       toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
     } else {
+      // Persist user choice. If unchecked, AuthContext will clear session on next browser open.
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, 'true');
+      } else {
+        localStorage.setItem(REMEMBER_ME_KEY, 'false');
+      }
       navigate('/dashboard');
     }
   };
