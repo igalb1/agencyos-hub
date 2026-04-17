@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import PublicLayout from "@/components/public/PublicLayout";
-import { Check, BarChart3, Users, Megaphone, CalendarDays, FileText, Plug } from "lucide-react";
+import { Check, BarChart3, Users, Megaphone, CalendarDays, FileText, Plug, LogIn } from "lucide-react";
 
 const features = [
   { icon: Users, title: "Client management", desc: "Centralize every client, contact, budget, and KPI in one workspace." },
@@ -26,12 +26,24 @@ export default function Index() {
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
           AgencyOS replaces scattered dashboards, spreadsheets, and project tools with a single platform built for digital marketing agencies.
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-3 mb-8">
           <Link to="/auth" className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
             Start free trial
           </Link>
           <Link to="/pricing" className="px-6 py-3 rounded-lg border border-border font-medium hover:bg-muted transition-colors">
             View pricing
+          </Link>
+        </div>
+
+        {/* Existing customers — large sign in CTA */}
+        <div className="flex flex-col items-center gap-3 pt-6 border-t border-border max-w-md mx-auto">
+          <p className="text-sm text-muted-foreground">כבר יש לך חשבון בתשלום?</p>
+          <Link
+            to="/auth"
+            className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-lg font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all duration-200 w-full"
+          >
+            <LogIn size={22} />
+            התחבר למערכת
           </Link>
         </div>
       </section>
