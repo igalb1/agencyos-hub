@@ -27,7 +27,7 @@ export default function AuthPage() {
     if (error) {
       toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
     } else {
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 

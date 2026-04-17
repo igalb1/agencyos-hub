@@ -46,7 +46,7 @@ export default function ResetPassword() {
       toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'הסיסמה עודכנה בהצלחה!' });
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
