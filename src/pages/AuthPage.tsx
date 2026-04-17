@@ -39,11 +39,12 @@ export default function AuthPage() {
     }
     setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Org + membership are created atomically by the DB trigger using user_metadata
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName, org_name: orgName },
         emailRedirectTo: window.location.origin,
       },
     });
@@ -52,23 +53,6 @@ export default function AuthPage() {
       setLoading(false);
       toast({ title: 'שגיאה', description: authError.message, variant: 'destructive' });
       return;
-    }
-
-    if (authData.user) {
-      // Create organization
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ name: orgName })
-        .select('id')
-        .single();
-
-      if (org && !orgError) {
-        await supabase.from('organization_members').insert({
-          organization_id: org.id,
-          user_id: authData.user.id,
-          role: 'owner',
-        });
-      }
     }
 
     setLoading(false);
