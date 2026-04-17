@@ -43,7 +43,7 @@ export default function Index() {
             className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-lg font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 transition-all duration-200 w-full"
           >
             <LogIn size={22} />
-            התחבר למערכת
+            התחברות למערכת
           </Link>
         </div>
       </section>
