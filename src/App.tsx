@@ -23,6 +23,11 @@ import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
 import TrialExpired from "@/pages/TrialExpired";
+import Index from "@/pages/Index";
+import PricingPage from "@/pages/PricingPage";
+import TermsPage from "@/pages/TermsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import RefundPage from "@/pages/RefundPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -44,7 +49,7 @@ function ProtectedRoutes() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
@@ -58,7 +63,6 @@ function ProtectedRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/billing" element={<BillingPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
-        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
@@ -68,7 +72,7 @@ function ProtectedRoutes() {
 function AuthRoute() {
   const { session, loading } = useAuth();
   if (loading) return null;
-  if (session) return <Navigate to="/" replace />;
+  if (session) return <Navigate to="/dashboard" replace />;
   return <AuthPage />;
 }
 
@@ -81,8 +85,18 @@ const App = () => (
         <AppProvider>
           <BrowserRouter>
             <Routes>
+              {/* Public marketing & legal pages */}
+              <Route path="/" element={<Index />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/refund" element={<RefundPage />} />
+
+              {/* Auth */}
               <Route path="/auth" element={<AuthRoute />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+
+              {/* Authenticated app */}
               <Route path="/*" element={<ProtectedRoutes />} />
             </Routes>
           </BrowserRouter>

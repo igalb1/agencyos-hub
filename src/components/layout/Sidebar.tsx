@@ -10,7 +10,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const navItems = [
-  { key: 'dashboard' as const, icon: LayoutDashboard, path: '/' },
+  { key: 'dashboard' as const, icon: LayoutDashboard, path: '/dashboard' },
   { key: 'clients' as const, icon: Users, path: '/clients' },
   { key: 'projects' as const, icon: FolderKanban, path: '/projects' },
   { key: 'campaigns' as const, icon: Megaphone, path: '/campaigns' },

@@ -84,7 +84,7 @@ export default function AdminPage() {
     setOrgs(prev => prev.filter(o => o.id !== id));
   };
 
-  if (!isSuperAdmin) return <Navigate to="/" replace />;
+  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
 
   const planColors: Record<string, string> = {
     free: 'bg-muted text-muted-foreground',
