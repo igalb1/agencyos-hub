@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
-import { mockProjects, mockClients } from '@/lib/mock-data';
+import { mockClients } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Project } from '@/lib/types';
 import { fmtCurrency } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,9 @@ const statusConfig = {
 
 export default function ProjectsPage() {
   const { lang } = useApp();
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const { projects: dbProjects, loaded } = useOrgData();
+  const [projects, setProjects] = useState<Project[]>([]);
+  useEffect(() => { if (loaded) setProjects(dbProjects); }, [loaded, dbProjects]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'planning' | 'completed'>('all');
   const [modalOpen, setModalOpen] = useState(false);

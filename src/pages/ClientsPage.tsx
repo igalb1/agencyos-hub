@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
-import { mockClients } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Client } from '@/lib/types';
 import { fmtCurrency, fmtNum } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,9 @@ export default function ClientsPage() {
   const { lang } = useApp();
   const { plan } = useEffectivePlan();
   const navigate = useNavigate();
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const { clients: dbClients, loaded } = useOrgData();
+  const [clients, setClients] = useState<Client[]>([]);
+  useEffect(() => { if (loaded) setClients(dbClients); }, [loaded, dbClients]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
   const [modalOpen, setModalOpen] = useState(false);
