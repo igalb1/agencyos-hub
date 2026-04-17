@@ -167,6 +167,17 @@ export default function AuthPage() {
               <button onClick={() => setMode('login')} className="text-primary hover:underline">חזרה להתחברות</button>
             )}
           </div>
+
+          {/* Legal footer */}
+          <div className="pt-4 border-t border-border text-center text-xs text-muted-foreground space-x-3 rtl:space-x-reverse">
+            <a href="https://agencyos.solutions/terms" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
+              תנאי שימוש
+            </a>
+            <span>·</span>
+            <a href="https://agencyos.solutions/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
+              מדיניות פרטיות
+            </a>
+          </div>
         </div>
       </div>
     </div>
