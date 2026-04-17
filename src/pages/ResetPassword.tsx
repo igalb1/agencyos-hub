@@ -15,10 +15,25 @@ export default function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Listen for PASSWORD_RECOVERY event fired by Supabase when user lands from recovery link
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && window.location.hash.includes('type=recovery'))) {
+        setReady(true);
+      }
+    });
+
+    // Also check existing session (in case event already fired before mount)
     const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
+    if (hash.includes('type=recovery') || hash.includes('access_token')) {
       setReady(true);
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) setReady(true);
+        else setChecked(true);
+      });
     }
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
