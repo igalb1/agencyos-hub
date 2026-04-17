@@ -4,10 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 type Mode = 'login' | 'signup' | 'reset';
+const REMEMBER_ME_KEY = 'agencyos_remember_me';
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login');
@@ -15,6 +17,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -27,6 +30,12 @@ export default function AuthPage() {
     if (error) {
       toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
     } else {
+      // Persist user choice. If unchecked, AuthContext will clear session on next browser open.
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, 'true');
+      } else {
+        localStorage.setItem(REMEMBER_ME_KEY, 'false');
+      }
       navigate('/dashboard');
     }
   };
@@ -119,6 +128,15 @@ export default function AuthPage() {
               <div className="space-y-2">
                 <Label htmlFor="password">סיסמה</Label>
                 <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required dir="ltr" />
+              </div>
+            )}
+
+            {mode === 'login' && (
+              <div className="flex items-center gap-2">
+                <Checkbox id="remember" checked={rememberMe} onCheckedChange={(v) => setRememberMe(v === true)} />
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer select-none">
+                  זכור אותי במכשיר זה
+                </Label>
               </div>
             )}
 
