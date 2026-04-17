@@ -138,8 +138,8 @@ export default function AuthPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" size="lg" className="w-full h-14 text-lg font-semibold" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
               {mode === 'login' && 'התחבר'}
               {mode === 'signup' && 'הרשמה'}
               {mode === 'reset' && 'שלח קישור איפוס'}
