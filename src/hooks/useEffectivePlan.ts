@@ -62,7 +62,7 @@ export function useEffectivePlan(): EffectivePlan {
   useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel(`sub-${user.id}`)
+      .channel(`sub-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
@@ -72,7 +72,7 @@ export function useEffectivePlan(): EffectivePlan {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchPlan]);
+  }, [user?.id]);
 
   return { ...data, loading, refresh: fetchPlan };
 }
