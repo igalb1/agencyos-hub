@@ -18,9 +18,9 @@ export default function ClientsPage() {
   const { lang } = useApp();
   const { plan } = useEffectivePlan();
   const navigate = useNavigate();
-  const { clients: dbClients, loaded } = useOrgData();
-  const [clients, setClients] = useState<Client[]>([]);
-  useEffect(() => { if (loaded) setClients(dbClients); }, [loaded, dbClients]);
+  const { clients: dbClients, loaded, upsertClient, deleteClient } = useOrgData();
+  const clients = dbClients;
+  // local state removed — DB is the source of truth
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,22 +47,29 @@ export default function ClientsPage() {
     return true;
   });
 
-  const handleSave = (client: Client) => {
-    if (editingClient) {
-      setClients(prev => prev.map(c => c.id === client.id ? client : c));
-      toast.success(lang === 'he' ? 'הלקוח עודכן בהצלחה' : 'Client updated successfully');
-    } else {
-      setClients(prev => [...prev, { ...client, id: crypto.randomUUID() }]);
-      toast.success(lang === 'he' ? 'הלקוח נוסף בהצלחה' : 'Client added successfully');
+  const handleSave = async (client: Client) => {
+    try {
+      await upsertClient(client);
+      toast.success(
+        editingClient
+          ? (lang === 'he' ? 'הלקוח עודכן בהצלחה' : 'Client updated successfully')
+          : (lang === 'he' ? 'הלקוח נוסף בהצלחה' : 'Client added successfully')
+      );
+      setModalOpen(false);
+      setEditingClient(null);
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה בשמירת הלקוח' : 'Error saving client'));
     }
-    setModalOpen(false);
-    setEditingClient(null);
   };
 
-  const handleDelete = (id: string) => {
-    setClients(prev => prev.filter(c => c.id !== id));
-    setDeleteConfirm(null);
-    toast.success(lang === 'he' ? 'הלקוח נמחק' : 'Client deleted');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteClient(id);
+      setDeleteConfirm(null);
+      toast.success(lang === 'he' ? 'הלקוח נמחק' : 'Client deleted');
+    } catch (e: any) {
+      toast.error(e?.message || (lang === 'he' ? 'שגיאה במחיקה' : 'Error deleting'));
+    }
   };
 
   const openEdit = (client: Client) => {

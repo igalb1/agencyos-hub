@@ -103,5 +103,131 @@ export function useOrgData() {
     return () => window.removeEventListener('orgdata:refresh', handler);
   }, [fetchAll]);
 
-  return { clients, projects, campaigns, loaded, refetch: fetchAll };
+  // ====== Mutations ======
+  const orgId = organization?.id;
+
+  // Clients
+  const upsertClient = useCallback(async (client: Client): Promise<Client | null> => {
+    if (!orgId) return null;
+    const payload = {
+      organization_id: orgId,
+      name: client.name,
+      industry: client.industry || null,
+      color: client.color || null,
+      budget: client.budget,
+      spend: client.spend,
+      leads: client.leads,
+      status: client.status,
+    };
+    if (client.id) {
+      const { error } = await supabase.from('clients').update(payload).eq('id', client.id);
+      if (error) throw error;
+      await fetchAll();
+      return client;
+    }
+    const { data, error } = await supabase.from('clients').insert(payload).select('id').single();
+    if (error) throw error;
+    await fetchAll();
+    return { ...client, id: data!.id };
+  }, [orgId, fetchAll]);
+
+  const deleteClient = useCallback(async (id: string) => {
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  // Projects
+  const upsertProject = useCallback(async (project: Project): Promise<Project | null> => {
+    if (!orgId) return null;
+    const payload = {
+      organization_id: orgId,
+      client_id: project.clientId || null,
+      name: project.name,
+      status: project.status,
+      budget: project.budget,
+      spend: project.spend,
+      start_date: project.startDate || null,
+      end_date: project.endDate || null,
+    };
+    if (project.id) {
+      const { error } = await supabase.from('projects').update(payload).eq('id', project.id);
+      if (error) throw error;
+      await fetchAll();
+      return project;
+    }
+    const { data, error } = await supabase.from('projects').insert(payload).select('id').single();
+    if (error) throw error;
+    await fetchAll();
+    return { ...project, id: data!.id };
+  }, [orgId, fetchAll]);
+
+  const deleteProject = useCallback(async (id: string) => {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  // Campaigns
+  const upsertCampaign = useCallback(async (campaign: Campaign): Promise<Campaign | null> => {
+    if (!orgId) return null;
+    const payload = {
+      organization_id: orgId,
+      client_id: campaign.clientId || null,
+      project_id: campaign.projectId || null,
+      name: campaign.name,
+      platform: campaign.platform,
+      status: campaign.status,
+      budget: campaign.budget,
+      spend: campaign.spend,
+      leads: campaign.leads,
+      impressions: campaign.impressions,
+      clicks: campaign.clicks,
+      conversions: campaign.conversions,
+      start_date: campaign.startDate || null,
+      end_date: campaign.endDate || null,
+      budget_alert_threshold: campaign.budgetAlertThreshold,
+    };
+    const isExisting = campaign.id && !campaign.id.startsWith('new-');
+    if (isExisting) {
+      const { error } = await supabase.from('campaigns').update(payload).eq('id', campaign.id);
+      if (error) throw error;
+      await fetchAll();
+      return campaign;
+    }
+    const { data, error } = await supabase.from('campaigns').insert(payload).select('id').single();
+    if (error) throw error;
+    await fetchAll();
+    return { ...campaign, id: data!.id };
+  }, [orgId, fetchAll]);
+
+  const updateCampaignField = useCallback(async (id: string, field: string, value: number | string) => {
+    const dbFieldMap: Record<string, string> = {
+      startDate: 'start_date',
+      endDate: 'end_date',
+      budgetAlertThreshold: 'budget_alert_threshold',
+      clientId: 'client_id',
+      projectId: 'project_id',
+    };
+    const dbField = dbFieldMap[field] ?? field;
+    const update: Record<string, unknown> = { [dbField]: value };
+    const { error } = await supabase.from('campaigns').update(update as never).eq('id', id);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  const deleteCampaigns = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const { error } = await supabase.from('campaigns').delete().in('id', ids);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  return {
+    clients, projects, campaigns, loaded,
+    refetch: fetchAll,
+    upsertClient, deleteClient,
+    upsertProject, deleteProject,
+    upsertCampaign, updateCampaignField, deleteCampaigns,
+  };
 }
