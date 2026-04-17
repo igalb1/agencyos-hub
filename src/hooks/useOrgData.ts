@@ -98,6 +98,9 @@ export function useOrgData() {
 
   useEffect(() => {
     fetchAll();
+    const handler = () => fetchAll();
+    window.addEventListener('orgdata:refresh', handler);
+    return () => window.removeEventListener('orgdata:refresh', handler);
   }, [fetchAll]);
 
   return { clients, projects, campaigns, loaded, refetch: fetchAll };
