@@ -1,16 +1,68 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Link } from "react-router-dom";
+import PublicLayout from "@/components/public/PublicLayout";
+import { Check, BarChart3, Users, Megaphone, CalendarDays, FileText, Plug } from "lucide-react";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const features = [
+  { icon: Users, title: "Client management", desc: "Centralize every client, contact, budget, and KPI in one workspace." },
+  { icon: Megaphone, title: "Campaign tracking", desc: "Monitor every campaign across channels from a single screen." },
+  { icon: BarChart3, title: "Performance analytics", desc: "Real-time dashboards across Google Ads, Meta, and more." },
+  { icon: CalendarDays, title: "Tasks & timelines", desc: "Gantt-style planning keeps your team aligned and on schedule." },
+  { icon: FileText, title: "Automated reports", desc: "Generate beautiful client reports in seconds, not hours." },
+  { icon: Plug, title: "Integrations", desc: "Connect Google Ads, Meta, Analytics — all in one place." },
+];
+
+export default function Index() {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <PublicLayout>
+      {/* Hero */}
+      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
+        <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-6">
+          Now in public beta — free trial
+        </span>
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+          Stop juggling tools.<br />
+          <span className="text-primary">Run your agency in one place.</span>
+        </h1>
+        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          AgencyOS replaces scattered dashboards, spreadsheets, and project tools with a single platform built for digital marketing agencies.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Link to="/auth" className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
+            Start free trial
+          </Link>
+          <Link to="/pricing" className="px-6 py-3 rounded-lg border border-border font-medium hover:bg-muted transition-colors">
+            View pricing
+          </Link>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-center mb-2">Everything your agency needs</h2>
+        <p className="text-center text-muted-foreground mb-12">Purpose-built for the way modern agencies work.</p>
+        <div className="grid gap-6 md:grid-cols-3">
+          {features.map((f) => (
+            <div key={f.title} className="p-6 rounded-xl border border-border bg-card">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <f.icon className="text-primary" size={20} />
+              </div>
+              <h3 className="font-semibold mb-2">{f.title}</h3>
+              <p className="text-sm text-muted-foreground">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="max-w-4xl mx-auto px-6 py-16 text-center">
+        <div className="p-10 rounded-2xl border border-border bg-card">
+          <h2 className="text-3xl font-bold mb-3">Ready to streamline your agency?</h2>
+          <p className="text-muted-foreground mb-6">Start your free trial — no credit card required.</p>
+          <Link to="/auth" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90">
+            <Check size={18} /> Get started free
+          </Link>
+        </div>
+      </section>
+    </PublicLayout>
   );
-};
-
-const Index = PlaceholderIndex;
-
-export default Index;
+}

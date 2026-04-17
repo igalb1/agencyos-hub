@@ -23,6 +23,11 @@ import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
 import TrialExpired from "@/pages/TrialExpired";
+import Index from "@/pages/Index";
+import PricingPage from "@/pages/PricingPage";
+import TermsPage from "@/pages/TermsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import RefundPage from "@/pages/RefundPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
