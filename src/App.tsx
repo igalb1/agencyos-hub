@@ -49,7 +49,7 @@ function ProtectedRoutes() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
@@ -96,22 +96,8 @@ const App = () => (
               <Route path="/auth" element={<AuthRoute />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
-              {/* Authenticated app — everything else */}
-              <Route path="/dashboard/*" element={<ProtectedRoutes />} />
-              <Route path="/clients/*" element={<ProtectedRoutes />} />
-              <Route path="/projects/*" element={<ProtectedRoutes />} />
-              <Route path="/campaigns/*" element={<ProtectedRoutes />} />
-              <Route path="/ads/*" element={<ProtectedRoutes />} />
-              <Route path="/admin/*" element={<ProtectedRoutes />} />
-              <Route path="/timeline/*" element={<ProtectedRoutes />} />
-              <Route path="/tasks/*" element={<ProtectedRoutes />} />
-              <Route path="/performance/*" element={<ProtectedRoutes />} />
-              <Route path="/integrations/*" element={<ProtectedRoutes />} />
-              <Route path="/reports/*" element={<ProtectedRoutes />} />
-              <Route path="/settings/*" element={<ProtectedRoutes />} />
-              <Route path="/calendar/*" element={<ProtectedRoutes />} />
-
-              <Route path="*" element={<NotFound />} />
+              {/* Authenticated app */}
+              <Route path="/*" element={<ProtectedRoutes />} />
             </Routes>
           </BrowserRouter>
         </AppProvider>
