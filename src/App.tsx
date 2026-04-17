@@ -22,6 +22,7 @@ import BillingPage from "@/pages/BillingPage";
 import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
+import AcceptInvitePage from "@/pages/AcceptInvitePage";
 import TrialExpired from "@/pages/TrialExpired";
 import Index from "@/pages/Index";
 import PricingPage from "@/pages/PricingPage";
@@ -95,6 +96,7 @@ const App = () => (
               {/* Auth */}
               <Route path="/auth" element={<AuthRoute />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
               {/* Authenticated app */}
               <Route path="/*" element={<ProtectedRoutes />} />

@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import TeamSettingsCard from '@/components/settings/TeamSettingsCard';
 
 export default function SettingsPage() {
   const { lang, setLang, theme, setTheme } = useApp();
@@ -94,6 +95,9 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Team */}
+      <TeamSettingsCard />
 
       {/* Appearance */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
