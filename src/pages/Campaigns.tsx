@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
-import { mockCampaigns, mockAds } from '@/lib/mock-data';
+import { mockAds } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
 import EditableCell from '@/components/campaigns/EditableCell';
@@ -60,7 +61,9 @@ export default function CampaignsPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
+  const { campaigns: dbCampaigns, loaded } = useOrgData();
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  useEffect(() => { if (loaded) setCampaigns(dbCampaigns); }, [loaded, dbCampaigns]);
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
