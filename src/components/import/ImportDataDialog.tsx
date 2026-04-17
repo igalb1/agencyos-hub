@@ -275,6 +275,7 @@ export default function ImportDataDialog({ open, onOpenChange }: Props) {
         tasks: insertedTasks.length,
       });
       setStep('done');
+      window.dispatchEvent(new Event('orgdata:refresh'));
       toast.success('הייבוא הסתיים בהצלחה!');
     } catch (e: any) {
       console.error(e);
