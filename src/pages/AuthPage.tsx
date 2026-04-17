@@ -131,6 +131,15 @@ export default function AuthPage() {
               </div>
             )}
 
+            {mode === 'login' && (
+              <div className="flex items-center gap-2">
+                <Checkbox id="remember" checked={rememberMe} onCheckedChange={(v) => setRememberMe(v === true)} />
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer select-none">
+                  זכור אותי במכשיר זה
+                </Label>
+              </div>
+            )}
+
             <Button type="submit" size="lg" className="w-full h-14 text-lg font-semibold" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
               {mode === 'login' && 'התחבר'}
