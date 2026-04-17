@@ -78,11 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const shouldClearSession = rememberMe === 'false' && !sessionAlive;
     sessionStorage.setItem('agencyos_session_alive', '1');
 
+    let subscription: { unsubscribe: () => void } | null = null;
+
     const init = async () => {
       if (shouldClearSession) {
         await supabase.auth.signOut();
       }
+
       // 1. Restore session from storage FIRST
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -91,28 +95,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchRole(session.user.id);
       }
       setLoading(false);
-    });
 
-    // 2. Then listen for subsequent auth changes (sign in/out/token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      // 2. Then listen for subsequent auth changes
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-          fetchOrganization(session.user.id);
-          fetchRole(session.user.id);
-        }, 0);
-      } else {
-        setProfile(null);
-        setOrganization(null);
-        setIsSuperAdmin(false);
-        setHasAccess(null);
-      }
-    });
+        if (session?.user) {
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+            fetchOrganization(session.user.id);
+            fetchRole(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+          setOrganization(null);
+          setIsSuperAdmin(false);
+          setHasAccess(null);
+        }
+      });
+      subscription = data.subscription;
+    };
 
-    return () => subscription.unsubscribe();
+    init();
+
+    return () => { subscription?.unsubscribe(); };
   }, [fetchOrganization]);
 
   // Realtime: subscription changes -> refresh org
