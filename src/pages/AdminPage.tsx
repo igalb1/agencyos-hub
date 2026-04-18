@@ -20,12 +20,7 @@ interface OrgRow {
   created_at: string;
 }
 
-interface ProfileRow {
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  created_at: string;
-}
+// AdminUser type imported from UserRow
 
 interface SubRow {
   id: string;
@@ -44,7 +39,7 @@ export default function AdminPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<'orgs' | 'users' | 'subs'>('orgs');
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
-  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -56,24 +51,14 @@ export default function AdminPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const [orgRes, profRes, subRes] = await Promise.all([
+    const [orgRes, usersRes, subRes] = await Promise.all([
       supabase.from('organizations').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      supabase.rpc('admin_get_users'),
       supabase.from('subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
     if (orgRes.data) setOrgs(orgRes.data as OrgRow[]);
     if (subRes.data) setSubs(subRes.data as SubRow[]);
-
-    // Fetch emails for profiles
-    if (profRes.data) {
-      const profilesWithEmail = await Promise.all(
-        profRes.data.map(async (p) => {
-          const { data } = await supabase.rpc('get_user_email', { _user_id: p.user_id });
-          return { ...p, email: data || null } as ProfileRow;
-        })
-      );
-      setProfiles(profilesWithEmail);
-    }
+    if (usersRes.data) setUsers(usersRes.data as unknown as AdminUser[]);
     setLoading(false);
   };
 
