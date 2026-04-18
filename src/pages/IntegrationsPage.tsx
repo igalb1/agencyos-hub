@@ -5,9 +5,17 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import {
   Globe, Search, Music2, BriefcaseBusiness, BarChart3,
-  Mail, MessageSquare, FileText, Zap, Loader2
+  Mail, MessageSquare, FileText, Zap, Loader2, RefreshCw, Calendar as CalendarIcon
 } from 'lucide-react';
 import { useGoogleAdsConnect } from '@/hooks/useGoogleAdsConnect';
+import { useGoogleAdsSync } from '@/hooks/useGoogleAdsSync';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 
 interface Integration {
   id: string;
@@ -39,10 +47,19 @@ const categoryLabels = {
   communication: { he: 'תקשורת', en: 'Communication' },
 };
 
+const microsToCurrency = (m: number) => (m / 1_000_000).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
 export default function IntegrationsPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
   const googleAds = useGoogleAdsConnect();
+  const gadsSync = useGoogleAdsSync();
+
+  // Default: last 30 days
+  const today = new Date();
+  const thirtyAgo = new Date(today.getTime() - 30 * 86400000);
+  const [dateFrom, setDateFrom] = useState<Date>(thirtyAgo);
+  const [dateTo, setDateTo] = useState<Date>(today);
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
@@ -52,6 +69,10 @@ export default function IntegrationsPage() {
   };
 
   const connectedCount = integrations.filter(i => getConnectedState(i)).length;
+
+  const handleSync = () => {
+    gadsSync.sync(format(dateFrom, 'yyyy-MM-dd'), format(dateTo, 'yyyy-MM-dd'));
+  };
 
   return (
     <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -69,7 +90,6 @@ export default function IntegrationsPage() {
         </Badge>
       </div>
 
-      {/* OAuth return loading overlay */}
       {googleAds.isReturningFromOAuth && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -77,6 +97,138 @@ export default function IntegrationsPage() {
             {isRtl ? 'מחבר את חשבון Google Ads שלך...' : 'Connecting your Google Ads account...'}
           </p>
         </div>
+      )}
+
+      {/* Google Ads sync panel */}
+      {googleAds.connection?.is_connected && (
+        <Card className="bg-card/50 backdrop-blur border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Search size={18} style={{ color: '#4285F4' }} />
+                  {isRtl ? 'סנכרון Google Ads' : 'Google Ads Sync'}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {gadsSync.lastSync ? (
+                    <>
+                      {isRtl ? 'סנכרון אחרון:' : 'Last sync:'}{' '}
+                      {format(new Date(gadsSync.lastSync.created_at), 'dd/MM/yyyy HH:mm')}
+                      {' • '}
+                      <span className={gadsSync.lastSync.status === 'success' ? 'text-primary' : 'text-destructive'}>
+                        {gadsSync.lastSync.status === 'success'
+                          ? `${gadsSync.lastSync.campaigns_synced} ${isRtl ? 'קמפיינים' : 'campaigns'}`
+                          : (isRtl ? 'שגיאה' : 'Error')}
+                      </span>
+                    </>
+                  ) : (
+                    isRtl ? 'עדיין לא סונכרן' : 'Not synced yet'
+                  )}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              {/* Date from */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'מתאריך' : 'From'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(dateFrom, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(d) => d && setDateFrom(d)}
+                      disabled={(d) => d > new Date() || d > dateTo}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Date to */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'עד תאריך' : 'To'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(dateTo, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(d) => d && setDateTo(d)}
+                      disabled={(d) => d > new Date() || d < dateFrom}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <Button onClick={handleSync} disabled={gadsSync.syncing} size="sm" className="gap-2">
+                {gadsSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
+              </Button>
+            </div>
+
+            {gadsSync.lastSync?.status === 'error' && gadsSync.lastSync.error_message && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                {gadsSync.lastSync.error_message}
+              </div>
+            )}
+
+            {/* Synced campaigns table */}
+            {gadsSync.campaigns.length > 0 ? (
+              <div className="rounded-md border border-border/50 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRtl ? 'קמפיין' : 'Campaign'}</TableHead>
+                      <TableHead>{isRtl ? 'סטטוס' : 'Status'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'חשיפות' : 'Impressions'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'קליקים' : 'Clicks'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'הוצאה' : 'Cost'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'המרות' : 'Conv.'}</TableHead>
+                      <TableHead className="text-right">CTR</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {gadsSync.campaigns.map(c => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.status === 'ENABLED' ? 'default' : 'outline'} className="text-xs">
+                            {c.status ?? '—'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{microsToCurrency(c.cost_micros)}</TableCell>
+                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : !gadsSync.loading && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {isRtl ? 'אין נתונים מסונכרנים. לחץ "סנכרן עכשיו" כדי להתחיל.' : 'No synced data. Click "Sync now" to start.'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {categories.map(cat => {
