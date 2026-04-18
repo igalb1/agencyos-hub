@@ -174,6 +174,12 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+        <TransferOwnershipDialog
+          orgId={org.id}
+          orgName={org.name}
+          open={ownerDialogOpen}
+          onOpenChange={setOwnerDialogOpen}
+        />
       </td>
     </tr>
   );
