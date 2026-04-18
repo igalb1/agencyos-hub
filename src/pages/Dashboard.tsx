@@ -133,6 +133,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Filter bar */}
+      <div className="flex items-center justify-end">
+        <div className="w-full sm:w-64">
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="glass-card">
+              <SelectValue placeholder={lang === 'he' ? 'סנן לפי לקוח' : 'Filter by client'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{lang === 'he' ? 'כל הלקוחות' : 'All clients'}</SelectItem>
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
