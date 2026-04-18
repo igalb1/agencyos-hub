@@ -88,7 +88,7 @@ export default function AdminPage() {
   };
 
   const filteredOrgs = orgs.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
-  const filteredProfiles = profiles.filter(p => (p.full_name || '').toLowerCase().includes(search.toLowerCase()) || (p.email || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredUsers = users.filter(u => (u.full_name || '').toLowerCase().includes(search.toLowerCase()) || (u.email || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6" dir={lang === 'he' ? 'rtl' : 'ltr'}>
@@ -115,7 +115,7 @@ export default function AdminPage() {
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <Users size={20} className="text-primary" />
           <div>
-            <p className="text-2xl font-bold text-foreground">{profiles.length}</p>
+            <p className="text-2xl font-bold text-foreground">{users.length}</p>
             <p className="text-xs text-muted-foreground">משתמשים</p>
           </div>
         </div>
