@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
         sender_domain: SENDER_DOMAIN,
         subject: `הוזמנת להצטרף ל-${orgName} ב-AgencyOS`,
         html,
+        text,
         purpose: "transactional",
         label: "team_invite",
         idempotency_key: `invite-${invite.token}`,
