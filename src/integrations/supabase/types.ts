@@ -678,6 +678,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      transfer_org_ownership: {
+        Args: { _new_owner_user_id: string; _org_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "super_admin"
