@@ -65,6 +65,23 @@ export function UserRow({ user, onChanged }: Props) {
     setRemoveDialog(null);
   };
 
+  const deleteUser = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+      body: { target_user_id: user.user_id },
+    });
+    setBusy(false);
+    const errMsg = (data as { error?: string })?.error || error?.message;
+    if (errMsg) {
+      toast({ title: 'שגיאה במחיקה', description: errMsg, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'המשתמש נמחק לחלוטין מהמערכת' });
+    setDeleteDialog(false);
+    setConfirmText('');
+    onChanged();
+  };
+
   return (
     <>
       <tr className="border-b border-border/50 hover:bg-muted/30">
