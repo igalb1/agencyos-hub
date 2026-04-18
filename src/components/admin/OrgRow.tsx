@@ -39,6 +39,7 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
   const { toast } = useToast();
   const [editingPlan, setEditingPlan] = useState(false);
   const [editingTrial, setEditingTrial] = useState(false);
+  const [ownerDialogOpen, setOwnerDialogOpen] = useState(false);
 
   const toggleActive = async () => {
     const { error } = await supabase
@@ -147,6 +148,9 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
       <td className="p-3 text-muted-foreground">{new Date(org.created_at).toLocaleDateString('he-IL')}</td>
       <td className="p-3">
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setOwnerDialogOpen(true)} title="נהל בעלים">
+            <Crown size={16} className="text-amber-400" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={toggleActive} title={org.is_active ? 'השבת' : 'הפעל'}>
             {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
           </Button>
