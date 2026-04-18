@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
 import { useOrgData } from '@/hooks/useOrgData';
@@ -6,6 +6,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { DollarSign, TrendingUp, Users, Target, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
 import { motion } from 'framer-motion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const PLATFORM_COLORS: Record<string, string> = {
   Meta: '#1877F2',
