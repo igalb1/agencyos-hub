@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
 
     if (!resendRes.ok) {
       const errText = await resendRes.text();
-      console.error("Resend error:", errText);
-      return json({ error: "Failed to send email", detail: errText }, 502);
+      console.error("Resend error:", resendRes.status, errText);
+      return json({ error: "Failed to send email" }, 502);
     }
 
     return json({ success: true, inviteUrl });
