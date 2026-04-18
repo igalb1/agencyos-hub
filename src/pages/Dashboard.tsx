@@ -56,14 +56,14 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="glass-card rounded-xl p-5">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('spendByPlatform', lang)}</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={mockSpendByPlatform}>
+            <BarChart data={mockSpendByPlatform} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" tick={{ fill: 'hsl(215,20%,55%)', fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis hide />
               <Tooltip
                 contentStyle={{ background: 'hsl(220,30%,8%)', border: '1px solid hsl(220,20%,16%)', borderRadius: 8, color: '#fff' }}
                 formatter={(v: number) => fmt(v)}
               />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} label={{ position: 'top', fill: 'hsl(215,20%,75%)', fontSize: 11, formatter: (v: number) => fmt(v) }}>
                 {mockSpendByPlatform.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
@@ -77,7 +77,17 @@ export default function Dashboard() {
           <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('leadsByClient', lang)}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={80} innerRadius={40} strokeWidth={0}>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                innerRadius={40}
+                strokeWidth={0}
+                label={({ name, value }) => `${name}: ${value}`}
+                labelLine={{ stroke: 'hsl(215,20%,40%)' }}
+              >
                 {pieData.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
@@ -93,7 +103,7 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="glass-card rounded-xl p-5">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('spendOverTime', lang)}</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={mockSpendOverTime}>
+            <AreaChart data={mockSpendOverTime} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
               <defs>
                 <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#00D4FF" stopOpacity={0.3} />
@@ -106,7 +116,14 @@ export default function Dashboard() {
                 contentStyle={{ background: 'hsl(220,30%,8%)', border: '1px solid hsl(220,20%,16%)', borderRadius: 8, color: '#fff' }}
                 formatter={(v: number) => fmt(v)}
               />
-              <Area type="monotone" dataKey="spend" stroke="#00D4FF" fill="url(#spendGradient)" strokeWidth={2} />
+              <Area
+                type="monotone"
+                dataKey="spend"
+                stroke="#00D4FF"
+                fill="url(#spendGradient)"
+                strokeWidth={2}
+                label={{ position: 'top', fill: 'hsl(215,20%,75%)', fontSize: 10, formatter: (v: number) => fmt(v) }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>
