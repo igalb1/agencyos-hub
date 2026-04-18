@@ -580,6 +580,10 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { _token: string }; Returns: Json }
+      admin_delete_user_data: {
+        Args: { _target_user_id: string }
+        Returns: Json
+      }
       admin_get_users: {
         Args: never
         Returns: {
