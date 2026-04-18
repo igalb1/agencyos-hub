@@ -4,8 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Snowflake, Sun, MoreHorizontal, UserMinus, Loader2 } from 'lucide-react';
+import { Snowflake, Sun, MoreHorizontal, UserMinus, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 export interface AdminUser {
   user_id: string;
@@ -32,6 +33,8 @@ export function UserRow({ user, onChanged }: Props) {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [removeDialog, setRemoveDialog] = useState<{ org_id: string; org_name: string } | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   const callAction = async (action: string, org_id?: string) => {
     setBusy(true);
