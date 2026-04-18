@@ -194,19 +194,17 @@ export default function AdminPage() {
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-start p-3 font-medium text-muted-foreground">שם</th>
                     <th className="text-start p-3 font-medium text-muted-foreground">אימייל</th>
+                    <th className="text-start p-3 font-medium text-muted-foreground">סוכנויות</th>
                     <th className="text-start p-3 font-medium text-muted-foreground">נוצר</th>
+                    <th className="text-end p-3 font-medium text-muted-foreground">פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProfiles.map(p => (
-                    <tr key={p.user_id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="p-3 font-medium text-foreground">{p.full_name || '—'}</td>
-                      <td className="p-3 text-muted-foreground">{p.email || '—'}</td>
-                      <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString('he-IL')}</td>
-                    </tr>
+                  {filteredUsers.map(u => (
+                    <UserRow key={u.user_id} user={u} onChanged={loadData} />
                   ))}
-                  {filteredProfiles.length === 0 && (
-                    <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
                   )}
                 </tbody>
               </table>
