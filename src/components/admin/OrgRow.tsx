@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ToggleLeft, ToggleRight, Pencil, CalendarIcon, Trash2 } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Pencil, CalendarIcon, Trash2, Crown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { TransferOwnershipDialog } from './TransferOwnershipDialog';
 
 interface OrgRow {
   id: string;
@@ -38,6 +39,7 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
   const { toast } = useToast();
   const [editingPlan, setEditingPlan] = useState(false);
   const [editingTrial, setEditingTrial] = useState(false);
+  const [ownerDialogOpen, setOwnerDialogOpen] = useState(false);
 
   const toggleActive = async () => {
     const { error } = await supabase
@@ -146,6 +148,9 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
       <td className="p-3 text-muted-foreground">{new Date(org.created_at).toLocaleDateString('he-IL')}</td>
       <td className="p-3">
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setOwnerDialogOpen(true)} title="נהל בעלים">
+            <Crown size={16} className="text-amber-400" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={toggleActive} title={org.is_active ? 'השבת' : 'הפעל'}>
             {org.is_active ? <ToggleRight size={18} className="text-emerald-400" /> : <ToggleLeft size={18} className="text-red-400" />}
           </Button>
@@ -169,6 +174,12 @@ export function OrgRowComponent({ org, onUpdate, onDelete }: OrgRowProps) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+        <TransferOwnershipDialog
+          orgId={org.id}
+          orgName={org.name}
+          open={ownerDialogOpen}
+          onOpenChange={setOwnerDialogOpen}
+        />
       </td>
     </tr>
   );
