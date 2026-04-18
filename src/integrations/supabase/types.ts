@@ -475,7 +475,6 @@ export type Database = {
       }
       user_integrations: {
         Row: {
-          access_token: string | null
           access_token_encrypted: string | null
           account_id: string | null
           account_name: string | null
@@ -483,14 +482,12 @@ export type Database = {
           id: string
           is_connected: boolean
           provider: string
-          refresh_token: string | null
           refresh_token_encrypted: string | null
           token_expires_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          access_token?: string | null
           access_token_encrypted?: string | null
           account_id?: string | null
           account_name?: string | null
@@ -498,14 +495,12 @@ export type Database = {
           id?: string
           is_connected?: boolean
           provider: string
-          refresh_token?: string | null
           refresh_token_encrypted?: string | null
           token_expires_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          access_token?: string | null
           access_token_encrypted?: string | null
           account_id?: string | null
           account_name?: string | null
@@ -513,7 +508,6 @@ export type Database = {
           id?: string
           is_connected?: boolean
           provider?: string
-          refresh_token?: string | null
           refresh_token_encrypted?: string | null
           token_expires_at?: string | null
           updated_at?: string
