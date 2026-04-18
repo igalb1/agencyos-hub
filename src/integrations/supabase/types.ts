@@ -270,6 +270,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_frozen: boolean
           updated_at: string
           user_id: string
         }
@@ -278,6 +279,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_frozen?: boolean
           updated_at?: string
           user_id: string
         }
@@ -286,6 +288,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_frozen?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -577,6 +580,21 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { _token: string }; Returns: Json }
+      admin_get_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          is_frozen: boolean
+          organizations: Json
+          user_id: string
+        }[]
+      }
+      admin_manage_user: {
+        Args: { _action: string; _org_id?: string; _target_user_id: string }
+        Returns: Json
+      }
       get_effective_plan: {
         Args: { _user_id: string }
         Returns: {

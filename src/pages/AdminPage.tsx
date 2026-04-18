@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Shield, Users, Building2, CreditCard, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { OrgRowComponent } from '@/components/admin/OrgRow';
+import { UserRow, type AdminUser } from '@/components/admin/UserRow';
 
 interface OrgRow {
   id: string;
@@ -19,12 +20,7 @@ interface OrgRow {
   created_at: string;
 }
 
-interface ProfileRow {
-  user_id: string;
-  full_name: string | null;
-  email: string | null;
-  created_at: string;
-}
+// AdminUser type imported from UserRow
 
 interface SubRow {
   id: string;
@@ -43,7 +39,7 @@ export default function AdminPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<'orgs' | 'users' | 'subs'>('orgs');
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
-  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -55,24 +51,14 @@ export default function AdminPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const [orgRes, profRes, subRes] = await Promise.all([
+    const [orgRes, usersRes, subRes] = await Promise.all([
       supabase.from('organizations').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      supabase.rpc('admin_get_users'),
       supabase.from('subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
     if (orgRes.data) setOrgs(orgRes.data as OrgRow[]);
     if (subRes.data) setSubs(subRes.data as SubRow[]);
-
-    // Fetch emails for profiles
-    if (profRes.data) {
-      const profilesWithEmail = await Promise.all(
-        profRes.data.map(async (p) => {
-          const { data } = await supabase.rpc('get_user_email', { _user_id: p.user_id });
-          return { ...p, email: data || null } as ProfileRow;
-        })
-      );
-      setProfiles(profilesWithEmail);
-    }
+    if (usersRes.data) setUsers(usersRes.data as unknown as AdminUser[]);
     setLoading(false);
   };
 
@@ -102,7 +88,7 @@ export default function AdminPage() {
   };
 
   const filteredOrgs = orgs.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
-  const filteredProfiles = profiles.filter(p => (p.full_name || '').toLowerCase().includes(search.toLowerCase()) || (p.email || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredUsers = users.filter(u => (u.full_name || '').toLowerCase().includes(search.toLowerCase()) || (u.email || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6" dir={lang === 'he' ? 'rtl' : 'ltr'}>
@@ -129,7 +115,7 @@ export default function AdminPage() {
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <Users size={20} className="text-primary" />
           <div>
-            <p className="text-2xl font-bold text-foreground">{profiles.length}</p>
+            <p className="text-2xl font-bold text-foreground">{users.length}</p>
             <p className="text-xs text-muted-foreground">משתמשים</p>
           </div>
         </div>
@@ -208,19 +194,17 @@ export default function AdminPage() {
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-start p-3 font-medium text-muted-foreground">שם</th>
                     <th className="text-start p-3 font-medium text-muted-foreground">אימייל</th>
+                    <th className="text-start p-3 font-medium text-muted-foreground">סוכנויות</th>
                     <th className="text-start p-3 font-medium text-muted-foreground">נוצר</th>
+                    <th className="text-end p-3 font-medium text-muted-foreground">פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProfiles.map(p => (
-                    <tr key={p.user_id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="p-3 font-medium text-foreground">{p.full_name || '—'}</td>
-                      <td className="p-3 text-muted-foreground">{p.email || '—'}</td>
-                      <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString('he-IL')}</td>
-                    </tr>
+                  {filteredUsers.map(u => (
+                    <UserRow key={u.user_id} user={u} onChanged={loadData} />
                   ))}
-                  {filteredProfiles.length === 0 && (
-                    <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
                   )}
                 </tbody>
               </table>
