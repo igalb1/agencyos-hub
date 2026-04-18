@@ -86,6 +86,17 @@ Deno.serve(async (req) => {
       role,
       inviteUrl,
     });
+    const roleLabelText = role === "admin" ? "מנהל/ת" : "חבר/ת צוות";
+    const text = [
+      `הוזמנת להצטרף ל-${orgName} ב-AgencyOS`,
+      ``,
+      `${callerEmail} הזמין/ה אותך להצטרף לסוכנות ${orgName} כ-${roleLabelText}.`,
+      `הקישור תקף ל-7 ימים.`,
+      ``,
+      `הצטרפות: ${inviteUrl}`,
+      ``,
+      `אם לא ציפית להזמנה זו, פשוט התעלם/י מהמייל.`,
+    ].join("\n");
 
     // Enqueue to Lovable Emails transactional queue
     const { error: enqueueErr } = await admin.rpc("enqueue_email", {
@@ -96,6 +107,7 @@ Deno.serve(async (req) => {
         sender_domain: SENDER_DOMAIN,
         subject: `הוזמנת להצטרף ל-${orgName} ב-AgencyOS`,
         html,
+        text,
         purpose: "transactional",
         label: "team_invite",
         idempotency_key: `invite-${invite.token}`,
