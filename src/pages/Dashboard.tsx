@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
 import { useOrgData } from '@/hooks/useOrgData';
@@ -6,6 +6,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { DollarSign, TrendingUp, Users, Target, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
 import { motion } from 'framer-motion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const PLATFORM_COLORS: Record<string, string> = {
   Meta: '#1877F2',
@@ -45,11 +46,26 @@ export default function Dashboard() {
   }, [clients]);
   const { tasks } = useTasks(clientLookup);
 
+  const [clientFilter, setClientFilter] = useState<string>('all');
+
   const fmt = (n: number) => `₪${Math.round(n).toLocaleString()}`;
 
-  const totalBudget = clients.reduce((s, c) => s + (c.budget || 0), 0);
-  const totalSpend = clients.reduce((s, c) => s + (c.spend || 0), 0);
-  const totalLeads = clients.reduce((s, c) => s + (c.leads || 0), 0);
+  const filteredClients = useMemo(
+    () => clientFilter === 'all' ? clients : clients.filter(c => c.id === clientFilter),
+    [clients, clientFilter]
+  );
+  const filteredCampaigns = useMemo(
+    () => clientFilter === 'all' ? campaigns : campaigns.filter(c => c.clientId === clientFilter),
+    [campaigns, clientFilter]
+  );
+  const filteredTasks = useMemo(
+    () => clientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === clientFilter),
+    [tasks, clientFilter]
+  );
+
+  const totalBudget = filteredClients.reduce((s, c) => s + (c.budget || 0), 0);
+  const totalSpend = filteredClients.reduce((s, c) => s + (c.spend || 0), 0);
+  const totalLeads = filteredClients.reduce((s, c) => s + (c.leads || 0), 0);
   const avgCpl = totalLeads > 0 ? Math.round(totalSpend / totalLeads) : 0;
 
   const kpis = [
@@ -62,16 +78,16 @@ export default function Dashboard() {
   // Spend by platform — derived from campaigns
   const spendByPlatform = useMemo(() => {
     const map = new Map<string, number>();
-    campaigns.forEach(c => map.set(c.platform, (map.get(c.platform) ?? 0) + (c.spend || 0)));
+    filteredCampaigns.forEach(c => map.set(c.platform, (map.get(c.platform) ?? 0) + (c.spend || 0)));
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value, color: PLATFORM_COLORS[name] ?? '#888' }))
       .filter(d => d.value > 0);
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
   // Leads by client — derived from clients
   const pieData = useMemo(
-    () => clients.filter(c => (c.leads ?? 0) > 0).map(c => ({ name: c.name, value: c.leads, color: c.color })),
-    [clients]
+    () => filteredClients.filter(c => (c.leads ?? 0) > 0).map(c => ({ name: c.name, value: c.leads, color: c.color })),
+    [filteredClients]
   );
 
   // Spend over time — aggregate campaign spend by start_date month (last 6 months bucket)
@@ -84,7 +100,7 @@ export default function Dashboard() {
       buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, month: months[d.getMonth()], spend: 0 });
     }
     const idx = new Map(buckets.map((b, i) => [b.key, i]));
-    campaigns.forEach(c => {
+    filteredCampaigns.forEach(c => {
       if (!c.startDate) return;
       const d = new Date(c.startDate);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
@@ -92,11 +108,11 @@ export default function Dashboard() {
       if (i !== undefined) buckets[i].spend += c.spend || 0;
     });
     return buckets;
-  }, [campaigns, lang]);
+  }, [filteredCampaigns, lang]);
 
   // Budget alerts — campaigns over their threshold
   const budgetAlerts = useMemo(() => {
-    return campaigns
+    return filteredCampaigns
       .filter(c => c.budget > 0 && (c.spend / c.budget) * 100 >= (c.budgetAlertThreshold || 80))
       .slice(0, 4)
       .map(c => ({
@@ -106,17 +122,34 @@ export default function Dashboard() {
         spend: c.spend,
         budget: c.budget,
       }));
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
-  const recentTasks = useMemo(() => tasks.slice(0, 3), [tasks]);
+  const recentTasks = useMemo(() => filteredTasks.slice(0, 3), [filteredTasks]);
 
   const topClients = useMemo(
-    () => [...clients].filter(c => c.status === 'active').sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 4),
-    [clients]
+    () => [...filteredClients].filter(c => c.status === 'active').sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 4),
+    [filteredClients]
   );
 
   return (
     <div className="space-y-6">
+      {/* Filter bar */}
+      <div className="flex items-center justify-end">
+        <div className="w-full sm:w-64">
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="glass-card">
+              <SelectValue placeholder={lang === 'he' ? 'סנן לפי לקוח' : 'Filter by client'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{lang === 'he' ? 'כל הלקוחות' : 'All clients'}</SelectItem>
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
