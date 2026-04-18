@@ -78,16 +78,16 @@ export default function Dashboard() {
   // Spend by platform — derived from campaigns
   const spendByPlatform = useMemo(() => {
     const map = new Map<string, number>();
-    campaigns.forEach(c => map.set(c.platform, (map.get(c.platform) ?? 0) + (c.spend || 0)));
+    filteredCampaigns.forEach(c => map.set(c.platform, (map.get(c.platform) ?? 0) + (c.spend || 0)));
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value, color: PLATFORM_COLORS[name] ?? '#888' }))
       .filter(d => d.value > 0);
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
   // Leads by client — derived from clients
   const pieData = useMemo(
-    () => clients.filter(c => (c.leads ?? 0) > 0).map(c => ({ name: c.name, value: c.leads, color: c.color })),
-    [clients]
+    () => filteredClients.filter(c => (c.leads ?? 0) > 0).map(c => ({ name: c.name, value: c.leads, color: c.color })),
+    [filteredClients]
   );
 
   // Spend over time — aggregate campaign spend by start_date month (last 6 months bucket)
@@ -100,7 +100,7 @@ export default function Dashboard() {
       buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, month: months[d.getMonth()], spend: 0 });
     }
     const idx = new Map(buckets.map((b, i) => [b.key, i]));
-    campaigns.forEach(c => {
+    filteredCampaigns.forEach(c => {
       if (!c.startDate) return;
       const d = new Date(c.startDate);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
@@ -108,11 +108,11 @@ export default function Dashboard() {
       if (i !== undefined) buckets[i].spend += c.spend || 0;
     });
     return buckets;
-  }, [campaigns, lang]);
+  }, [filteredCampaigns, lang]);
 
   // Budget alerts — campaigns over their threshold
   const budgetAlerts = useMemo(() => {
-    return campaigns
+    return filteredCampaigns
       .filter(c => c.budget > 0 && (c.spend / c.budget) * 100 >= (c.budgetAlertThreshold || 80))
       .slice(0, 4)
       .map(c => ({
@@ -122,13 +122,13 @@ export default function Dashboard() {
         spend: c.spend,
         budget: c.budget,
       }));
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
-  const recentTasks = useMemo(() => tasks.slice(0, 3), [tasks]);
+  const recentTasks = useMemo(() => filteredTasks.slice(0, 3), [filteredTasks]);
 
   const topClients = useMemo(
-    () => [...clients].filter(c => c.status === 'active').sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 4),
-    [clients]
+    () => [...filteredClients].filter(c => c.status === 'active').sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 4),
+    [filteredClients]
   );
 
   return (
