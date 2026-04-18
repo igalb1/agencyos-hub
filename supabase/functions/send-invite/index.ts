@@ -98,6 +98,23 @@ Deno.serve(async (req) => {
       `אם לא ציפית להזמנה זו, פשוט התעלם/י מהמייל.`,
     ].join("\n");
 
+    // Get-or-create unsubscribe token for this recipient (one per email address)
+    let unsubscribeToken: string | null = null;
+    const { data: existingTok } = await admin
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", email)
+      .maybeSingle();
+    if (existingTok?.token) {
+      unsubscribeToken = existingTok.token;
+    } else {
+      const newTok = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      const { error: tokErr } = await admin
+        .from("email_unsubscribe_tokens")
+        .insert({ email, token: newTok });
+      if (!tokErr) unsubscribeToken = newTok;
+    }
+
     // Enqueue to Lovable Emails transactional queue
     const { error: enqueueErr } = await admin.rpc("enqueue_email", {
       queue_name: "transactional_emails",
@@ -112,6 +129,7 @@ Deno.serve(async (req) => {
         label: "team_invite",
         idempotency_key: `invite-${invite.token}`,
         message_id: messageId,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     });
