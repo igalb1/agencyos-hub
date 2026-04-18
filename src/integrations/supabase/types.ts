@@ -992,6 +992,7 @@ export type Database = {
         Args: { _new_owner_user_id: string; _org_id: string }
         Returns: Json
       }
+      trigger_google_ads_auto_sync: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "super_admin"
