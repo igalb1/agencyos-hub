@@ -7,7 +7,7 @@ interface OrgData { id: string; name: string; logo_url: string | null; trial_end
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: { full_name: string | null; avatar_url: string | null } | null;
+  profile: { full_name: string | null; avatar_url: string | null; is_frozen?: boolean } | null;
   organization: OrgData | null;
   loading: boolean;
   trialExpired: boolean;
@@ -30,10 +30,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('full_name, avatar_url')
+      .select('full_name, avatar_url, is_frozen')
       .eq('user_id', userId)
       .single();
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+      // If user is frozen, sign them out immediately
+      if (data.is_frozen) {
+        await supabase.auth.signOut();
+        alert('החשבון שלך הוקפא. צור קשר עם התמיכה.');
+      }
+    }
   };
 
   const fetchOrganization = useCallback(async (userId: string) => {
