@@ -46,11 +46,26 @@ export default function Dashboard() {
   }, [clients]);
   const { tasks } = useTasks(clientLookup);
 
+  const [clientFilter, setClientFilter] = useState<string>('all');
+
   const fmt = (n: number) => `₪${Math.round(n).toLocaleString()}`;
 
-  const totalBudget = clients.reduce((s, c) => s + (c.budget || 0), 0);
-  const totalSpend = clients.reduce((s, c) => s + (c.spend || 0), 0);
-  const totalLeads = clients.reduce((s, c) => s + (c.leads || 0), 0);
+  const filteredClients = useMemo(
+    () => clientFilter === 'all' ? clients : clients.filter(c => c.id === clientFilter),
+    [clients, clientFilter]
+  );
+  const filteredCampaigns = useMemo(
+    () => clientFilter === 'all' ? campaigns : campaigns.filter(c => c.clientId === clientFilter),
+    [campaigns, clientFilter]
+  );
+  const filteredTasks = useMemo(
+    () => clientFilter === 'all' ? tasks : tasks.filter(t => t.clientId === clientFilter),
+    [tasks, clientFilter]
+  );
+
+  const totalBudget = filteredClients.reduce((s, c) => s + (c.budget || 0), 0);
+  const totalSpend = filteredClients.reduce((s, c) => s + (c.spend || 0), 0);
+  const totalLeads = filteredClients.reduce((s, c) => s + (c.leads || 0), 0);
   const avgCpl = totalLeads > 0 ? Math.round(totalSpend / totalLeads) : 0;
 
   const kpis = [
