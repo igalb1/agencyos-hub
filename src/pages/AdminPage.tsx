@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Shield, Users, Building2, CreditCard, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { OrgRowComponent } from '@/components/admin/OrgRow';
+import { UserRow, type AdminUser } from '@/components/admin/UserRow';
 
 interface OrgRow {
   id: string;
