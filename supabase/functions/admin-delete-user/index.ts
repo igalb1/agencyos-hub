@@ -57,11 +57,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Service role client for cleanup + auth deletion
+    // Service role client for auth deletion only
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // 1. Delete app data via RPC (validates ownership constraints)
-    const { data: cleanup, error: cleanupErr } = await admin.rpc("admin_delete_user_data", {
+    // 1. Delete app data via RPC using CALLER client so auth.uid() is set for is_super_admin check
+    const { data: cleanup, error: cleanupErr } = await caller.rpc("admin_delete_user_data", {
       _target_user_id: target_user_id,
     });
     if (cleanupErr) {
