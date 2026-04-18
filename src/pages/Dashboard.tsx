@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
 import { mockClients, mockSpendByPlatform, mockSpendOverTime, mockTasks, mockBudgetAlerts } from '@/lib/mock-data';
 import { DollarSign, TrendingUp, Users, Target, AlertTriangle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
 import { motion } from 'framer-motion';
 
 const totalBudget = mockClients.reduce((s, c) => s + c.budget, 0);
@@ -75,18 +75,17 @@ export default function Dashboard() {
         {/* Leads by Client */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="glass-card rounded-xl p-5">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('leadsByClient', lang)}</h3>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
                 data={pieData}
                 dataKey="value"
+                nameKey="name"
                 cx="50%"
-                cy="50%"
-                outerRadius={80}
-                innerRadius={40}
+                cy="45%"
+                outerRadius={70}
+                innerRadius={38}
                 strokeWidth={0}
-                label={({ name, value }) => `${name}: ${value}`}
-                labelLine={{ stroke: 'hsl(215,20%,40%)' }}
               >
                 {pieData.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
@@ -94,6 +93,14 @@ export default function Dashboard() {
               </Pie>
               <Tooltip
                 contentStyle={{ background: 'hsl(220,30%,8%)', border: '1px solid hsl(220,20%,16%)', borderRadius: 8, color: '#fff' }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                iconType="circle"
+                iconSize={8}
+                wrapperStyle={{ fontSize: 11, color: 'hsl(215,20%,75%)' }}
+                formatter={(value, entry: any) => `${value}: ${entry?.payload?.value ?? ''}`}
               />
             </PieChart>
           </ResponsiveContainer>
