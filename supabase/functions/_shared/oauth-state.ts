@@ -70,6 +70,13 @@ export function validateRedirectUrl(redirectUrl: string, allowedOrigins: string[
     const u = new URL(redirectUrl);
     const origin = `${u.protocol}//${u.host}`;
     if (allowedOrigins.includes(origin)) return redirectUrl;
+    // Allow any Lovable preview/sandbox subdomain
+    if (
+      u.protocol === "https:" &&
+      (u.host.endsWith(".lovable.app") || u.host.endsWith(".lovableproject.com"))
+    ) {
+      return redirectUrl;
+    }
     return null;
   } catch {
     return null;
@@ -82,6 +89,7 @@ export function getAllowedRedirectOrigins(): string[] {
     "https://agencyos-hub.lovable.app",
     "https://login.agencyos.solutions",
     "https://id-preview--f6f9f611-7917-4c2c-bede-850bccff9707.lovable.app",
+    "https://f6f9f611-7917-4c2c-bede-850bccff9707.lovableproject.com",
     "http://localhost:3000",
     "http://localhost:5173",
     "https://localhost:3000",
