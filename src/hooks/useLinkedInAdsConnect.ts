@@ -66,7 +66,16 @@ export function useLinkedInAdsConnect() {
         body: { redirect_url: `${window.location.origin}/integrations` },
       });
       if (error) throw error;
-      if (data?.url) window.location.href = data.url;
+      if (data?.url) {
+        // Open in top-level window to avoid being blocked inside preview iframe
+        const target = window.top ?? window;
+        try {
+          target.location.href = data.url;
+        } catch {
+          // Cross-origin top access blocked — fall back to a new tab
+          window.open(data.url, '_blank', 'noopener,noreferrer');
+        }
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       toast.error(`לא ניתן להתחיל חיבור: ${msg}`);
