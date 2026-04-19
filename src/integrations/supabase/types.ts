@@ -990,31 +990,16 @@ export type Database = {
           plan: string
         }[]
       }
-      get_integration_tokens:
-        | {
-            Args: { _provider: string; _user_id: string }
-            Returns: {
-              access_token: string
-              account_id: string
-              account_name: string
-              refresh_token: string
-              token_expires_at: string
-            }[]
-          }
-        | {
-            Args: {
-              _encryption_key?: string
-              _provider: string
-              _user_id: string
-            }
-            Returns: {
-              access_token: string
-              account_id: string
-              account_name: string
-              refresh_token: string
-              token_expires_at: string
-            }[]
-          }
+      get_integration_tokens: {
+        Args: { _provider: string; _user_id: string }
+        Returns: {
+          access_token: string
+          account_id: string
+          account_name: string
+          refresh_token: string
+          token_expires_at: string
+        }[]
+      }
       get_integrations_encryption_key: { Args: never; Returns: string }
       get_invitation_by_token: {
         Args: { _token: string }
@@ -1073,32 +1058,18 @@ export type Database = {
           read_ct: number
         }[]
       }
-      set_integration_tokens:
-        | {
-            Args: {
-              _access_token: string
-              _account_id: string
-              _account_name: string
-              _provider: string
-              _refresh_token: string
-              _token_expires_at: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _access_token: string
-              _account_id: string
-              _account_name: string
-              _encryption_key?: string
-              _provider: string
-              _refresh_token: string
-              _token_expires_at: string
-              _user_id: string
-            }
-            Returns: undefined
-          }
+      set_integration_tokens: {
+        Args: {
+          _access_token: string
+          _account_id: string
+          _account_name: string
+          _provider: string
+          _refresh_token: string
+          _token_expires_at: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       transfer_org_ownership: {
         Args: { _new_owner_user_id: string; _org_id: string }
         Returns: Json
