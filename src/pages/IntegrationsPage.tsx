@@ -245,6 +245,139 @@ export default function IntegrationsPage() {
         </Card>
       )}
 
+      {/* LinkedIn Ads sync panel */}
+      {linkedInAds.connection?.is_connected && (
+        <Card className="bg-card/50 backdrop-blur border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BriefcaseBusiness size={18} style={{ color: '#0A66C2' }} />
+                  {isRtl ? 'סנכרון LinkedIn Ads' : 'LinkedIn Ads Sync'}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {liSync.lastSync ? (
+                    <>
+                      {isRtl ? 'סנכרון אחרון:' : 'Last sync:'}{' '}
+                      {format(new Date(liSync.lastSync.created_at), 'dd/MM/yyyy HH:mm')}
+                      {' • '}
+                      <span className={liSync.lastSync.status === 'success' ? 'text-primary' : 'text-destructive'}>
+                        {liSync.lastSync.status === 'success'
+                          ? `${liSync.lastSync.campaigns_synced} ${isRtl ? 'קמפיינים' : 'campaigns'}`
+                          : (isRtl ? 'שגיאה' : 'Error')}
+                      </span>
+                      {' • '}
+                      <span className="text-muted-foreground text-xs">
+                        {isRtl ? 'סנכרון אוטומטי יומי 03:00 UTC' : 'Auto-sync daily 03:00 UTC'}
+                      </span>
+                    </>
+                  ) : (
+                    isRtl ? 'עדיין לא סונכרן • סנכרון אוטומטי יומי 03:00 UTC' : 'Not synced yet • Auto-sync daily 03:00 UTC'
+                  )}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'מתאריך' : 'From'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(liDateFrom, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={liDateFrom}
+                      onSelect={(d) => d && setLiDateFrom(d)}
+                      disabled={(d) => d > new Date() || d > liDateTo}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'עד תאריך' : 'To'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(liDateTo, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={liDateTo}
+                      onSelect={(d) => d && setLiDateTo(d)}
+                      disabled={(d) => d > new Date() || d < liDateFrom}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <Button onClick={handleLiSync} disabled={liSync.syncing} size="sm" className="gap-2">
+                {liSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
+              </Button>
+            </div>
+
+            {liSync.lastSync?.status === 'error' && liSync.lastSync.error_message && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                {liSync.lastSync.error_message}
+              </div>
+            )}
+
+            {liSync.campaigns.length > 0 ? (
+              <div className="rounded-md border border-border/50 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRtl ? 'קמפיין' : 'Campaign'}</TableHead>
+                      <TableHead>{isRtl ? 'סטטוס' : 'Status'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'חשיפות' : 'Impressions'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'קליקים' : 'Clicks'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'הוצאה' : 'Cost'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'המרות' : 'Conv.'}</TableHead>
+                      <TableHead className="text-right">CTR</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {liSync.campaigns.map(c => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
+                            {c.status ?? '—'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(c.cost_in_local_currency, c.currency_code)}</TableCell>
+                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : !liSync.loading && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {isRtl ? 'אין נתונים מסונכרנים. לחץ "סנכרן עכשיו" כדי להתחיל.' : 'No synced data. Click "Sync now" to start.'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {categories.map(cat => {
         const items = integrations.filter(i => i.category === cat);
         return (
