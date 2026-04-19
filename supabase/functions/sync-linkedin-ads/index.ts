@@ -231,6 +231,79 @@ Deno.serve(async (req) => {
           });
         if (upErr) throw new Error(`Upsert failed: ${upErr.message}`);
         totalSynced += rows.length;
+
+        // ===== Mirror into org-wide campaigns + clients tables =====
+        try {
+          // Find the user's organization (first membership)
+          const { data: memberRow } = await admin
+            .from("organization_members")
+            .select("organization_id")
+            .eq("user_id", userId)
+            .limit(1)
+            .maybeSingle();
+          const orgId = memberRow?.organization_id as string | undefined;
+
+          if (orgId) {
+            // Ensure a "LinkedIn Ads" client exists for this org
+            const clientName = `LinkedIn Ads - ${acc.name}`;
+            let clientId: string | null = null;
+            const { data: existingClient } = await admin
+              .from("clients")
+              .select("id")
+              .eq("organization_id", orgId)
+              .eq("name", clientName)
+              .maybeSingle();
+            if (existingClient?.id) {
+              clientId = existingClient.id;
+            } else {
+              const { data: newClient } = await admin
+                .from("clients")
+                .insert({
+                  organization_id: orgId,
+                  name: clientName,
+                  industry: "LinkedIn Ads",
+                  color: "#0A66C2",
+                  status: "active",
+                })
+                .select("id")
+                .single();
+              clientId = newClient?.id ?? null;
+            }
+
+            // Upsert each campaign by (org, name, platform=LinkedIn)
+            for (const r of rows) {
+              const campaignPayload = {
+                organization_id: orgId,
+                client_id: clientId,
+                name: r.campaign_name,
+                platform: "LinkedIn",
+                status: r.status === "ACTIVE" ? "Live" : r.status === "PAUSED" ? "Paused" : "Planned",
+                budget: Number(r.daily_budget_amount ?? r.total_budget_amount ?? 0),
+                spend: Number(r.cost_in_local_currency ?? 0),
+                impressions: Number(r.impressions ?? 0),
+                clicks: Number(r.clicks ?? 0),
+                conversions: Math.round(Number(r.conversions ?? 0)),
+                leads: Math.round(Number(r.conversions ?? 0)),
+                start_date: r.date_range_start,
+                end_date: r.date_range_end,
+              };
+              const { data: existingCamp } = await admin
+                .from("campaigns")
+                .select("id")
+                .eq("organization_id", orgId)
+                .eq("platform", "LinkedIn")
+                .eq("name", r.campaign_name)
+                .maybeSingle();
+              if (existingCamp?.id) {
+                await admin.from("campaigns").update(campaignPayload).eq("id", existingCamp.id);
+              } else {
+                await admin.from("campaigns").insert(campaignPayload);
+              }
+            }
+          }
+        } catch (mirrorErr) {
+          console.warn("Mirror to org campaigns failed:", mirrorErr instanceof Error ? mirrorErr.message : mirrorErr);
+        }
       }
     }
 
