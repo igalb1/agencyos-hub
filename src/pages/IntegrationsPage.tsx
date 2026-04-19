@@ -57,12 +57,15 @@ export default function IntegrationsPage() {
   const googleAds = useGoogleAdsConnect();
   const gadsSync = useGoogleAdsSync();
   const linkedInAds = useLinkedInAdsConnect();
+  const liSync = useLinkedInAdsSync();
 
   // Default: last 30 days
   const today = new Date();
   const thirtyAgo = new Date(today.getTime() - 30 * 86400000);
   const [dateFrom, setDateFrom] = useState<Date>(thirtyAgo);
   const [dateTo, setDateTo] = useState<Date>(today);
+  const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
+  const [liDateTo, setLiDateTo] = useState<Date>(today);
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
@@ -77,6 +80,13 @@ export default function IntegrationsPage() {
   const handleSync = () => {
     gadsSync.sync(format(dateFrom, 'yyyy-MM-dd'), format(dateTo, 'yyyy-MM-dd'));
   };
+
+  const handleLiSync = () => {
+    liSync.sync(format(liDateFrom, 'yyyy-MM-dd'), format(liDateTo, 'yyyy-MM-dd'));
+  };
+
+  const formatCurrency = (amount: number, currency: string | null) =>
+    amount.toLocaleString(undefined, { style: 'currency', currency: currency || 'USD', maximumFractionDigits: 0 });
 
   return (
     <div className="space-y-6" dir={isRtl ? 'rtl' : 'ltr'}>
