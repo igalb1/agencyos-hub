@@ -1075,6 +1075,7 @@ export type Database = {
         Returns: Json
       }
       trigger_google_ads_auto_sync: { Args: never; Returns: undefined }
+      trigger_linkedin_ads_auto_sync: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "super_admin"
