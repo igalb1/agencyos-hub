@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useGoogleAdsConnect } from '@/hooks/useGoogleAdsConnect';
 import { useGoogleAdsSync } from '@/hooks/useGoogleAdsSync';
+import { useLinkedInAdsConnect } from '@/hooks/useLinkedInAdsConnect';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -31,7 +32,7 @@ const integrations: Integration[] = [
   { id: 'meta', name: 'Meta Ads', description: { he: 'חיבור לקמפיינים ב-Facebook ו-Instagram', en: 'Connect to Facebook & Instagram campaigns' }, icon: Globe, color: '#1877F2', category: 'ads' },
   { id: 'google', name: 'Google Ads', description: { he: 'ניהול קמפיינים ב-Google Search ו-Display', en: 'Manage Google Search & Display campaigns' }, icon: Search, color: '#4285F4', category: 'ads', hasRealConnect: true },
   { id: 'tiktok', name: 'TikTok Ads', description: { he: 'ניהול מודעות ב-TikTok', en: 'Manage TikTok ad campaigns' }, icon: Music2, color: '#000000', category: 'ads' },
-  { id: 'linkedin', name: 'LinkedIn Ads', description: { he: 'קמפיינים ממוקדים ב-LinkedIn', en: 'Targeted LinkedIn ad campaigns' }, icon: BriefcaseBusiness, color: '#0A66C2', category: 'ads' },
+  { id: 'linkedin', name: 'LinkedIn Ads', description: { he: 'קמפיינים ממוקדים ב-LinkedIn', en: 'Targeted LinkedIn ad campaigns' }, icon: BriefcaseBusiness, color: '#0A66C2', category: 'ads', hasRealConnect: true },
   { id: 'hubspot', name: 'HubSpot CRM', description: { he: 'סנכרון לידים ואנשי קשר', en: 'Sync leads and contacts' }, icon: BarChart3, color: '#FF7A59', category: 'crm' },
   { id: 'mailchimp', name: 'Mailchimp', description: { he: 'אוטומציות אימייל ורשימות תפוצה', en: 'Email automations & mailing lists' }, icon: Mail, color: '#FFE01B', category: 'communication' },
   { id: 'slack', name: 'Slack', description: { he: 'התראות והתנהלות צוות', en: 'Team notifications & collaboration' }, icon: MessageSquare, color: '#4A154B', category: 'communication' },
@@ -54,6 +55,7 @@ export default function IntegrationsPage() {
   const isRtl = lang === 'he';
   const googleAds = useGoogleAdsConnect();
   const gadsSync = useGoogleAdsSync();
+  const linkedInAds = useLinkedInAdsConnect();
 
   // Default: last 30 days
   const today = new Date();
@@ -65,6 +67,7 @@ export default function IntegrationsPage() {
 
   const getConnectedState = (item: Integration) => {
     if (item.id === 'google') return googleAds.connection?.is_connected ?? false;
+    if (item.id === 'linkedin') return linkedInAds.connection?.is_connected ?? false;
     return false;
   };
 
@@ -241,6 +244,7 @@ export default function IntegrationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {items.map(item => {
                 const isGoogleAds = item.id === 'google';
+                const isLinkedIn = item.id === 'linkedin';
                 const connected = getConnectedState(item);
                 return (
                   <Card key={item.id} className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-colors">
@@ -266,7 +270,9 @@ export default function IntegrationsPage() {
                           {connected
                             ? (isGoogleAds && googleAds.connection?.account_name
                               ? googleAds.connection.account_name
-                              : (isRtl ? 'מחובר' : 'Connected'))
+                              : isLinkedIn && linkedInAds.connection?.account_name
+                                ? linkedInAds.connection.account_name
+                                : (isRtl ? 'מחובר' : 'Connected'))
                             : (isRtl ? 'לא מחובר' : 'Not connected')}
                         </Badge>
                         {isGoogleAds ? (
@@ -283,6 +289,23 @@ export default function IntegrationsPage() {
                               disabled={googleAds.connecting}
                             >
                               {googleAds.connecting && <Loader2 size={12} className="animate-spin" />}
+                              {isRtl ? 'התחבר' : 'Connect'}
+                            </Button>
+                          )
+                        ) : isLinkedIn ? (
+                          connected ? (
+                            <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={linkedInAds.disconnect}>
+                              {isRtl ? 'נתק' : 'Disconnect'}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-xs gap-1"
+                              onClick={linkedInAds.connect}
+                              disabled={linkedInAds.connecting}
+                            >
+                              {linkedInAds.connecting && <Loader2 size={12} className="animate-spin" />}
                               {isRtl ? 'התחבר' : 'Connect'}
                             </Button>
                           )

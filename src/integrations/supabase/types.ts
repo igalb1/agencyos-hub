@@ -344,6 +344,117 @@ export type Database = {
         }
         Relationships: []
       }
+      linkedin_ads_campaigns: {
+        Row: {
+          campaign_id: string
+          campaign_name: string
+          campaign_type: string | null
+          clicks: number | null
+          conversion_value_in_local_currency: number | null
+          conversions: number | null
+          cost_in_local_currency: number | null
+          created_at: string
+          ctr: number | null
+          currency_code: string | null
+          daily_budget_amount: number | null
+          date_range_end: string
+          date_range_start: string
+          id: string
+          impressions: number | null
+          last_synced_at: string
+          linkedin_account_id: string
+          status: string | null
+          total_budget_amount: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          campaign_name: string
+          campaign_type?: string | null
+          clicks?: number | null
+          conversion_value_in_local_currency?: number | null
+          conversions?: number | null
+          cost_in_local_currency?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency_code?: string | null
+          daily_budget_amount?: number | null
+          date_range_end: string
+          date_range_start: string
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string
+          linkedin_account_id: string
+          status?: string | null
+          total_budget_amount?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          campaign_name?: string
+          campaign_type?: string | null
+          clicks?: number | null
+          conversion_value_in_local_currency?: number | null
+          conversions?: number | null
+          cost_in_local_currency?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency_code?: string | null
+          daily_budget_amount?: number | null
+          date_range_end?: string
+          date_range_start?: string
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string
+          linkedin_account_id?: string
+          status?: string | null
+          total_budget_amount?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      linkedin_ads_sync_log: {
+        Row: {
+          campaigns_synced: number | null
+          created_at: string
+          date_range_end: string | null
+          date_range_start: string | null
+          error_message: string | null
+          id: string
+          linkedin_account_id: string | null
+          status: string
+          triggered_by: string
+          user_id: string
+        }
+        Insert: {
+          campaigns_synced?: number | null
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          id?: string
+          linkedin_account_id?: string | null
+          status: string
+          triggered_by?: string
+          user_id: string
+        }
+        Update: {
+          campaigns_synced?: number | null
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          id?: string
+          linkedin_account_id?: string | null
+          status?: string
+          triggered_by?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organization_invitations: {
         Row: {
           accepted_at: string | null
