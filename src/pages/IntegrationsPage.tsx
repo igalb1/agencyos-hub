@@ -10,6 +10,7 @@ import {
 import { useGoogleAdsConnect } from '@/hooks/useGoogleAdsConnect';
 import { useGoogleAdsSync } from '@/hooks/useGoogleAdsSync';
 import { useLinkedInAdsConnect } from '@/hooks/useLinkedInAdsConnect';
+import { useLinkedInAdsSync } from '@/hooks/useLinkedInAdsSync';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
