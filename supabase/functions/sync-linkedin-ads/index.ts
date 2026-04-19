@@ -34,7 +34,7 @@ async function refreshAccessToken(refreshToken: string, clientId: string, client
   return await res.json() as { access_token: string; expires_in: number };
 }
 
-const LI_VERSION = "202411"; // LinkedIn versioned API
+const LI_VERSION = "202509"; // LinkedIn versioned API (YYYYMM, must be active)
 const LI_HEADERS = (token: string) => ({
   Authorization: `Bearer ${token}`,
   "LinkedIn-Version": LI_VERSION,
