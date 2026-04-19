@@ -146,9 +146,9 @@ Deno.serve(async (req) => {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: claims, error: claimsErr } = await userClient.auth.getClaims();
-      if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
-      userId = claims.claims.sub;
+      const { data: userData, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userData?.user?.id) throw new Error("Unauthorized");
+      userId = userData.user.id;
     }
 
     const today = new Date();
