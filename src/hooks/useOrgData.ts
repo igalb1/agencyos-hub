@@ -26,39 +26,62 @@ export function useOrgData() {
       supabase.from('campaigns').select('*').eq('organization_id', orgId).order('created_at', { ascending: true }),
     ]);
 
+    // Aggregate campaign totals per client + per project (so synced ad data shows up everywhere)
+    const clientAgg = new Map<string, { budget: number; spend: number; leads: number }>();
+    const projectAgg = new Map<string, { budget: number; spend: number; leads: number }>();
+    const campaignCounts = new Map<string, number>();
+    (campRows ?? []).forEach((c) => {
+      const budget = Number(c.budget ?? 0);
+      const spend = Number(c.spend ?? 0);
+      const leads = Number(c.leads ?? 0);
+      if (c.client_id) {
+        const a = clientAgg.get(c.client_id) ?? { budget: 0, spend: 0, leads: 0 };
+        a.budget += budget; a.spend += spend; a.leads += leads;
+        clientAgg.set(c.client_id, a);
+      }
+      if (c.project_id) {
+        campaignCounts.set(c.project_id, (campaignCounts.get(c.project_id) ?? 0) + 1);
+        const a = projectAgg.get(c.project_id) ?? { budget: 0, spend: 0, leads: 0 };
+        a.budget += budget; a.spend += spend; a.leads += leads;
+        projectAgg.set(c.project_id, a);
+      }
+    });
+
     const clientMap = new Map<string, { name: string; color: string }>();
     const mappedClients: Client[] = (cRows ?? []).map((c, i) => {
       const color = c.color || colorFor(i);
       clientMap.set(c.id, { name: c.name, color });
+      const agg = clientAgg.get(c.id);
+      const storedBudget = Number(c.budget ?? 0);
+      const storedSpend = Number(c.spend ?? 0);
+      const storedLeads = Number(c.leads ?? 0);
       return {
         id: c.id,
         name: c.name,
         industry: c.industry ?? '',
         color,
-        budget: Number(c.budget ?? 0),
-        spend: Number(c.spend ?? 0),
-        leads: c.leads ?? 0,
+        budget: agg?.budget ? agg.budget : storedBudget,
+        spend: agg?.spend ? agg.spend : storedSpend,
+        leads: agg?.leads ? agg.leads : storedLeads,
         status: (c.status === 'paused' ? 'paused' : 'active') as 'active' | 'paused',
       };
     });
 
     const projectMap = new Map<string, string>();
-    const campaignCounts = new Map<string, number>();
-    (campRows ?? []).forEach((c) => {
-      if (c.project_id) campaignCounts.set(c.project_id, (campaignCounts.get(c.project_id) ?? 0) + 1);
-    });
-
     const mappedProjects: Project[] = (pRows ?? []).map((p) => {
       projectMap.set(p.id, p.name);
       const client = p.client_id ? clientMap.get(p.client_id) : undefined;
+      const agg = projectAgg.get(p.id);
+      const storedBudget = Number(p.budget ?? 0);
+      const storedSpend = Number(p.spend ?? 0);
       return {
         id: p.id,
         clientId: p.client_id ?? '',
         clientName: client?.name ?? '',
         name: p.name,
         status: (['active', 'planning', 'completed'].includes(p.status) ? p.status : 'active') as Project['status'],
-        budget: Number(p.budget ?? 0),
-        spend: Number(p.spend ?? 0),
+        budget: agg?.budget ? agg.budget : storedBudget,
+        spend: agg?.spend ? agg.spend : storedSpend,
         campaigns: campaignCounts.get(p.id) ?? 0,
         startDate: p.start_date ?? '',
         endDate: p.end_date ?? '',
