@@ -244,23 +244,38 @@ Deno.serve(async (req) => {
           const orgId = memberRow?.organization_id as string | undefined;
 
           if (orgId) {
-            // Ensure a "LinkedIn Ads" client exists for this org
-            const clientName = `LinkedIn Ads - ${acc.name}`;
+            // Try to match an existing client by the LinkedIn account name (case-insensitive).
+            // Fall back to the previous "LinkedIn Ads - X" naming, otherwise create a new client.
+            const accountName = (acc.name ?? "").trim();
+            const fallbackName = `LinkedIn Ads - ${accountName}`;
             let clientId: string | null = null;
-            const { data: existingClient } = await admin
-              .from("clients")
-              .select("id")
-              .eq("organization_id", orgId)
-              .eq("name", clientName)
-              .maybeSingle();
-            if (existingClient?.id) {
-              clientId = existingClient.id;
-            } else {
+
+            if (accountName.length > 0) {
+              const { data: matchByAccount } = await admin
+                .from("clients")
+                .select("id")
+                .eq("organization_id", orgId)
+                .ilike("name", accountName)
+                .maybeSingle();
+              if (matchByAccount?.id) clientId = matchByAccount.id;
+            }
+
+            if (!clientId) {
+              const { data: matchByFallback } = await admin
+                .from("clients")
+                .select("id")
+                .eq("organization_id", orgId)
+                .eq("name", fallbackName)
+                .maybeSingle();
+              if (matchByFallback?.id) clientId = matchByFallback.id;
+            }
+
+            if (!clientId) {
               const { data: newClient } = await admin
                 .from("clients")
                 .insert({
                   organization_id: orgId,
-                  name: clientName,
+                  name: accountName || fallbackName,
                   industry: "LinkedIn Ads",
                   color: "#0A66C2",
                   status: "active",
