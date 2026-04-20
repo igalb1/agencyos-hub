@@ -336,6 +336,16 @@ export default function CampaignsPage() {
                                 </span>
                               </div>
                             </div>
+                            {selected.has(campaign.id) && (
+                              <button
+                                onClick={e => deleteOne(campaign.id, e)}
+                                title={lang === 'he' ? 'מחק קמפיין' : 'Delete campaign'}
+                                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors text-xs font-medium"
+                              >
+                                <Trash2 size={14} />
+                                <span className="hidden sm:inline">{lang === 'he' ? 'מחק' : 'Delete'}</span>
+                              </button>
+                            )}
                           </div>
 
                           {/* Desktop columns - hidden on small */}
