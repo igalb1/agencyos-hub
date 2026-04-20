@@ -92,6 +92,21 @@ export default function CampaignsPage() {
     }
   };
 
+  const deleteOne = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteCampaigns([id]);
+      toast.success(lang === 'he' ? 'הקמפיין נמחק' : 'Campaign deleted');
+      setSelected(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } catch (err: any) {
+      toast.error(err?.message || (lang === 'he' ? 'שגיאה במחיקה' : 'Error deleting'));
+    }
+  };
+
   const handleCampaignCreated = async (campaign: Campaign) => {
     try {
       await upsertCampaign(campaign);
