@@ -399,8 +399,17 @@ export default function CampaignsPage() {
                             />
                           </div>
 
-                          {/* Expand toggle */}
-                          <div className="flex items-center justify-end">
+                          {/* Expand toggle / inline delete when selected */}
+                          <div className="flex items-center justify-end gap-1">
+                            {selected.has(campaign.id) && (
+                              <button
+                                onClick={e => deleteOne(campaign.id, e)}
+                                title={lang === 'he' ? 'מחק קמפיין' : 'Delete campaign'}
+                                className="p-1 rounded hover:bg-destructive/10 text-destructive transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                             {ads.length > 0 && (
                               <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} className="text-muted-foreground">
                                 <Chevron size={16} />
