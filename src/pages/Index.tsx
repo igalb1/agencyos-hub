@@ -30,7 +30,7 @@ export default function Index() {
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
         <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-6">
-          {isHe ? "כעת בבטא ציבורית — תקופת ניסיון חינם" : "Now in public beta — free trial"}
+          {isHe ? "כעת בבטא ציבורית — 28 ימי ניסיון חינם" : "Now in public beta — 28-day free trial"}
         </span>
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
           {isHe ? (
@@ -52,7 +52,7 @@ export default function Index() {
         </p>
         <div className="flex items-center justify-center gap-3 mb-8">
           <Link to="/auth" className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
-            {isHe ? "התחל ניסיון חינם" : "Start free trial"}
+            {isHe ? "התחל 28 ימי ניסיון חינם" : "Start 28-day free trial"}
           </Link>
           <Link to="/pricing" className="px-6 py-3 rounded-lg border border-border font-medium hover:bg-muted transition-colors">
             {isHe ? "צפה בתמחור" : "View pricing"}
@@ -102,7 +102,7 @@ export default function Index() {
             {isHe ? "מוכן לייעל את הסוכנות שלך?" : "Ready to streamline your agency?"}
           </h2>
           <p className="text-muted-foreground mb-6">
-            {isHe ? "התחל את תקופת הניסיון החינמית — ללא צורך בכרטיס אשראי." : "Start your free trial — no credit card required."}
+            {isHe ? "התחל 28 ימי ניסיון חינם — ללא צורך בכרטיס אשראי." : "Start your 28-day free trial — no credit card required."}
           </p>
           <Link to="/auth" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90">
             <Check size={18} /> {isHe ? "התחל בחינם" : "Get started free"}
