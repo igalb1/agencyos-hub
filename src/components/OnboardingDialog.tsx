@@ -57,7 +57,7 @@ export function OnboardingDialog() {
             ברוך הבא ל-AgencyOS! 🎉
           </DialogTitle>
           <DialogDescription className="text-right">
-            יש לך 14 ימי ניסיון חינם. בוא נתחיל בכמה צעדים פשוטים:
+            יש לך 28 ימי ניסיון חינם. בוא נתחיל בכמה צעדים פשוטים:
           </DialogDescription>
         </DialogHeader>
 
