@@ -1,16 +1,35 @@
-import { Link } from "react-router-dom";
-import { Check } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Check, Loader2 } from "lucide-react";
 import PublicLayout from "@/components/public/PublicLayout";
 import { PLANS } from "@/lib/plans";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 
 export default function PricingPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { openCheckout, loading } = usePaddleCheckout();
+
+  const handleSelect = (priceId: string) => {
+    if (!user) {
+      navigate(`/auth?plan=${priceId}`);
+      return;
+    }
+    openCheckout({
+      priceId,
+      customerEmail: user.email || undefined,
+      customData: { userId: user.id },
+      successUrl: `${window.location.origin}/settings/billing?checkout=success`,
+    });
+  };
+
   return (
     <PublicLayout>
-      <section className="max-w-6xl mx-auto px-6 py-16">
+      <section className="max-w-6xl mx-auto px-6 py-16" dir="rtl">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple pricing for every agency</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">תמחור פשוט לכל סוכנות</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start with a free trial. Upgrade when you're ready. Cancel any time.
+            התחל בתקופת ניסיון חינם. שדרג כשתרצה. בטל בכל עת.
           </p>
         </div>
 
@@ -24,7 +43,7 @@ export default function PricingPage() {
             >
               {p.popular && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
-                  Most popular
+                  הכי פופולרי
                 </span>
               )}
               <div className="mb-6">
@@ -32,7 +51,7 @@ export default function PricingPage() {
                 <p className="text-sm text-muted-foreground">{p.description}</p>
                 <div className="mt-3">
                   <span className="text-4xl font-bold">{p.price}</span>
-                  <span className="text-muted-foreground">/mo</span>
+                  <span className="text-muted-foreground">/חודש</span>
                 </div>
               </div>
               <ul className="space-y-2 mb-6 flex-1">
@@ -43,23 +62,24 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/auth"
-                className={`w-full text-center py-2.5 rounded-lg font-medium transition-opacity ${
+              <button
+                onClick={() => handleSelect(p.priceId)}
+                disabled={loading}
+                className={`w-full text-center py-2.5 rounded-lg font-medium transition-opacity flex items-center justify-center gap-2 ${
                   p.popular
                     ? "bg-primary text-primary-foreground hover:opacity-90"
                     : "border border-border hover:bg-muted"
-                }`}
+                } disabled:opacity-50`}
               >
-                Start free trial
-              </Link>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (user ? "בחר תוכנית" : "התחל ניסיון חינם")}
+              </button>
             </div>
           ))}
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-10">
-          All plans billed in USD. Payments are securely processed by Paddle, our Merchant of Record.
-          See our <Link to="/refund" className="text-primary hover:underline">Refund Policy</Link>.
+          כל התוכניות בחיוב בדולרים. התשלומים מעובדים בצורה מאובטחת ע״י Paddle, סוחר הרשם שלנו.
+          ראה <Link to="/refund" className="text-primary hover:underline">מדיניות החזרים</Link>.
         </p>
       </section>
     </PublicLayout>
