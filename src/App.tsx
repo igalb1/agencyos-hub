@@ -29,6 +29,7 @@ import PricingPage from "@/pages/PricingPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import RefundPage from "@/pages/RefundPage";
+import UnsubscribePage from "@/pages/UnsubscribePage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -92,6 +93,7 @@ const App = () => (
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/refund" element={<RefundPage />} />
+              <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
               {/* Auth */}
               <Route path="/auth" element={<AuthRoute />} />
