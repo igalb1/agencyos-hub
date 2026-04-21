@@ -28,7 +28,7 @@ export default function TrialExpired() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">תקופת הניסיון הסתיימה</h1>
           <p className="text-muted-foreground max-w-md">
-            תקופת הניסיון של 60 יום עבור <span className="font-semibold text-foreground">{organization?.name}</span> הסתיימה.
+            תקופת הניסיון של <span className="font-semibold text-foreground">{organization?.name}</span> הסתיימה.
             בחר תוכנית כדי להמשיך.
           </p>
         </div>
