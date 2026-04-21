@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectivePlan } from '@/hooks/useEffectivePlan';
 import { PaymentTestModeBanner } from '@/components/PaymentTestModeBanner';
+import { TrialBanner } from '@/components/TrialBanner';
+import { OnboardingDialog } from '@/components/OnboardingDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -30,11 +32,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden flex-col">
       <PaymentTestModeBanner />
+      <TrialBanner />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Topbar />
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <OnboardingDialog />
             {paymentStatus === 'past_due' && (
               <Alert variant="destructive" className="mb-4">
                 <AlertTriangle className="h-4 w-4" />
