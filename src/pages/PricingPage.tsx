@@ -29,7 +29,7 @@ export default function PricingPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">תמחור פשוט לכל סוכנות</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            התחל בתקופת ניסיון חינם. שדרג כשתרצה. בטל בכל עת.
+            התחל ב-28 ימי ניסיון חינם. שדרג כשתרצה. בטל בכל עת.
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function PricingPage() {
                     : "border border-border hover:bg-muted"
                 } disabled:opacity-50`}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (user ? "בחר תוכנית" : "התחל ניסיון חינם")}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (user ? "בחר תוכנית" : "התחל 28 ימי ניסיון חינם")}
               </button>
             </div>
           ))}
