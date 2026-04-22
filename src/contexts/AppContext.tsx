@@ -15,7 +15,10 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('agencyos-lang') as Lang) || 'he');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('agencyos-theme') as 'dark' | 'light') || 'dark');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 1024;
+  });
 
   useEffect(() => {
     localStorage.setItem('agencyos-lang', lang);
