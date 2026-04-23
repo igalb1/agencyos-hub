@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 
 /**
  * Tenant isolation tests
@@ -33,7 +34,6 @@ function makeBuilder(table: string) {
   builder.insert = chain("insert");
   builder.update = chain("update");
   builder.delete = chain("delete");
-  // awaitable -> resolves to empty array result (for list queries)
   (builder as { then: (r: (v: unknown) => void) => void }).then = (r) =>
     r({ data: [], error: null });
   return builder;
@@ -61,8 +61,19 @@ vi.mock("@/integrations/supabase/client", () => ({
 const ORG_A = "11111111-1111-1111-1111-111111111111";
 const ORG_B = "22222222-2222-2222-2222-222222222222";
 
+// Mutable org state — switched per test before re-rendering.
+const authState: { organization: { id: string } | null } = { organization: { id: ORG_A } };
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => authState,
+}));
+
+// Import hooks AFTER mocks are registered.
+import { useOrgData } from "@/hooks/useOrgData";
+import { useTasks } from "@/hooks/useTasks";
+
 beforeEach(() => {
   calls.length = 0;
+  authState.organization = { id: ORG_A };
 });
 
 const callsFor = (t: string) => calls.filter((c) => c.table === t);
@@ -73,21 +84,12 @@ const hasOrgFilter = (c: TableCall, id: string) =>
 
 describe("useOrgData scopes every read by organization_id", () => {
   it("filters clients/projects/campaigns by the active org", async () => {
-    vi.resetModules();
-    calls.length = 0;
-    vi.doMock("@/contexts/AuthContext", () => ({
-      useAuth: () => ({ organization: { id: ORG_A } }),
-    }));
-    const { renderHook, waitFor } = await import("@testing-library/react");
-    const { useOrgData } = await import("@/hooks/useOrgData");
-
     renderHook(() => useOrgData());
     await waitFor(() => {
       expect(callsFor("clients").length).toBeGreaterThan(0);
       expect(callsFor("projects").length).toBeGreaterThan(0);
       expect(callsFor("campaigns").length).toBeGreaterThan(0);
     });
-
     for (const t of ["clients", "projects", "campaigns"]) {
       for (const c of callsFor(t)) {
         expect(hasOrgFilter(c, ORG_A), `${t} missing org filter`).toBe(true);
@@ -97,13 +99,7 @@ describe("useOrgData scopes every read by organization_id", () => {
   });
 
   it("issues no queries when organization is missing", async () => {
-    vi.resetModules();
-    calls.length = 0;
-    vi.doMock("@/contexts/AuthContext", () => ({
-      useAuth: () => ({ organization: null }),
-    }));
-    const { renderHook } = await import("@testing-library/react");
-    const { useOrgData } = await import("@/hooks/useOrgData");
+    authState.organization = null;
     renderHook(() => useOrgData());
     await new Promise((r) => setTimeout(r, 30));
     expect(callsFor("clients")).toHaveLength(0);
@@ -114,13 +110,6 @@ describe("useOrgData scopes every read by organization_id", () => {
 
 describe("useOrgData stamps organization_id on every write", () => {
   it("inserts include organization_id matching the active org", async () => {
-    vi.resetModules();
-    calls.length = 0;
-    vi.doMock("@/contexts/AuthContext", () => ({
-      useAuth: () => ({ organization: { id: ORG_A } }),
-    }));
-    const { renderHook, act, waitFor } = await import("@testing-library/react");
-    const { useOrgData } = await import("@/hooks/useOrgData");
     const { result } = renderHook(() => useOrgData());
     await waitFor(() => expect(result.current).toBeTruthy());
 
@@ -157,14 +146,8 @@ describe("useOrgData stamps organization_id on every write", () => {
 
 describe("useTasks is scoped to organization_id", () => {
   it("reads and inserts are stamped with the active org", async () => {
-    vi.resetModules();
-    calls.length = 0;
-    vi.doMock("@/contexts/AuthContext", () => ({
-      useAuth: () => ({ organization: { id: ORG_A } }),
-    }));
-    const { renderHook, act, waitFor } = await import("@testing-library/react");
-    const { useTasks } = await import("@/hooks/useTasks");
-    const { result } = renderHook(() => useTasks(new Map()));
+    const lookup = new Map<string, string>();
+    const { result } = renderHook(() => useTasks(lookup));
     await waitFor(() => expect(callsFor("tasks").length).toBeGreaterThan(0));
 
     for (const c of callsFor("tasks")) {
