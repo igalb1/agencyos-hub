@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 type FilterCall = { method: string; args: unknown[] };
-type TableCall = { table: string; filters: FilterCall[]; selected?: string };
+type TableCall = { table: string; filters: FilterCall[] };
 const calls: TableCall[] = [];
 
 function makeBuilder(table: string) {
@@ -22,25 +22,18 @@ function makeBuilder(table: string) {
     record.filters.push({ method, args });
     return builder;
   };
-  builder.select = (cols?: unknown) => {
-    record.selected = String(cols ?? "*");
-    return builder;
-  };
+  builder.select = chain("select");
   builder.eq = chain("eq");
   builder.in = chain("in");
   builder.order = chain("order");
   builder.limit = chain("limit");
-  builder.single = () => Promise.resolve({ data: null, error: null });
+  builder.single = () =>
+    Promise.resolve({ data: { id: "generated-id" }, error: null });
   builder.maybeSingle = () => Promise.resolve({ data: null, error: null });
-  builder.insert = (...args: unknown[]) => {
-    record.filters.push({ method: "insert", args });
-    return builder;
-  };
-  builder.update = (...args: unknown[]) => {
-    record.filters.push({ method: "update", args });
-    return builder;
-  };
+  builder.insert = chain("insert");
+  builder.update = chain("update");
   builder.delete = chain("delete");
+  // awaitable -> resolves to empty array result (for list queries)
   (builder as { then: (r: (v: unknown) => void) => void }).then = (r) =>
     r({ data: [], error: null });
   return builder;
