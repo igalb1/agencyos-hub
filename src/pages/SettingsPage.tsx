@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft } from 'lucide-react';
+import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import TeamSettingsCard from '@/components/settings/TeamSettingsCard';
 
@@ -22,6 +22,10 @@ export default function SettingsPage() {
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [saving, setSaving] = useState(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const initials = (fullName || user?.email || '?').slice(0, 2).toUpperCase();
 
@@ -39,6 +43,27 @@ export default function SettingsPage() {
       toast({ title: isRtl ? 'הפרופיל עודכן בהצלחה' : 'Profile updated successfully' });
     }
     setSaving(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: isRtl ? 'הסיסמה חייבת להכיל לפחות 6 תווים' : 'Password must be at least 6 characters', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: isRtl ? 'הסיסמאות אינן תואמות' : 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast({ title: isRtl ? 'שגיאה בעדכון הסיסמה' : 'Failed to update password', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: isRtl ? 'הסיסמה עודכנה בהצלחה' : 'Password updated successfully' });
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+    setChangingPassword(false);
   };
 
   return (
