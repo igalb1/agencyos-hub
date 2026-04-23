@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft } from 'lucide-react';
+import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import TeamSettingsCard from '@/components/settings/TeamSettingsCard';
 
@@ -22,6 +22,10 @@ export default function SettingsPage() {
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [saving, setSaving] = useState(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const initials = (fullName || user?.email || '?').slice(0, 2).toUpperCase();
 
@@ -39,6 +43,27 @@ export default function SettingsPage() {
       toast({ title: isRtl ? 'הפרופיל עודכן בהצלחה' : 'Profile updated successfully' });
     }
     setSaving(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: isRtl ? 'הסיסמה חייבת להכיל לפחות 6 תווים' : 'Password must be at least 6 characters', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: isRtl ? 'הסיסמאות אינן תואמות' : 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast({ title: isRtl ? 'שגיאה בעדכון הסיסמה' : 'Failed to update password', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: isRtl ? 'הסיסמה עודכנה בהצלחה' : 'Password updated successfully' });
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+    setChangingPassword(false);
   };
 
   return (
@@ -98,6 +123,51 @@ export default function SettingsPage() {
 
       {/* Team */}
       <TeamSettingsCard />
+
+      {/* Change Password */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Lock size={20} className="text-primary" />
+            <div>
+              <CardTitle className="text-lg">{isRtl ? 'שינוי סיסמה' : 'Change Password'}</CardTitle>
+              <CardDescription>{isRtl ? 'עדכן את סיסמת החשבון שלך' : 'Update your account password'}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>{isRtl ? 'סיסמה חדשה' : 'New Password'}</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder={isRtl ? 'לפחות 6 תווים' : 'At least 6 characters'}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{isRtl ? 'אימות סיסמה' : 'Confirm Password'}</Label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder={isRtl ? 'הזן שוב את הסיסמה' : 'Re-enter password'}
+              autoComplete="new-password"
+            />
+          </div>
+          <Button
+            onClick={handleChangePassword}
+            disabled={changingPassword || !newPassword || !confirmPassword}
+            className="gap-2"
+          >
+            <Lock size={16} />
+            {changingPassword
+              ? (isRtl ? 'מעדכן...' : 'Updating...')
+              : (isRtl ? 'עדכן סיסמה' : 'Update Password')}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Appearance */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
