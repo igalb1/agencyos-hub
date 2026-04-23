@@ -124,6 +124,51 @@ export default function SettingsPage() {
       {/* Team */}
       <TeamSettingsCard />
 
+      {/* Change Password */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Lock size={20} className="text-primary" />
+            <div>
+              <CardTitle className="text-lg">{isRtl ? 'שינוי סיסמה' : 'Change Password'}</CardTitle>
+              <CardDescription>{isRtl ? 'עדכן את סיסמת החשבון שלך' : 'Update your account password'}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>{isRtl ? 'סיסמה חדשה' : 'New Password'}</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder={isRtl ? 'לפחות 6 תווים' : 'At least 6 characters'}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{isRtl ? 'אימות סיסמה' : 'Confirm Password'}</Label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder={isRtl ? 'הזן שוב את הסיסמה' : 'Re-enter password'}
+              autoComplete="new-password"
+            />
+          </div>
+          <Button
+            onClick={handleChangePassword}
+            disabled={changingPassword || !newPassword || !confirmPassword}
+            className="gap-2"
+          >
+            <Lock size={16} />
+            {changingPassword
+              ? (isRtl ? 'מעדכן...' : 'Updating...')
+              : (isRtl ? 'עדכן סיסמה' : 'Update Password')}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Appearance */}
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardHeader>
