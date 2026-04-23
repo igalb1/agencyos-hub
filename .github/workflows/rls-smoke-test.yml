@@ -1,0 +1,60 @@
+name: RLS Smoke Test
+
+# Spins up a temporary Postgres, applies all Supabase migrations, then runs a
+# lightweight RLS isolation test proving that a member of Org A cannot read
+# or write data belonging to Org B (clients, projects, campaigns, tasks).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/rls-smoke-test.sql'
+      - '.github/workflows/rls-smoke-test.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/rls-smoke-test.sql'
+      - '.github/workflows/rls-smoke-test.yml'
+  workflow_dispatch:
+
+jobs:
+  rls-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Bootstrap Supabase-compatible schema
+        run: psql -v ON_ERROR_STOP=1 -f scripts/rls-bootstrap.sql
+
+      - name: Apply migrations (tolerant of vault/pgmq/net features)
+        run: |
+          set -e
+          for f in supabase/migrations/*.sql; do
+            echo "==> $f"
+            psql -v ON_ERROR_STOP=0 -f "$f" >/dev/null 2>&1 || echo "   (non-fatal errors ignored)"
+          done
+
+      - name: Run RLS isolation smoke test
+        run: psql -v ON_ERROR_STOP=1 -f scripts/rls-smoke-test.sql
