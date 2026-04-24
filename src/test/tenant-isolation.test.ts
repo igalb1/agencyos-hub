@@ -175,16 +175,24 @@ describe("useTasks is scoped to organization_id", () => {
 describe("blocked workspace gate", () => {
   // Mirrors AuthContext: trialExpired = !isSuperAdmin && organization && hasAccess===false
   it("trialExpired=true when get_effective_plan returns has_access=false", () => {
-    const trialExpired = !false && !!{ id: ORG_A } && false === false;
+    const isSuperAdmin = false;
+    const organization: { id: string } | null = { id: ORG_A };
+    const hasAccess = false;
+    const trialExpired = !isSuperAdmin && !!organization && hasAccess === false;
     expect(trialExpired).toBe(true);
   });
   it("super admin retains access regardless of has_access", () => {
     const isSuperAdmin = true;
-    const trialExpired = !isSuperAdmin && !!{ id: ORG_A } && false === false;
+    const organization: { id: string } | null = { id: ORG_A };
+    const hasAccess = false;
+    const trialExpired = !isSuperAdmin && !!organization && hasAccess === false;
     expect(trialExpired).toBe(false);
   });
   it("active subscription grants access", () => {
-    const trialExpired = !false && !!{ id: ORG_A } && true === false;
+    const isSuperAdmin = false;
+    const organization: { id: string } | null = { id: ORG_A };
+    const hasAccess: boolean = true;
+    const trialExpired = !isSuperAdmin && !!organization && !hasAccess;
     expect(trialExpired).toBe(false);
   });
 });
