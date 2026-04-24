@@ -192,7 +192,7 @@ describe("blocked workspace gate", () => {
     const isSuperAdmin = false;
     const organization: { id: string } | null = { id: ORG_A };
     const hasAccess: boolean = true;
-    const trialExpired = !isSuperAdmin && !!organization && hasAccess === false;
+    const trialExpired = !isSuperAdmin && !!organization && !hasAccess;
     expect(trialExpired).toBe(false);
   });
 });
