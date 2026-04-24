@@ -191,7 +191,7 @@ describe("blocked workspace gate", () => {
   it("active subscription grants access", () => {
     const isSuperAdmin = false;
     const organization: { id: string } | null = { id: ORG_A };
-    const hasAccess = true;
+    const hasAccess: boolean = true;
     const trialExpired = !isSuperAdmin && !!organization && hasAccess === false;
     expect(trialExpired).toBe(false);
   });
