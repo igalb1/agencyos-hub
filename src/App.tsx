@@ -32,6 +32,8 @@ import PrivacyPage from "@/pages/PrivacyPage";
 import RefundPage from "@/pages/RefundPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import NotFound from "./pages/NotFound.tsx";
+import SupportBot from "@/components/support/SupportBot";
+import SupportAdminPage from "@/pages/SupportAdminPage";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +66,7 @@ function ProtectedRoutes() {
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/ads" element={<AdsPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/support" element={<SupportAdminPage />} />
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/performance" element={<PerformancePage />} />
@@ -118,6 +121,7 @@ const App = () => (
               {/* Authenticated app */}
               <Route path="/*" element={<ProtectedRoutes />} />
             </Routes>
+            <SupportBot />
           </BrowserRouter>
         </AppProvider>
       </AuthProvider>
