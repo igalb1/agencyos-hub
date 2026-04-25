@@ -7,6 +7,8 @@ import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, Users, Building2, CreditCard, Search } from 'lucide-react';
+import { Headset } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { OrgRowComponent } from '@/components/admin/OrgRow';
 import { UserRow, type AdminUser } from '@/components/admin/UserRow';
@@ -101,6 +103,13 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-foreground">Super Admin</h1>
           <p className="text-sm text-muted-foreground">ניהול כלל המערכת</p>
         </div>
+        <Link
+          to="/admin/support"
+          className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:opacity-90"
+        >
+          <Headset size={16} />
+          תמיכה
+        </Link>
       </div>
 
       {/* Stats */}
