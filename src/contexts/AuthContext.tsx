@@ -4,25 +4,32 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface OrgData { id: string; name: string; logo_url: string | null; trial_ends_at: string; is_active: boolean; plan: string; payment_status?: string }
 
+interface MembershipOrg { id: string; name: string; logo_url: string | null; role: string }
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: { full_name: string | null; avatar_url: string | null; is_frozen?: boolean } | null;
   organization: OrgData | null;
+  organizations: MembershipOrg[];
   loading: boolean;
   trialExpired: boolean;
   isSuperAdmin: boolean;
   signOut: () => Promise<void>;
   refreshOrganization: () => Promise<void>;
+  switchOrganization: (orgId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const ACTIVE_ORG_KEY = 'agencyos_active_org_id';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthContextType['profile']>(null);
   const [organization, setOrganization] = useState<AuthContextType['organization']>(null);
+  const [organizations, setOrganizations] = useState<MembershipOrg[]>([]);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -44,20 +51,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchOrganization = useCallback(async (userId: string) => {
-    const { data: membership } = await supabase
+    // Load all memberships
+    const { data: memberships } = await supabase
       .from('organization_members')
-      .select('organization_id')
-      .eq('user_id', userId)
-      .limit(1)
-      .single();
+      .select('organization_id, role, organizations(id, name, logo_url)')
+      .eq('user_id', userId);
 
-    if (membership) {
+    const orgs: MembershipOrg[] = (memberships ?? [])
+      .map((m: any) => m.organizations ? {
+        id: m.organizations.id,
+        name: m.organizations.name,
+        logo_url: m.organizations.logo_url,
+        role: m.role,
+      } : null)
+      .filter(Boolean) as MembershipOrg[];
+    setOrganizations(orgs);
+
+    if (orgs.length > 0) {
+      // Determine which org to load: persisted choice if still a member, else first
+      const stored = localStorage.getItem(ACTIVE_ORG_KEY);
+      const activeId = stored && orgs.some(o => o.id === stored) ? stored : orgs[0].id;
+      localStorage.setItem(ACTIVE_ORG_KEY, activeId);
+
       const { data: org } = await supabase
         .from('organizations')
         .select('id, name, logo_url, trial_ends_at, is_active, plan, payment_status')
-        .eq('id', membership.organization_id)
+        .eq('id', activeId)
         .single();
       if (org) setOrganization(org as OrgData);
+    } else {
+      setOrganization(null);
     }
 
     // Get effective access from DB
@@ -144,11 +167,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchOrganization]);
 
   const signOut = async () => {
+    localStorage.removeItem(ACTIVE_ORG_KEY);
+    sessionStorage.removeItem('agencyos_workspace_chosen');
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
     setProfile(null);
     setOrganization(null);
+    setOrganizations([]);
     setIsSuperAdmin(false);
     setHasAccess(null);
   };
@@ -157,11 +183,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await fetchOrganization(user.id);
   };
 
+  const switchOrganization = async (orgId: string) => {
+    if (!organizations.some(o => o.id === orgId)) return;
+    localStorage.setItem(ACTIVE_ORG_KEY, orgId);
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('id, name, logo_url, trial_ends_at, is_active, plan, payment_status')
+      .eq('id', orgId)
+      .single();
+    if (org) setOrganization(org as OrgData);
+  };
+
   // trialExpired = no effective access (DB-driven). Super admin always has access.
   const trialExpired = !isSuperAdmin && organization && hasAccess === false;
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, organization, loading, trialExpired: !!trialExpired, isSuperAdmin, signOut, refreshOrganization }}>
+    <AuthContext.Provider value={{ session, user, profile, organization, organizations, loading, trialExpired: !!trialExpired, isSuperAdmin, signOut, refreshOrganization, switchOrganization }}>
       {children}
     </AuthContext.Provider>
   );

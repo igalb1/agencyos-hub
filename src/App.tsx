@@ -24,6 +24,7 @@ import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
 import AcceptInvitePage from "@/pages/AcceptInvitePage";
 import TrialExpired from "@/pages/TrialExpired";
+import SelectWorkspace from "@/pages/SelectWorkspace";
 import Index from "@/pages/Index";
 import PricingPage from "@/pages/PricingPage";
 import TermsPage from "@/pages/TermsPage";
@@ -35,7 +36,7 @@ import NotFound from "./pages/NotFound.tsx";
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { session, loading, trialExpired } = useAuth();
+  const { session, loading, trialExpired, organizations, organization } = useAuth();
 
   if (loading) {
     return (
@@ -46,6 +47,12 @@ function ProtectedRoutes() {
   }
 
   if (!session) return <Navigate to="/auth" replace />;
+  // After login: if user has multiple workspaces and hasn't picked one this session,
+  // send them to the workspace selector.
+  const justChose = sessionStorage.getItem('agencyos_workspace_chosen') === '1';
+  if (organizations.length > 1 && !justChose) {
+    return <Navigate to="/select-workspace" replace />;
+  }
   if (trialExpired) return <TrialExpired />;
 
   return (
@@ -78,6 +85,13 @@ function AuthRoute() {
   return <AuthPage />;
 }
 
+function WorkspaceSelectRoute() {
+  const { session, loading } = useAuth();
+  if (loading) return null;
+  if (!session) return <Navigate to="/auth" replace />;
+  return <SelectWorkspace />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -99,6 +113,7 @@ const App = () => (
               <Route path="/auth" element={<AuthRoute />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/accept-invite" element={<AcceptInvitePage />} />
+              <Route path="/select-workspace" element={<WorkspaceSelectRoute />} />
 
               {/* Authenticated app */}
               <Route path="/*" element={<ProtectedRoutes />} />
