@@ -168,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     localStorage.removeItem(ACTIVE_ORG_KEY);
+    sessionStorage.removeItem('agencyos_workspace_chosen');
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);

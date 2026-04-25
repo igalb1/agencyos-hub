@@ -14,6 +14,7 @@ export default function SelectWorkspace() {
 
   const handleSelect = async (orgId: string) => {
     await switchOrganization(orgId);
+    sessionStorage.setItem('agencyos_workspace_chosen', '1');
     navigate('/dashboard');
   };
 

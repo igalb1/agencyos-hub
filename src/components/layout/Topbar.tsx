@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { t } from '@/lib/i18n';
-import { Bell, Menu, Search, LogOut, Upload } from 'lucide-react';
+import { Bell, Menu, Search, LogOut, Upload, Building2 } from 'lucide-react';
 import ImportDataDialog from '@/components/import/ImportDataDialog';
 
 export default function Topbar() {
   const { lang, sidebarOpen, setSidebarOpen } = useApp();
-  const { profile, organization, signOut } = useAuth();
+  const { profile, organization, organizations, signOut } = useAuth();
   const [importOpen, setImportOpen] = useState(false);
+  const hasMultiple = organizations.length > 1;
+  const isRtl = lang === 'he';
 
   return (
     <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
@@ -19,7 +22,21 @@ export default function Topbar() {
           </button>
         )}
         {organization && (
-          <span className="text-sm font-semibold text-foreground hidden md:block">{organization.name}</span>
+          hasMultiple ? (
+            <Link
+              to="/select-workspace"
+              className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors group"
+              title={isRtl ? 'החלף סביבת עבודה' : 'Switch workspace'}
+            >
+              <Building2 size={14} className="text-muted-foreground group-hover:text-foreground" />
+              <span className="text-sm font-semibold text-foreground">{organization.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {isRtl ? 'החלף' : 'Switch'}
+              </span>
+            </Link>
+          ) : (
+            <span className="text-sm font-semibold text-foreground hidden md:block">{organization.name}</span>
+          )
         )}
         <div className="hidden sm:flex items-center gap-2 bg-muted rounded-lg px-3 py-2 w-64">
           <Search size={16} className="text-muted-foreground" />
