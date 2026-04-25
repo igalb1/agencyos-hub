@@ -8,6 +8,7 @@ import {
   Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield, Settings
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const navItems = [
   { key: 'dashboard' as const, icon: LayoutDashboard, path: '/dashboard' },
@@ -30,6 +31,19 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isRtl = lang === 'he';
+
+  // Auto-close the sidebar on mobile when the route changes, so links work
+  // reliably without needing the click handler to manage open/close state.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const handleNav = (path: string) => {
+    navigate(path);
+  };
 
   return (
     <>
@@ -77,7 +91,8 @@ export default function Sidebar() {
             return (
               <button
                 key={item.key}
-                onClick={() => { navigate(item.path); setSidebarOpen(window.innerWidth >= 1024); }}
+                type="button"
+                onClick={() => handleNav(item.path)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                   active
@@ -92,7 +107,8 @@ export default function Sidebar() {
           })}
           {isSuperAdmin && (
             <button
-              onClick={() => { navigate('/admin'); setSidebarOpen(window.innerWidth >= 1024); }}
+              type="button"
+              onClick={() => handleNav('/admin')}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all mt-2 border-t border-border pt-3",
                 location.pathname === '/admin'
