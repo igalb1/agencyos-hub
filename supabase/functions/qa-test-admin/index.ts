@@ -75,6 +75,14 @@ Deno.serve(async (req) => {
   const qaOk = !!QA_SECRET && qaHeader === QA_SECRET;
   const srOk = !!SERVICE_ROLE && bearer === SERVICE_ROLE;
   if (!qaOk && !srOk) {
+    console.log('forbidden', {
+      hasQaHeader: !!qaHeader,
+      qaSecretConfigured: !!QA_SECRET,
+      bearerLen: bearer.length,
+      srLen: SERVICE_ROLE.length,
+      srPrefix: SERVICE_ROLE.slice(0, 12),
+      bearerPrefix: bearer.slice(0, 12),
+    });
     return json({ error: 'forbidden' }, 403);
   }
 
