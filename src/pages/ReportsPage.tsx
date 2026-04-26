@@ -39,7 +39,8 @@ export default function ReportsPage() {
     });
   }, [filterClient, dateFrom, dateTo, orgCampaigns]);
 
-  // Derive ads from campaigns (no separate ad table per org).
+  // Derive ads from campaigns (no separate ad table per org). Map campaign
+  // status into the ad-status vocabulary used in the table cell below.
   const filteredAds = useMemo(
     () =>
       filteredCampaigns.map((c) => ({
@@ -49,7 +50,10 @@ export default function ReportsPage() {
         campaignName: c.name,
         clientName: c.clientName,
         platform: c.platform,
-        status: c.status,
+        status:
+          c.status === 'Live' ? 'Active'
+          : c.status === 'Paused' ? 'Paused'
+          : 'Draft',
         spend: c.spend,
         leads: c.leads,
         clicks: c.clicks,
