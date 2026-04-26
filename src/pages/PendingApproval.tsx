@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock, LogOut, RefreshCw, Plus } from 'lucide-react';
 
-interface Membership { organization_id: string; organization_name: string; role: string; status: string }
+interface Membership { id: string; name: string; role: string; status: string }
 
 export default function PendingApproval({ memberships }: { memberships: Membership[] }) {
   const { signOut, refreshOrganization } = useAuth();
@@ -59,7 +59,7 @@ export default function PendingApproval({ memberships }: { memberships: Membersh
             <h1 className="text-2xl font-bold text-foreground">ממתין לאישור</h1>
             {pending ? (
               <p className="text-muted-foreground">
-                שלחנו בקשת הצטרפות ל-<span className="font-semibold text-foreground">{pending.organization_name}</span>.
+                שלחנו בקשת הצטרפות ל-<span className="font-semibold text-foreground">{pending.name}</span>.
                 ברגע שהמנהל יאשר את הבקשה, תקבל גישה אוטומטית.
               </p>
             ) : (
