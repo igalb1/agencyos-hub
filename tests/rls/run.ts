@@ -14,8 +14,10 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // -- config ----------------------------------------------------------------
-const SUPABASE_URL = "https://llioeafzlhrjqwkjaepe.supabase.co";
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "https://llioeafzlhrjqwkjaepe.supabase.co";
 const ANON_KEY =
+  process.env.SUPABASE_PUBLISHABLE_KEY ??
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsaW9lYWZ6bGhyanF3a2phZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzg0NTQsImV4cCI6MjA5MTkxNDQ1NH0.MOLKs5krnEa_KFuc2ViQdnGK-FVTjtaaQE0xIlk8Q8U";
 const QA_SECRET = process.env.QA_TEST_SECRET ?? "";
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -38,24 +40,144 @@ const E = {
 const ORG_A = `${PREFIX}Agency A`;
 const ORG_B = `${PREFIX}Agency B`;
 
-// -- admin helper (service-role via edge function) -------------------------
+// -- admin helper (direct service-role client; falls back to edge fn) ------
+const sr: SupabaseClient | null = SERVICE_ROLE
+  ? createClient(SUPABASE_URL, SERVICE_ROLE, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  : null;
+
 async function admin<T = any>(action: string, payload: any = {}): Promise<T> {
+  if (sr) return adminDirect(action, payload) as Promise<T>;
+  // legacy edge-fn path
   const headers: Record<string, string> = {
     "content-type": "application/json",
     apikey: ANON_KEY,
+    "x-qa-secret": QA_SECRET,
   };
-  if (QA_SECRET) headers["x-qa-secret"] = QA_SECRET;
-  if (SERVICE_ROLE) headers["authorization"] = `Bearer ${SERVICE_ROLE}`;
   const r = await fetch(`${SUPABASE_URL}/functions/v1/qa-test-admin`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ action, payload }),
+    method: "POST", headers, body: JSON.stringify({ action, payload }),
   });
   const text = await r.text();
-  let body: any;
-  try { body = JSON.parse(text); } catch { body = { raw: text }; }
   if (!r.ok) throw new Error(`admin(${action}) ${r.status}: ${text}`);
-  return body;
+  return JSON.parse(text) as T;
+}
+
+async function findUser(email: string) {
+  // listUsers paginates 50/page by default; loop a few pages.
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await sr!.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const u = data.users.find((x) => x.email?.toLowerCase() === email.toLowerCase());
+    if (u) return u;
+    if (data.users.length < 200) return null;
+  }
+  return null;
+}
+
+async function adminDirect(action: string, payload: any): Promise<any> {
+  const c = sr!;
+  switch (action) {
+    case "ping": return { ok: true };
+
+    case "create_user": {
+      const { email, password, full_name, meta } = payload;
+      const { data, error } = await c.auth.admin.createUser({
+        email, password, email_confirm: true,
+        user_metadata: { full_name: full_name ?? email.split("@")[0], ...(meta ?? {}) },
+      });
+      if (error) throw new Error(`create_user ${email}: ${error.message}`);
+      return { user: data.user };
+    }
+
+    case "get_member": {
+      const u = await findUser(payload.email);
+      if (!u) throw new Error(`get_member: user not found ${payload.email}`);
+      const { data, error } = await c
+        .from("organization_members")
+        .select("id, organization_id, role, status")
+        .eq("user_id", u.id);
+      if (error) throw error;
+      return { user_id: u.id, memberships: data ?? [] };
+    }
+
+    case "set_member_status": {
+      const { error } = await c.from("organization_members")
+        .update({ status: payload.status }).eq("id", payload.member_id);
+      if (error) throw error;
+      return { ok: true };
+    }
+    case "set_member_role": {
+      const { error } = await c.from("organization_members")
+        .update({ role: payload.role }).eq("id", payload.member_id);
+      if (error) throw error;
+      return { ok: true };
+    }
+    case "remove_member": {
+      const { error } = await c.from("organization_members")
+        .delete().eq("id", payload.member_id);
+      if (error) throw error;
+      return { ok: true };
+    }
+
+    case "seed_client": {
+      const { data, error } = await c.from("clients")
+        .insert({ name: payload.name, organization_id: payload.organization_id })
+        .select().single();
+      if (error) throw error;
+      return { client: data };
+    }
+    case "seed_campaign": {
+      const { data, error } = await c.from("campaigns")
+        .insert({
+          name: payload.name,
+          organization_id: payload.organization_id,
+          client_id: payload.client_id,
+        })
+        .select().single();
+      if (error) throw error;
+      return { campaign: data };
+    }
+
+    case "cleanup_prefix": {
+      const prefix = payload.prefix as string;
+      // Find users with the prefix
+      const emails: string[] = [];
+      const userIds: string[] = [];
+      for (let page = 1; page <= 20; page++) {
+        const { data, error } = await c.auth.admin.listUsers({ page, perPage: 200 });
+        if (error) throw error;
+        for (const u of data.users) {
+          if (u.email?.startsWith(prefix)) { emails.push(u.email); userIds.push(u.id); }
+        }
+        if (data.users.length < 200) break;
+      }
+      // Find prefixed orgs
+      const { data: orgs } = await c.from("organizations").select("id,name").like("name", `${prefix}%`);
+      const orgIds = (orgs ?? []).map((o: any) => o.id);
+
+      if (orgIds.length) {
+        await c.from("organization_invitations").delete().in("organization_id", orgIds);
+        await c.from("organization_members").delete().in("organization_id", orgIds);
+        await c.from("campaigns").delete().in("organization_id", orgIds);
+        await c.from("projects").delete().in("organization_id", orgIds);
+        await c.from("clients").delete().in("organization_id", orgIds);
+        await c.from("tasks").delete().in("organization_id", orgIds);
+        await c.from("organizations").delete().in("id", orgIds);
+      }
+      for (const uid of userIds) {
+        await c.from("organization_members").delete().eq("user_id", uid);
+        await c.from("organization_invitations").delete().eq("invited_by", uid);
+        await c.from("user_roles").delete().eq("user_id", uid);
+        await c.from("profiles").delete().eq("user_id", uid);
+        await c.auth.admin.deleteUser(uid);
+      }
+      return { ok: true, users: userIds.length, orgs: orgIds.length };
+    }
+
+    default:
+      throw new Error(`adminDirect: unknown action ${action}`);
+  }
 }
 
 // -- per-user clients ------------------------------------------------------
