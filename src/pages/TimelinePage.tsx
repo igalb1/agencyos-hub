@@ -1,5 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
-import { mockCampaigns, mockProjects } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,19 +24,22 @@ const statusColors: Record<string, string> = {
 
 export default function TimelinePage() {
   const { lang } = useApp();
+  const { campaigns, projects } = useOrgData();
   const isRtl = lang === 'he';
   const [view, setView] = useState<'campaigns' | 'projects'>('campaigns');
   const [filterClient, setFilterClient] = useState<string>('all');
 
   const clients = useMemo(() => {
-    const set = new Set(mockCampaigns.map(c => c.clientName));
+    const source = view === 'campaigns' ? campaigns : projects;
+    const set = new Set(source.map(c => c.clientName).filter(Boolean));
     return Array.from(set);
-  }, []);
+  }, [view, campaigns, projects]);
 
   // Determine timeline range
   const items = view === 'campaigns'
-    ? mockCampaigns
+    ? campaigns
         .filter(c => filterClient === 'all' || c.clientName === filterClient)
+        .filter(c => c.startDate && c.endDate)
         .map(c => ({
           id: c.id,
           name: c.name,
@@ -48,8 +51,9 @@ export default function TimelinePage() {
           spend: c.spend,
           budget: c.budget,
         }))
-    : mockProjects
+    : projects
         .filter(p => filterClient === 'all' || p.clientName === filterClient)
+        .filter(p => p.startDate && p.endDate)
         .map(p => ({
           id: p.id,
           name: p.name,
