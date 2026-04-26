@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
-import { mockAds, mockClients } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Ad } from '@/lib/types';
 import { fmtCurrency, fmtNum, calcCtr } from '@/lib/campaign-utils';
 import { cn } from '@/lib/utils';
@@ -44,7 +44,36 @@ interface GroupedData {
 
 export default function AdsPage() {
   const { lang } = useApp();
-  const [ads, setAds] = useState<Ad[]>(mockAds);
+  const { campaigns, clients: orgClients } = useOrgData();
+
+  // Derive an Ad row per campaign (no dedicated ad table per org). The local
+  // `ads` state lets us toggle status optimistically without touching the DB.
+  const derivedAds = useMemo<Ad[]>(
+    () =>
+      campaigns.map((c) => ({
+        id: c.id,
+        campaignId: c.id,
+        campaignName: c.name,
+        clientId: c.clientId,
+        clientName: c.clientName,
+        projectId: c.projectId,
+        name: c.name,
+        platform: c.platform,
+        status:
+          c.status === 'Live' ? 'Active'
+          : c.status === 'Paused' ? 'Paused'
+          : 'Draft',
+        spend: c.spend,
+        impressions: c.impressions,
+        clicks: c.clicks,
+        leads: c.leads,
+        conversions: c.conversions,
+        mediaType: 'image',
+      })),
+    [campaigns],
+  );
+  const [ads, setAds] = useState<Ad[]>(derivedAds);
+  useEffect(() => { setAds(derivedAds); }, [derivedAds]);
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -70,7 +99,7 @@ export default function AdsPage() {
     });
 
     return Object.entries(map).map(([clientId, campaigns]) => {
-      const client = mockClients.find(c => c.id === clientId);
+      const client = orgClients.find(c => c.id === clientId);
       const firstAd = Object.values(campaigns)[0][0];
       return {
         clientId,
