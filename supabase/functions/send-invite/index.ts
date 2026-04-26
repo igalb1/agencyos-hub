@@ -12,6 +12,7 @@ interface InvitePayload {
   email: string;
   role?: "admin" | "member";
   appUrl?: string;
+  organizationId?: string;
 }
 
 Deno.serve(async (req) => {
@@ -38,6 +39,7 @@ Deno.serve(async (req) => {
     const email = (body.email || "").trim().toLowerCase();
     const role = body.role === "admin" ? "admin" : "member";
     const appUrl = body.appUrl || "https://login.agencyos.solutions";
+    const requestedOrgId = body.organizationId;
 
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       return json({ error: "Invalid email" }, 400);
@@ -45,13 +47,16 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Find caller's org (must be admin/owner)
-    const { data: membership } = await admin
+    // Find caller's ACTIVE membership in the requested org (or first active org)
+    let membershipQuery = admin
       .from("organization_members")
-      .select("organization_id, role, organizations(name)")
+      .select("organization_id, role, status, organizations(name)")
       .eq("user_id", callerId)
-      .limit(1)
-      .single();
+      .eq("status", "active");
+    if (requestedOrgId) {
+      membershipQuery = membershipQuery.eq("organization_id", requestedOrgId);
+    }
+    const { data: membership } = await membershipQuery.limit(1).maybeSingle();
 
     if (!membership || !["owner", "admin"].includes(membership.role)) {
       return json({ error: "Only owners or admins can invite" }, 403);
@@ -59,6 +64,23 @@ Deno.serve(async (req) => {
 
     const orgId = membership.organization_id;
     const orgName = (membership as any).organizations?.name ?? "Your agency";
+
+    // Block invites to existing active members of this org
+    const { data: existingActive } = await admin
+      .from("organization_members")
+      .select("id, status, user_id")
+      .eq("organization_id", orgId)
+      .in("user_id", [
+        // Subquery via auth.users by email (RPC-free): we resolve via email match
+      ]);
+    // Simpler: check by joining auth.users via email
+    const { data: existingByEmail } = await admin.rpc("get_org_members_with_details", { _org_id: orgId });
+    const dup = (existingByEmail as any[] | null)?.find(
+      (m) => m.email?.toLowerCase() === email && m.status === "active"
+    );
+    if (dup) {
+      return json({ error: "This user is already a member of the organization" }, 400);
+    }
 
     // Cleanup any prior pending invite for same email+org (so token regenerates)
     await admin

@@ -52,19 +52,12 @@ export default function SupportAdminPage() {
   useEffect(() => {
     if (!isSuperAdmin) return;
     loadAll();
-    const ch = supabase
-      .channel("support-admin")
-      .on("postgres_changes", { event: "*", schema: "public", table: "support_conversations" }, loadAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "support_tickets" }, loadAll)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages" }, (payload: any) => {
-        if (payload.new?.conversation_id === activeId) {
-          setMessages((m) => [...m, payload.new as Msg]);
-        }
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
+    // Realtime disabled for support tables (security). Use polling.
+    const interval = setInterval(() => {
+      loadAll();
+      if (activeId) loadMessages(activeId);
+    }, 5000);
+    return () => clearInterval(interval);
   }, [isSuperAdmin, activeId]);
 
   useEffect(() => {

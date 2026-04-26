@@ -79,7 +79,7 @@ export default function TeamSettingsCard() {
     if (!inviteEmail.trim()) return;
     setSending(true);
     const { data, error } = await supabase.functions.invoke('send-invite', {
-      body: { email: inviteEmail.trim(), role: inviteRole, appUrl: window.location.origin },
+      body: { email: inviteEmail.trim(), role: inviteRole, appUrl: window.location.origin, organizationId: organization?.id },
     });
     setSending(false);
     if (error || (data as any)?.error) {
