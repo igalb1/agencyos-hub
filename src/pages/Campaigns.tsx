@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
-import { mockAds } from '@/lib/mock-data';
 import { useOrgData } from '@/hooks/useOrgData';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
@@ -289,7 +288,9 @@ export default function CampaignsPage() {
                     const statusStyle = getStatusColor(campaign.status);
                     const ctr = calcCtr(campaign.clicks, campaign.impressions);
                     const cpl = calcCpl(campaign.spend, campaign.leads);
-                    const ads = mockAds.filter(a => a.campaignId === campaign.id);
+                    // No per-ad table for this org; keep an empty list so the
+                    // expandable ad-row UI stays a no-op.
+                    const ads: never[] = [];
                     const isExpanded = expandedCampaigns.has(campaign.id);
                     const spendPct = campaign.budget > 0 ? Math.min((campaign.spend / campaign.budget) * 100, 100) : 0;
                     const Chevron = isRtl ? ChevronLeft : ChevronRight;
