@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, X, Send, Loader2, Headset } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Headset, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 const VISITOR_KEY = "agencyos_support_visitor_id";
 const CONV_KEY = "agencyos_support_conv_id";
+const HIDDEN_KEY = "agencyos_support_hidden";
 
 function getVisitorId() {
   if (typeof window === "undefined") return "";
@@ -24,6 +25,9 @@ function getVisitorId() {
 export default function SupportBot() {
   const { session } = useAuth();
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState<boolean>(
+    typeof window !== "undefined" && localStorage.getItem(HIDDEN_KEY) === "1"
+  );
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,21 +87,61 @@ export default function SupportBot() {
 
   return (
     <>
-      {/* Floating button */}
-      <button
+      {hidden ? (
+        // Tiny restore handle when hidden
+        <button
+          onClick={() => {
+            setHidden(false);
+            localStorage.removeItem(HIDDEN_KEY);
+          }}
+          className={cn(
+            "fixed bottom-2 right-2 z-[100] w-8 h-8 rounded-full",
+            "bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground",
+            "flex items-center justify-center shadow-md backdrop-blur transition-colors",
+            "border border-border"
+          )}
+          aria-label="הצג צ'אט תמיכה"
+          title="הצג צ'אט תמיכה"
+        >
+          <MessageCircle className="w-4 h-4" />
+        </button>
+      ) : (
+        <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2">
+          {/* Hide button (only when chat closed) */}
+          {!open && (
+            <button
+              onClick={() => {
+                setHidden(true);
+                localStorage.setItem(HIDDEN_KEY, "1");
+              }}
+              className={cn(
+                "w-7 h-7 rounded-full bg-muted/90 hover:bg-muted text-muted-foreground hover:text-foreground",
+                "flex items-center justify-center shadow border border-border transition-colors"
+              )}
+              aria-label="הסתר צ'אט תמיכה"
+              title="הסתר צ'אט תמיכה"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Floating button */}
+          <button
         onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full shadow-lg",
-          "bg-primary text-primary-foreground hover:scale-105 transition-transform",
-          "flex items-center justify-center"
-        )}
-        aria-label={open ? "סגור צ'אט תמיכה" : "פתח צ'אט תמיכה"}
-      >
-        {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
-      </button>
+            className={cn(
+              "w-14 h-14 rounded-full shadow-lg",
+              "bg-primary text-primary-foreground hover:scale-105 transition-transform",
+              "flex items-center justify-center"
+            )}
+            aria-label={open ? "סגור צ'אט תמיכה" : "פתח צ'אט תמיכה"}
+          >
+            {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+          </button>
+        </div>
+      )}
 
       {/* Chat panel */}
-      {open && (
+      {open && !hidden && (
         <div
           className={cn(
             "fixed bottom-24 right-6 z-[100] w-[min(380px,calc(100vw-3rem))] h-[min(560px,calc(100vh-8rem))]",
@@ -113,6 +157,18 @@ export default function SupportBot() {
               <div className="font-semibold text-sm">תמיכה AgencyOS</div>
               <div className="text-xs text-muted-foreground">בוט AI · מקוון 24/7</div>
             </div>
+            <button
+              onClick={() => {
+                setOpen(false);
+                setHidden(true);
+                localStorage.setItem(HIDDEN_KEY, "1");
+              }}
+              className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
+              aria-label="הסתר צ'אט"
+              title="הסתר צ'אט"
+            >
+              <EyeOff className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Messages */}
