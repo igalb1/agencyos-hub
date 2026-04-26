@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel(`org-sub-${user.id}`)
+      .channel(`${user.id}:org-sub`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${user.id}` },
