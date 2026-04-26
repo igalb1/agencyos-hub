@@ -1,5 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
-import { mockCampaigns, mockClients, mockAds, mockProjects } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,7 @@ type ReportType = 'overview' | 'campaigns' | 'clients' | 'ads';
 
 export default function ReportsPage() {
   const { lang } = useApp();
+  const { campaigns: orgCampaigns, clients: orgClients, projects: orgProjects } = useOrgData();
   const isHe = lang === 'he';
   const [reportType, setReportType] = useState<ReportType>('overview');
   const [filterClient, setFilterClient] = useState<string>('all');
@@ -24,29 +25,51 @@ export default function ReportsPage() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
-  const clients = useMemo(() => Array.from(new Set(mockClients.map(c => c.name))), []);
+  const clients = useMemo(
+    () => Array.from(new Set(orgClients.map(c => c.name))),
+    [orgClients],
+  );
 
   const filteredCampaigns = useMemo(() => {
-    return mockCampaigns.filter(c => {
+    return orgCampaigns.filter(c => {
       if (filterClient !== 'all' && c.clientName !== filterClient) return false;
-      if (dateFrom && new Date(c.endDate) < dateFrom) return false;
-      if (dateTo && new Date(c.startDate) > dateTo) return false;
+      if (dateFrom && c.endDate && new Date(c.endDate) < dateFrom) return false;
+      if (dateTo && c.startDate && new Date(c.startDate) > dateTo) return false;
       return true;
     });
-  }, [filterClient, dateFrom, dateTo]);
+  }, [filterClient, dateFrom, dateTo, orgCampaigns]);
 
-  const filteredAds = useMemo(() => {
-    const ids = new Set(filteredCampaigns.map(c => c.id));
-    return mockAds.filter(a => ids.has(a.campaignId));
-  }, [filteredCampaigns]);
+  // Derive ads from campaigns (no separate ad table per org). Map campaign
+  // status into the ad-status vocabulary used in the table cell below.
+  const filteredAds = useMemo(
+    () =>
+      filteredCampaigns.map((c) => ({
+        id: c.id,
+        name: c.name,
+        campaignId: c.id,
+        campaignName: c.name,
+        clientName: c.clientName,
+        platform: c.platform,
+        status:
+          c.status === 'Live' ? 'Active'
+          : c.status === 'Paused' ? 'Paused'
+          : 'Draft',
+        spend: c.spend,
+        leads: c.leads,
+        clicks: c.clicks,
+        impressions: c.impressions,
+        conversions: c.conversions,
+      })),
+    [filteredCampaigns],
+  );
 
   const filteredProjects = useMemo(() =>
-    filterClient === 'all' ? mockProjects : mockProjects.filter(p => p.clientName === filterClient),
-    [filterClient]);
+    filterClient === 'all' ? orgProjects : orgProjects.filter(p => p.clientName === filterClient),
+    [filterClient, orgProjects]);
 
   const filteredClients = useMemo(() =>
-    filterClient === 'all' ? mockClients : mockClients.filter(c => c.name === filterClient),
-    [filterClient]);
+    filterClient === 'all' ? orgClients : orgClients.filter(c => c.name === filterClient),
+    [filterClient, orgClients]);
 
   // Summary stats
   const summary = useMemo(() => {
@@ -399,7 +422,7 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {filteredClients.map(c => {
-                    const clientCampaigns = mockCampaigns.filter(cm => cm.clientName === c.name);
+                    const clientCampaigns = orgCampaigns.filter(cm => cm.clientName === c.name);
                     return (
                       <tr key={c.id} className="border-b border-border/30 hover:bg-muted/20">
                         <td className="py-2 px-3 font-medium text-foreground">{c.name}</td>

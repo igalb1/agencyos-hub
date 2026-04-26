@@ -1,5 +1,6 @@
 import { useApp } from '@/contexts/AppContext';
-import { mockCampaigns, mockTasks } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
+import { useTasks } from '@/hooks/useTasks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,13 @@ type ViewFilter = 'all' | 'campaigns' | 'tasks';
 
 export default function CalendarPage() {
   const { lang } = useApp();
+  const { campaigns, clients } = useOrgData();
+  const clientLookup = useMemo(() => {
+    const m = new Map<string, string>();
+    clients.forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [clients]);
+  const { tasks } = useTasks(clientLookup);
   const isHe = lang === 'he';
   const isRtl = lang === 'he';
 
@@ -39,7 +47,9 @@ export default function CalendarPage() {
     const map: Record<string, { type: 'campaign-start' | 'campaign-end' | 'task'; label: string; color: string; platform?: string }[]> = {};
 
     const addEvent = (dateStr: string, event: typeof map[string][number]) => {
+      if (!dateStr) return;
       const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return;
       if (d.getFullYear() === year && d.getMonth() === month) {
         const key = d.getDate().toString();
         if (!map[key]) map[key] = [];
@@ -48,14 +58,14 @@ export default function CalendarPage() {
     };
 
     if (viewFilter !== 'tasks') {
-      mockCampaigns.forEach(c => {
+      campaigns.forEach(c => {
         addEvent(c.startDate, { type: 'campaign-start', label: c.name, color: 'bg-emerald-500', platform: c.platform });
         addEvent(c.endDate, { type: 'campaign-end', label: c.name, color: 'bg-destructive', platform: c.platform });
       });
     }
 
     if (viewFilter !== 'campaigns') {
-      mockTasks.forEach(t => {
+      tasks.forEach(t => {
         addEvent(t.due, {
           type: 'task',
           label: t.title,
@@ -65,7 +75,7 @@ export default function CalendarPage() {
     }
 
     return map;
-  }, [year, month, viewFilter]);
+  }, [year, month, viewFilter, campaigns, tasks]);
 
   const today = new Date();
   const isToday = (day: number) => day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
