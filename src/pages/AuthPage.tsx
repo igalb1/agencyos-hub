@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,17 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (sessionStorage.getItem('agencyos_frozen_notice') === '1') {
+      sessionStorage.removeItem('agencyos_frozen_notice');
+      toast({
+        title: 'החשבון שלך הוקפא',
+        description: 'צור קשר עם התמיכה לקבלת מידע נוסף.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
 
   const domain = useMemo(() => getEmailDomain(email), [email]);
   const isPublic = useMemo(() => isPublicEmailDomain(email), [email]);
