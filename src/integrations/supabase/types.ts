@@ -508,6 +508,7 @@ export type Database = {
           id: string
           organization_id: string
           role: string
+          status: string
           user_id: string
         }
         Insert: {
@@ -515,6 +516,7 @@ export type Database = {
           id?: string
           organization_id: string
           role?: string
+          status?: string
           user_id: string
         }
         Update: {
@@ -522,6 +524,7 @@ export type Database = {
           id?: string
           organization_id?: string
           role?: string
+          status?: string
           user_id?: string
         }
         Relationships: [
@@ -537,10 +540,12 @@ export type Database = {
       organizations: {
         Row: {
           created_at: string
+          domain: string | null
           id: string
           is_active: boolean
           logo_url: string | null
           name: string
+          owner_user_id: string | null
           payment_status: string
           plan: string
           trial_ends_at: string
@@ -548,10 +553,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          domain?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name: string
+          owner_user_id?: string | null
           payment_status?: string
           plan?: string
           trial_ends_at?: string
@@ -559,10 +566,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          domain?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          owner_user_id?: string | null
           payment_status?: string
           plan?: string
           trial_ends_at?: string
@@ -1103,6 +1112,7 @@ export type Database = {
         Args: { _action: string; _org_id?: string; _target_user_id: string }
         Returns: Json
       }
+      approve_member: { Args: { _member_id: string }; Returns: Json }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1144,6 +1154,15 @@ export type Database = {
           role: string
         }[]
       }
+      get_my_memberships: {
+        Args: never
+        Returns: {
+          organization_id: string
+          organization_name: string
+          role: string
+          status: string
+        }[]
+      }
       get_org_members_with_details: {
         Args: { _org_id: string }
         Returns: {
@@ -1153,6 +1172,7 @@ export type Database = {
           joined_at: string
           member_id: string
           role: string
+          status: string
           user_id: string
         }[]
       }
@@ -1170,7 +1190,19 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_public_email_domain: { Args: { _domain: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_pending_members: {
+        Args: { _org_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          member_id: string
+          requested_at: string
+          role: string
+          user_id: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1188,6 +1220,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reject_member: { Args: { _member_id: string }; Returns: Json }
       set_integration_tokens: {
         Args: {
           _access_token: string
