@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface OrgData { id: string; name: string; logo_url: string | null; trial_ends_at: string; is_active: boolean; plan: string; payment_status?: string }
 
-interface MembershipOrg { id: string; name: string; logo_url: string | null; role: string }
+interface MembershipOrg { id: string; name: string; logo_url: string | null; role: string; status: string }
 
 interface AuthContextType {
   session: Session | null;
@@ -12,6 +12,7 @@ interface AuthContextType {
   profile: { full_name: string | null; avatar_url: string | null; is_frozen?: boolean } | null;
   organization: OrgData | null;
   organizations: MembershipOrg[];
+  pendingMemberships: MembershipOrg[];
   loading: boolean;
   trialExpired: boolean;
   isSuperAdmin: boolean;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<AuthContextType['profile']>(null);
   const [organization, setOrganization] = useState<AuthContextType['organization']>(null);
   const [organizations, setOrganizations] = useState<MembershipOrg[]>([]);
+  const [pendingMemberships, setPendingMemberships] = useState<MembershipOrg[]>([]);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,21 +53,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchOrganization = useCallback(async (userId: string) => {
-    // Load all memberships
+    // Load all memberships (any status)
     const { data: memberships } = await supabase
       .from('organization_members')
-      .select('organization_id, role, organizations(id, name, logo_url)')
+      .select('organization_id, role, status, organizations(id, name, logo_url)')
       .eq('user_id', userId);
 
-    const orgs: MembershipOrg[] = (memberships ?? [])
+    const all: MembershipOrg[] = (memberships ?? [])
       .map((m: any) => m.organizations ? {
         id: m.organizations.id,
         name: m.organizations.name,
         logo_url: m.organizations.logo_url,
         role: m.role,
+        status: m.status ?? 'active',
       } : null)
       .filter(Boolean) as MembershipOrg[];
+    const orgs = all.filter(o => o.status === 'active');
+    const pending = all.filter(o => o.status === 'pending');
     setOrganizations(orgs);
+    setPendingMemberships(pending);
 
     if (orgs.length > 0) {
       // Determine which org to load: persisted choice if still a member, else first
@@ -175,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setOrganization(null);
     setOrganizations([]);
+    setPendingMemberships([]);
     setIsSuperAdmin(false);
     setHasAccess(null);
   };
@@ -198,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const trialExpired = !isSuperAdmin && organization && hasAccess === false;
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, organization, organizations, loading, trialExpired: !!trialExpired, isSuperAdmin, signOut, refreshOrganization, switchOrganization }}>
+    <AuthContext.Provider value={{ session, user, profile, organization, organizations, pendingMemberships, loading, trialExpired: !!trialExpired, isSuperAdmin, signOut, refreshOrganization, switchOrganization }}>
       {children}
     </AuthContext.Provider>
   );
