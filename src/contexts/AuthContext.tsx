@@ -44,10 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
     if (data) {
       setProfile(data);
-      // If user is frozen, sign them out immediately
+      // If user is frozen, sign them out immediately and redirect
       if (data.is_frozen) {
         await supabase.auth.signOut();
-        alert('החשבון שלך הוקפא. צור קשר עם התמיכה.');
+        sessionStorage.setItem('agencyos_frozen_notice', '1');
+        window.location.replace('/auth');
       }
     }
   };
