@@ -436,6 +436,86 @@ async function run() {
     }
   }, "Multi-table cross-tenant leak");
 
+  // 12. SCREEN-LEVEL ISOLATION ---------------------------------------------
+  // Simulates exactly what each app screen queries when Owner B (a brand-new
+  // user in a separate organization) loads it. Owner B must see ZERO rows
+  // belonging to Agency A — across Reports / Performance / Calendar /
+  // Timeline / Ads / Campaigns / Projects.
+  await check("Screen: Projects page — Owner B sees 0 Agency A projects", async () => {
+    const { data, error } = await ownerB.from("projects")
+      .select("id, organization_id").eq("organization_id", ctx.orgA);
+    expect(!error, `error: ${error?.message}`);
+    expect((data?.length ?? 0) === 0,
+      `Projects screen leaked ${data?.length} Agency A row(s) to Owner B`);
+  }, "Projects screen leaks cross-org data");
+
+  await check("Screen: Campaigns page — Owner B sees 0 Agency A campaigns", async () => {
+    const { data, error } = await ownerB.from("campaigns")
+      .select("id, organization_id").eq("organization_id", ctx.orgA);
+    expect(!error, `error: ${error?.message}`);
+    expect((data?.length ?? 0) === 0,
+      `Campaigns screen leaked ${data?.length} Agency A row(s) to Owner B`);
+  }, "Campaigns screen leaks cross-org data");
+
+  await check("Screen: Reports/Performance — Owner B aggregates exclude Agency A", async () => {
+    // Reports & Performance read clients + campaigns via useOrgData, then
+    // aggregate spend/leads/etc. The aggregate is safe iff the underlying
+    // rows contain ZERO cross-org records.
+    const [clients, campaigns] = await Promise.all([
+      ownerB.from("clients").select("id, organization_id, spend, leads, budget"),
+      ownerB.from("campaigns").select("id, organization_id, spend, leads, clicks, impressions, conversions"),
+    ]);
+    expect(!clients.error, `clients: ${clients.error?.message}`);
+    expect(!campaigns.error, `campaigns: ${campaigns.error?.message}`);
+    const leakedClients = (clients.data ?? []).filter((r: any) => r.organization_id === ctx.orgA);
+    const leakedCampaigns = (campaigns.data ?? []).filter((r: any) => r.organization_id === ctx.orgA);
+    expect(leakedClients.length === 0,
+      `Reports leaked ${leakedClients.length} Agency A client(s)`);
+    expect(leakedCampaigns.length === 0,
+      `Reports leaked ${leakedCampaigns.length} Agency A campaign(s)`);
+  }, "Reports/Performance aggregate leaks cross-org data");
+
+  await check("Screen: Calendar/Timeline — Owner B sees 0 Agency A tasks/campaigns", async () => {
+    // Calendar & Timeline pull tasks (with due_date) + campaigns (with
+    // start/end_date) via useTasks + useOrgData.
+    const [tasks, campaigns] = await Promise.all([
+      ownerB.from("tasks").select("id, organization_id, due_date"),
+      ownerB.from("campaigns").select("id, organization_id, start_date, end_date"),
+    ]);
+    expect(!tasks.error, `tasks: ${tasks.error?.message}`);
+    expect(!campaigns.error, `campaigns: ${campaigns.error?.message}`);
+    const leakedTasks = (tasks.data ?? []).filter((r: any) => r.organization_id === ctx.orgA);
+    const leakedCamp = (campaigns.data ?? []).filter((r: any) => r.organization_id === ctx.orgA);
+    expect(leakedTasks.length === 0,
+      `Calendar/Timeline leaked ${leakedTasks.length} Agency A task(s)`);
+    expect(leakedCamp.length === 0,
+      `Calendar/Timeline leaked ${leakedCamp.length} Agency A campaign(s)`);
+  }, "Calendar/Timeline leak cross-org data");
+
+  await check("Screen: Ads page — Owner B sees 0 other-user ad rows", async () => {
+    // Ads tables (google_ads_campaigns / linkedin_ads_campaigns) are scoped
+    // by user_id, not organization_id. A new user in a different org must
+    // never see another user's ad rows. Owner A is the only seeded user
+    // with ads — Owner B's reads must be empty.
+    const [g, l] = await Promise.all([
+      ownerB.from("google_ads_campaigns").select("id, user_id"),
+      ownerB.from("linkedin_ads_campaigns").select("id, user_id"),
+    ]);
+    expect(!g.error, `google_ads_campaigns: ${g.error?.message}`);
+    expect(!l.error, `linkedin_ads_campaigns: ${l.error?.message}`);
+    const gLeak = (g.data ?? []).filter((r: any) => r.user_id !== ctx.ownerB_id);
+    const lLeak = (l.data ?? []).filter((r: any) => r.user_id !== ctx.ownerB_id);
+    expect(gLeak.length === 0, `Ads screen leaked ${gLeak.length} Google Ads row(s)`);
+    expect(lLeak.length === 0, `Ads screen leaked ${lLeak.length} LinkedIn Ads row(s)`);
+  }, "Ads screen leaks cross-user data");
+
+  await check("Screen: full sweep — Owner B's organizations list contains only Agency B", async () => {
+    const { data, error } = await ownerB.from("organizations").select("id, name");
+    expect(!error, `error: ${error?.message}`);
+    expect((data?.length ?? 0) === 1 && data![0].id === ctx.orgB,
+      `Owner B sees foreign orgs: ${JSON.stringify(data)}`);
+  }, "Org list leaks cross-tenant orgs");
+
   // -- final report -------------------------------------------------------
   console.log("\n──────────────── REPORT ────────────────");
   const passed = results.filter((r) => r.ok).length;
