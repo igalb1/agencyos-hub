@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Mail, Trash2, Loader2, Send, Clock, Crown, Shield, User as UserIcon } from 'lucide-react';
+import { Users, Mail, Trash2, Loader2, Send, Clock, Crown, Shield, User as UserIcon, Check, X, UserPlus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface Member {
@@ -19,6 +19,7 @@ interface Member {
   full_name: string | null;
   avatar_url: string | null;
   role: string;
+  status: string;
   joined_at: string;
 }
 
@@ -50,7 +51,9 @@ export default function TeamSettingsCard() {
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
   const [sending, setSending] = useState(false);
 
-  const myRole = members.find((m) => m.user_id === user?.id)?.role;
+  const activeMembers = members.filter(m => m.status === 'active');
+  const pendingMembers = members.filter(m => m.status === 'pending');
+  const myRole = activeMembers.find((m) => m.user_id === user?.id)?.role;
   const canManage = myRole === 'owner' || myRole === 'admin';
 
   const refresh = async () => {
@@ -99,6 +102,26 @@ export default function TeamSettingsCard() {
     const { error } = await supabase.from('organization_members').delete().eq('id', memberId);
     if (error) { toast({ title: 'שגיאה', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'החבר הוסר מהסוכנות' });
+    refresh();
+  };
+
+  const approvePending = async (memberId: string) => {
+    const { data, error } = await supabase.rpc('approve_member', { _member_id: memberId });
+    if (error || !(data as any)?.success) {
+      toast({ title: 'שגיאה', description: error?.message ?? (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'המשתמש אושר' });
+    refresh();
+  };
+
+  const rejectPending = async (memberId: string) => {
+    const { data, error } = await supabase.rpc('reject_member', { _member_id: memberId });
+    if (error || !(data as any)?.success) {
+      toast({ title: 'שגיאה', description: error?.message ?? (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'הבקשה נדחתה' });
     refresh();
   };
 
@@ -181,10 +204,43 @@ export default function TeamSettingsCard() {
               </div>
             )}
 
+            {/* Pending join requests (auto-detected by domain) */}
+            {canManage && pendingMembers.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">בקשות הצטרפות ממתינות ({pendingMembers.length})</p>
+                {pendingMembers.map((m) => {
+                  const initials = (m.full_name || m.email).slice(0, 2).toUpperCase();
+                  return (
+                    <div key={m.member_id} className="flex items-center justify-between p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-9 w-9 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                          <UserPlus className="h-4 w-4 text-amber-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{m.full_name || initials}</p>
+                          <p className="text-xs text-muted-foreground truncate" dir="ltr">{m.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button size="sm" variant="ghost" onClick={() => approvePending(m.member_id)} className="gap-1">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          <span className="hidden sm:inline">אשר</span>
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => rejectPending(m.member_id)} className="gap-1">
+                          <X className="h-4 w-4 text-destructive" />
+                          <span className="hidden sm:inline">דחה</span>
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Members */}
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">חברי הצוות ({members.length})</p>
-              {members.map((m) => {
+              <p className="text-sm font-medium text-muted-foreground">חברי הצוות ({activeMembers.length})</p>
+              {activeMembers.map((m) => {
                 const initials = (m.full_name || m.email).slice(0, 2).toUpperCase();
                 const isMe = m.user_id === user?.id;
                 const canEditThis = canManage && m.role !== 'owner' && !isMe;
