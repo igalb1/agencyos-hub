@@ -11,6 +11,7 @@ import { isPublicEmailDomain, getEmailDomain } from '@/lib/email-domain';
 
 type Mode = 'login' | 'signup' | 'reset';
 const REMEMBER_ME_KEY = 'agencyos_remember_me';
+const AUTH_REDIRECT_ORIGIN = 'https://login.agencyos.solutions';
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login');
@@ -96,7 +97,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${AUTH_REDIRECT_ORIGIN}/reset-password`,
     });
     setLoading(false);
     if (error) return toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
