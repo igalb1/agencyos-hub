@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
 import { useOrgData } from '@/hooks/useOrgData';
-import { Campaign, Platform, CampaignStatus } from '@/lib/types';
+import { Ad, Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
 import EditableCell from '@/components/campaigns/EditableCell';
 import { toast } from 'sonner';
@@ -290,7 +290,7 @@ export default function CampaignsPage() {
                     const cpl = calcCpl(campaign.spend, campaign.leads);
                     // No per-ad table for this org; keep an empty list so the
                     // expandable ad-row UI stays a no-op.
-                    const ads: never[] = [];
+                    const ads: Ad[] = [];
                     const isExpanded = expandedCampaigns.has(campaign.id);
                     const spendPct = campaign.budget > 0 ? Math.min((campaign.spend / campaign.budget) * 100, 100) : 0;
                     const Chevron = isRtl ? ChevronLeft : ChevronRight;
