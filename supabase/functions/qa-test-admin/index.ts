@@ -64,7 +64,17 @@ async function deleteOrgByName(name: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-  if (req.headers.get('x-qa-secret') !== QA_SECRET || !QA_SECRET) {
+  // Auth: either the shared QA secret header, OR a bearer token equal to the
+  // service-role key (used by the local sandbox test runner where the QA
+  // secret env var is not available).
+  const qaHeader = req.headers.get('x-qa-secret');
+  const authHeader = req.headers.get('authorization') ?? '';
+  const bearer = authHeader.toLowerCase().startsWith('bearer ')
+    ? authHeader.slice(7).trim()
+    : '';
+  const qaOk = !!QA_SECRET && qaHeader === QA_SECRET;
+  const srOk = !!SERVICE_ROLE && bearer === SERVICE_ROLE;
+  if (!qaOk && !srOk) {
     return json({ error: 'forbidden' }, 403);
   }
 
