@@ -18,11 +18,12 @@ const SUPABASE_URL = "https://llioeafzlhrjqwkjaepe.supabase.co";
 const ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsaW9lYWZ6bGhyanF3a2phZXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzg0NTQsImV4cCI6MjA5MTkxNDQ1NH0.MOLKs5krnEa_KFuc2ViQdnGK-FVTjtaaQE0xIlk8Q8U";
 const QA_SECRET = process.env.QA_TEST_SECRET ?? "";
+const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const PASSWORD = process.env.QA_USER_PASSWORD ?? "QaPass!2026";
 const PREFIX = "qa-rls-";
 
-if (!QA_SECRET) {
-  console.error("✖ QA_TEST_SECRET is not set. Aborting.");
+if (!QA_SECRET && !SERVICE_ROLE) {
+  console.error("✖ Neither QA_TEST_SECRET nor SUPABASE_SERVICE_ROLE_KEY is set. Aborting.");
   process.exit(2);
 }
 
@@ -39,13 +40,15 @@ const ORG_B = `${PREFIX}Agency B`;
 
 // -- admin helper (service-role via edge function) -------------------------
 async function admin<T = any>(action: string, payload: any = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    apikey: ANON_KEY,
+  };
+  if (QA_SECRET) headers["x-qa-secret"] = QA_SECRET;
+  if (SERVICE_ROLE) headers["authorization"] = `Bearer ${SERVICE_ROLE}`;
   const r = await fetch(`${SUPABASE_URL}/functions/v1/qa-test-admin`, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-qa-secret": QA_SECRET,
-      apikey: ANON_KEY,
-    },
+    headers,
     body: JSON.stringify({ action, payload }),
   });
   const text = await r.text();
