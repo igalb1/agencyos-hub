@@ -19,7 +19,7 @@ const TrialEndingReminderEmail = ({ name, daysLeft = 3, orgName }: TrialEndingPr
   return (
     <Html lang="he" dir="rtl">
       <Head />
-      <Preview>נותרו {daysLeft} ימים בתקופת הניסיון שלך ב-{SITE_NAME}</Preview>
+      <Preview>{`נותרו ${daysLeft} ימים בתקופת הניסיון שלך ב-${SITE_NAME}`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>תקופת הניסיון{orgLine} מסתיימת בקרוב</Heading>
