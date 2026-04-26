@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
-import { mockClients } from '@/lib/mock-data';
 import { useOrgData } from '@/hooks/useOrgData';
 import { Project } from '@/lib/types';
 import { fmtCurrency } from '@/lib/campaign-utils';
@@ -231,6 +230,7 @@ export default function ProjectsPage() {
           <ProjectModal
             lang={lang}
             project={editingProject}
+            clients={dbClients}
             onSave={handleSave}
             onClose={() => { setModalOpen(false); setEditingProject(null); }}
           />
@@ -251,15 +251,15 @@ export default function ProjectsPage() {
   );
 }
 
-function ProjectModal({ lang, project, onSave, onClose }: { lang: string; project: Project | null; onSave: (p: Project) => void; onClose: () => void }) {
+function ProjectModal({ lang, project, clients, onSave, onClose }: { lang: string; project: Project | null; clients: { id: string; name: string }[]; onSave: (p: Project) => void; onClose: () => void }) {
   const [name, setName] = useState(project?.name || '');
-  const [clientId, setClientId] = useState(project?.clientId || mockClients[0]?.id || '');
+  const [clientId, setClientId] = useState(project?.clientId || clients[0]?.id || '');
   const [budget, setBudget] = useState(project?.budget?.toString() || '');
   const [status, setStatus] = useState<Project['status']>(project?.status || 'planning');
   const [startDate, setStartDate] = useState(project?.startDate || '');
   const [endDate, setEndDate] = useState(project?.endDate || '');
 
-  const selectedClient = mockClients.find(c => c.id === clientId);
+  const selectedClient = clients.find(c => c.id === clientId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,7 +307,7 @@ function ProjectModal({ lang, project, onSave, onClose }: { lang: string; projec
 
           <Field label={lang === 'he' ? 'לקוח' : 'Client'}>
             <select value={clientId} onChange={e => setClientId(e.target.value)} className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 ring-primary/40 appearance-none">
-              {mockClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
 
