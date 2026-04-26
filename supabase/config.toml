@@ -15,3 +15,5 @@ project_id = "llioeafzlhrjqwkjaepe"
     verify_jwt = true
   [functions.send-trial-reminders]
     verify_jwt = true
+  [functions.qa-test-admin]
+    verify_jwt = false
