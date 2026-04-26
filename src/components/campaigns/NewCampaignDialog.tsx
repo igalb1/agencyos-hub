@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockClients, mockProjects } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import { Lang } from '@/lib/i18n';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ const platforms: Platform[] = ['Meta', 'Google', 'TikTok', 'LinkedIn'];
 const statuses: CampaignStatus[] = ['Live', 'Planned', 'Paused'];
 
 export default function NewCampaignDialog({ open, onOpenChange, lang, onCampaignCreated }: NewCampaignDialogProps) {
+  const { clients, projects } = useOrgData();
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
   const [projectId, setProjectId] = useState('');
@@ -29,7 +30,7 @@ export default function NewCampaignDialog({ open, onOpenChange, lang, onCampaign
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const filteredProjects = mockProjects.filter(p => p.clientId === clientId);
+  const filteredProjects = projects.filter(p => p.clientId === clientId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +38,8 @@ export default function NewCampaignDialog({ open, onOpenChange, lang, onCampaign
       toast.error(lang === 'he' ? 'נא למלא את כל השדות' : 'Please fill all required fields');
       return;
     }
-    const client = mockClients.find(c => c.id === clientId);
-    const project = mockProjects.find(p => p.id === projectId);
+    const client = clients.find(c => c.id === clientId);
+    const project = projects.find(p => p.id === projectId);
     const newCampaign: Campaign = {
       id: `new-${Date.now()}`,
       clientId,
@@ -97,7 +98,7 @@ export default function NewCampaignDialog({ open, onOpenChange, lang, onCampaign
               <Select value={clientId} onValueChange={v => { setClientId(v); setProjectId(''); }}>
                 <SelectTrigger><SelectValue placeholder={lang === 'he' ? 'בחר לקוח' : 'Select client'} /></SelectTrigger>
                 <SelectContent>
-                  {mockClients.map(c => (
+                  {clients.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
