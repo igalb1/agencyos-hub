@@ -25,6 +25,8 @@ import ResetPassword from "@/pages/ResetPassword";
 import AcceptInvitePage from "@/pages/AcceptInvitePage";
 import TrialExpired from "@/pages/TrialExpired";
 import SelectWorkspace from "@/pages/SelectWorkspace";
+import PendingApproval from "@/pages/PendingApproval";
+import AccessDenied from "@/pages/AccessDenied";
 import Index from "@/pages/Index";
 import PricingPage from "@/pages/PricingPage";
 import TermsPage from "@/pages/TermsPage";
@@ -38,7 +40,7 @@ import SupportAdminPage from "@/pages/SupportAdminPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { session, loading, trialExpired, organizations, organization } = useAuth();
+  const { session, loading, trialExpired, organizations, organization, pendingMemberships, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -49,6 +51,15 @@ function ProtectedRoutes() {
   }
 
   if (!session) return <Navigate to="/auth" replace />;
+
+  // No active organization at all
+  if (!isSuperAdmin && organizations.length === 0) {
+    if (pendingMemberships.length > 0) {
+      return <PendingApproval memberships={pendingMemberships} />;
+    }
+    return <AccessDenied message="החשבון שלך אינו משויך לסוכנות פעילה. צור סוכנות חדשה או השתמש בקישור הזמנה." />;
+  }
+
   // After login: if user has multiple workspaces and hasn't picked one this session,
   // send them to the workspace selector.
   const justChose = sessionStorage.getItem('agencyos_workspace_chosen') === '1';
