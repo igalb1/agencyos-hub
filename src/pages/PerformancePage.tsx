@@ -1,5 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
-import { mockCampaigns, mockClients, mockAds, mockSpendByPlatform } from '@/lib/mock-data';
+import { useOrgData } from '@/hooks/useOrgData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -18,25 +18,42 @@ const COLORS = ['#00D4FF', '#A78BFA', '#22C55E', '#F59E0B', '#EF4444', '#EC4899'
 
 export default function PerformancePage() {
   const { lang } = useApp();
+  const { campaigns: orgCampaigns, clients: orgClients } = useOrgData();
   const isHe = lang === 'he';
   const [filterClient, setFilterClient] = useState<string>('all');
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
 
-  const clients = useMemo(() => Array.from(new Set(mockClients.map(c => c.name))), []);
+  const clients = useMemo(
+    () => Array.from(new Set(orgClients.map(c => c.name))),
+    [orgClients],
+  );
   const platforms = ['Meta', 'Google', 'TikTok', 'LinkedIn'];
 
   const campaigns = useMemo(() => {
-    return mockCampaigns.filter(c => {
+    return orgCampaigns.filter(c => {
       if (filterClient !== 'all' && c.clientName !== filterClient) return false;
       if (filterPlatform !== 'all' && c.platform !== filterPlatform) return false;
       return true;
     });
-  }, [filterClient, filterPlatform]);
+  }, [filterClient, filterPlatform, orgCampaigns]);
 
-  const ads = useMemo(() => {
-    const campaignIds = new Set(campaigns.map(c => c.id));
-    return mockAds.filter(a => campaignIds.has(a.campaignId));
-  }, [campaigns]);
+  // Ads are derived from campaigns (no separate ad table in this org).
+  const ads = useMemo(
+    () =>
+      campaigns.map((c) => ({
+        id: c.id,
+        name: c.name,
+        campaignId: c.id,
+        clientName: c.clientName,
+        platform: c.platform,
+        spend: c.spend,
+        leads: c.leads,
+        clicks: c.clicks,
+        impressions: c.impressions,
+        conversions: c.conversions,
+      })),
+    [campaigns],
+  );
 
   // KPIs
   const kpis = useMemo(() => {
