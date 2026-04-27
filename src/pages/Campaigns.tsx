@@ -458,6 +458,25 @@ export default function CampaignsPage() {
 
                           {/* Custom columns */}
                           {customColumns.map(col => {
+                            // Calculated (formula) column — read-only, derived from campaign metrics
+                            if (col.type === 'formula') {
+                              const result = evaluateFormula(col.formula ?? '', {
+                                budget: campaign.budget,
+                                spend: campaign.spend,
+                                leads: campaign.leads,
+                                impressions: campaign.impressions,
+                                clicks: campaign.clicks,
+                                conversions: campaign.conversions,
+                              });
+                              return (
+                                <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                  <p className="text-sm text-foreground tabular-nums" title={col.formula ?? ''}>
+                                    {result === null ? '—' : (Math.abs(result) >= 1000 ? fmtNum(Math.round(result)) : result.toFixed(2))}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate" title={col.formula ?? ''}>ƒ {col.formula}</p>
+                                </div>
+                              );
+                            }
                             const v = customValues[campaign.id]?.[col.id] ?? '';
                             return (
                               <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
@@ -602,6 +621,7 @@ export default function CampaignsPage() {
         columns={customColumns}
         onAdd={addColumn}
         onRename={renameColumn}
+        onUpdateFormula={updateFormula}
         onDelete={deleteColumn}
       />
       <AssignClientDialog
