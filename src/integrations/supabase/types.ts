@@ -1222,6 +1222,7 @@ export type Database = {
         }[]
       }
       reject_member: { Args: { _member_id: string }; Returns: Json }
+      seed_cron_service_role_key: { Args: { _key: string }; Returns: undefined }
       set_integration_tokens: {
         Args: {
           _access_token: string
