@@ -125,7 +125,7 @@ describe("useOrgData stamps organization_id on every write", () => {
       });
       await result.current.upsertCampaign({
         id: "new-1", clientId: "", clientName: "", projectId: "",
-        projectName: "", name: "C1", platform: "Meta", status: "Planned",
+        projectName: "", name: "C1", platform: "Meta", status: "Planned", objective: "leads",
         budget: 0, spend: 0, leads: 0, impressions: 0, clicks: 0,
         conversions: 0, startDate: "", endDate: "", budgetAlertThreshold: 80,
       });

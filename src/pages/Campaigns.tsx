@@ -11,6 +11,21 @@ import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { evaluateFormula } from '@/lib/formula';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
+import {
+  ALL_OBJECTIVES,
+  computeObjectiveMetric,
+  detectObjective,
+  objectiveIcon,
+  objectiveLabel,
+  type CampaignObjective,
+} from '@/lib/campaign-objectives';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -308,18 +323,19 @@ export default function CampaignsPage() {
                 {/* Table header - visible on desktop only */}
                 <div
                   className="hidden lg:grid gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20"
-                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 100px 100px 120px 120px 80px 80px 100px 100px ${customColumns.map(() => '110px ').join('')}40px` }}
+                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
                   <span>{lang === 'he' ? 'שם' : 'Name'}</span>
+                  <span>{lang === 'he' ? 'סוג קמפיין' : 'Objective'}</span>
                   <span className="text-end">{t('budget', lang)}</span>
                   <span className="text-end">{t('spend', lang)}</span>
                   <span className="text-center">{lang === 'he' ? 'התקדמות' : 'Progress'}</span>
                   <span className="text-center">{lang === 'he' ? 'קצב' : 'Pacing'}</span>
                   <span className="text-end">{t('leads', lang)}</span>
-                  <span className="text-end">CPL</span>
                   <span className="text-end">CTR</span>
                   <span className="text-end">{lang === 'he' ? 'המרות' : 'Conv.'}</span>
+                  <span className="text-end">{lang === 'he' ? 'מדד מטרה' : 'Goal KPI'}</span>
                   {customColumns.map(col => (
                     <span key={col.id} className="text-end truncate" title={col.name}>{col.name}</span>
                   ))}
@@ -332,7 +348,6 @@ export default function CampaignsPage() {
                     const pace = calcPacing(campaign.spend, campaign.budget, campaign.startDate, campaign.endDate);
                     const statusStyle = getStatusColor(campaign.status);
                     const ctr = calcCtr(campaign.clicks, campaign.impressions);
-                    const cpl = calcCpl(campaign.spend, campaign.leads);
                     // No per-ad table for this org; keep an empty list so the
                     // expandable ad-row UI stays a no-op.
                     const ads: Ad[] = [];
@@ -348,7 +363,7 @@ export default function CampaignsPage() {
                             "lg:[grid-template-columns:var(--cols)]",
                             selected.has(campaign.id) && "bg-primary/5"
                           )}
-                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 100px 100px 120px 120px 80px 80px 100px 100px ${customColumns.map(() => '110px ').join('')}40px` }}
+                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px ${customColumns.map(() => '110px ').join('')}40px` }}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
                           {/* Checkbox */}
@@ -396,6 +411,37 @@ export default function CampaignsPage() {
                             )}
                           </div>
 
+                          {/* Objective selector */}
+                          <div className="hidden lg:block" onClick={e => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 hover:bg-muted text-xs font-medium text-foreground transition-colors w-full justify-start"
+                                  title={lang === 'he' ? 'שנה סוג קמפיין' : 'Change campaign objective'}
+                                >
+                                  <span className="text-sm">{objectiveIcon(campaign.objective)}</span>
+                                  <span className="truncate">{objectiveLabel(campaign.objective, lang === 'he' ? 'he' : 'en')}</span>
+                                  <ChevronDown size={12} className="ms-auto opacity-60 shrink-0" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="bg-popover">
+                                {ALL_OBJECTIVES.map(o => (
+                                  <DropdownMenuItem
+                                    key={o}
+                                    onClick={() => updateCampaign(campaign.id, 'objective' as keyof Campaign, o)}
+                                    className={cn(
+                                      'gap-2 cursor-pointer',
+                                      campaign.objective === o && 'bg-primary/10 text-primary'
+                                    )}
+                                  >
+                                    <span>{objectiveIcon(o)}</span>
+                                    <span>{objectiveLabel(o, lang === 'he' ? 'he' : 'en')}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
                           {/* Desktop columns - hidden on small */}
                           <div className="hidden lg:block text-end">
                             <EditableCell
@@ -441,10 +487,6 @@ export default function CampaignsPage() {
                             />
                           </div>
                           <div className="hidden lg:block text-end">
-                            <p className="text-sm text-foreground">{cpl}</p>
-                            <p className="text-[10px] text-muted-foreground">CPL</p>
-                          </div>
-                          <div className="hidden lg:block text-end">
                             <p className="text-sm text-foreground">{ctr}</p>
                             <p className="text-[10px] text-muted-foreground">CTR</p>
                           </div>
@@ -456,6 +498,35 @@ export default function CampaignsPage() {
                               onSave={v => updateCampaign(campaign.id, 'conversions', v)}
                             />
                           </div>
+                          {/* Goal KPI — primary metric for the campaign objective */}
+                          {(() => {
+                            const metric = computeObjectiveMetric(campaign.objective, {
+                              spend: campaign.spend,
+                              leads: campaign.leads,
+                              conversions: campaign.conversions,
+                              impressions: campaign.impressions,
+                              clicks: campaign.clicks,
+                            }, lang === 'he' ? 'he' : 'en');
+                            return (
+                              <div className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                <TooltipProvider delayDuration={200}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="cursor-help">
+                                        <p className="text-sm font-semibold text-primary tabular-nums">{metric.primary}</p>
+                                        <p className="text-[10px] text-muted-foreground truncate">
+                                          {metric.label}{metric.secondary ? ` · ${metric.secondary}` : ''}
+                                        </p>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[260px] text-xs">
+                                      {metric.tooltip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            );
+                          })()}
 
                           {/* Custom columns */}
                           {customColumns.map(col => {

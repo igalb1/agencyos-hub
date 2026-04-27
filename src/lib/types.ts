@@ -18,6 +18,7 @@ export interface Campaign {
   name: string;
   platform: 'Meta' | 'Google' | 'TikTok' | 'LinkedIn';
   status: 'Live' | 'Planned' | 'Paused';
+  objective: 'leads' | 'sales' | 'video' | 'awareness' | 'traffic' | 'engagement' | 'app' | 'other';
   budget: number;
   spend: number;
   leads: number;
