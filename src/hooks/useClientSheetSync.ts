@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export type SyncFrequency = 'manual' | 'hourly' | 'every_6_hours' | 'daily' | 'weekly';
+export type SyncMode = 'flat' | 'hierarchical';
 
 export interface SheetSyncConfig {
   id: string;
@@ -16,6 +17,7 @@ export interface SheetSyncConfig {
   column_mapping: Record<string, string>;
   match_field: string;
   frequency: SyncFrequency;
+  sync_mode: SyncMode;
   is_active: boolean;
   last_synced_at: string | null;
   next_run_at: string | null;
@@ -53,6 +55,8 @@ export type SyncStreamEvent =
       updated?: number;
       skipped?: number;
       failed?: number;
+      campaigns_created?: number;
+      campaigns_updated?: number;
       error?: string;
     };
 
@@ -106,7 +110,7 @@ export function useClientSheetSync() {
           sheet_name: input.sheet_name, range_a1: input.range_a1,
           header_row: input.header_row, column_mapping: input.column_mapping,
           match_field: input.match_field, frequency: input.frequency,
-          is_active: input.is_active,
+          sync_mode: input.sync_mode, is_active: input.is_active,
         })
         .eq('id', input.id);
       if (error) throw error;
@@ -122,6 +126,7 @@ export function useClientSheetSync() {
         column_mapping: input.column_mapping ?? {},
         match_field: input.match_field ?? 'name',
         frequency: input.frequency ?? 'manual',
+        sync_mode: input.sync_mode ?? 'flat',
         is_active: input.is_active ?? true,
       });
       if (error) throw error;
