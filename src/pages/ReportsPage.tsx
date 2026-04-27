@@ -261,7 +261,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Report Type Selector */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {reportCards.map(r => (
           <button
             key={r.type}
@@ -281,6 +281,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Export Buttons */}
+      {reportType !== 'compare' && (
       <div className="flex justify-end gap-2">
         <Button
           variant="outline"
@@ -306,6 +307,7 @@ export default function ReportsPage() {
           CSV
         </Button>
       </div>
+      )}
 
       {/* Report Content */}
       {reportType === 'overview' && (
@@ -488,6 +490,14 @@ export default function ReportsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {reportType === 'compare' && (
+        <ComparisonPanel
+          campaigns={orgCampaigns}
+          clients={clients}
+          isHe={isHe}
+        />
       )}
     </div>
   );
