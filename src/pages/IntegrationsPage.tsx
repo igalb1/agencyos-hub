@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import {
   Globe, Search, Music2, BriefcaseBusiness, BarChart3,
-  Mail, MessageSquare, FileText, Zap, Loader2, RefreshCw, Calendar as CalendarIcon
+  Mail, MessageSquare, FileText, Zap, Loader2, RefreshCw, Calendar as CalendarIcon,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useGoogleAdsConnect } from '@/hooks/useGoogleAdsConnect';
 import { useGoogleAdsSync } from '@/hooks/useGoogleAdsSync';
@@ -69,6 +70,7 @@ export default function IntegrationsPage() {
   const [dateTo, setDateTo] = useState<Date>(today);
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
+  const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
@@ -258,6 +260,11 @@ export default function IntegrationsPage() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <BriefcaseBusiness size={18} style={{ color: '#0A66C2' }} />
                   {isRtl ? 'סנכרון LinkedIn Ads' : 'LinkedIn Ads Sync'}
+                  {liCollapsed && liSync.campaigns.length > 0 && (
+                    <Badge variant="outline" className="text-xs ml-1">
+                      {liSync.campaigns.length} {isRtl ? 'קמפיינים' : 'campaigns'}
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription className="mt-1">
                   {liSync.lastSync ? (
@@ -280,8 +287,19 @@ export default function IntegrationsPage() {
                   )}
                 </CardDescription>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLiCollapsed(v => !v)}
+                className="gap-1"
+                aria-label={liCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}
+              >
+                {liCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                <span className="text-xs">{liCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}</span>
+              </Button>
             </div>
           </CardHeader>
+          {!liCollapsed && (
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
@@ -379,6 +397,7 @@ export default function IntegrationsPage() {
               </p>
             )}
           </CardContent>
+          )}
         </Card>
       )}
 
