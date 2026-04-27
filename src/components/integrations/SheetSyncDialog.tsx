@@ -9,7 +9,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClientSheetSync, type SheetSyncConfig, type SyncFrequency } from '@/hooks/useClientSheetSync';
 
@@ -51,6 +51,8 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [preview, setPreview] = useState<Record<string, any>[] | null>(null);
   const [sheets, setSheets] = useState<{ title: string }[]>(
     config?.sheet_name ? [{ title: config.sheet_name }] : []
   );
@@ -69,6 +71,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       setSheetName(chosen);
       setHeaders(meta.headers);
       setSample(meta.sample);
+      setPreview(null);
       // Pre-fill mapping by header name match
       const next: Record<string, string> = { ...mapping };
       meta.headers.forEach((h) => {
@@ -87,6 +90,40 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runDryTest = () => {
+    if (headers.length === 0) {
+      toast.error(isRtl ? 'יש לטעון את הגיליון תחילה' : 'Load the sheet first');
+      return;
+    }
+    setTesting(true);
+    try {
+      const allowed = new Set(['name', 'industry', 'status', 'color', 'budget']);
+      const rows = sample.slice(0, 5).map((row) => {
+        const rec: Record<string, any> = {};
+        headers.forEach((h, i) => {
+          const target = mapping[h];
+          if (!target || target === '__skip__' || !allowed.has(target)) return;
+          const value = row[i];
+          if (value === undefined || value === null || value === '') return;
+          if (target === 'budget') {
+            const num = Number(String(value).replace(/[^0-9.\-]/g, ''));
+            if (!Number.isNaN(num)) rec.budget = num;
+          } else if (target === 'status') {
+            const v = String(value).trim().toLowerCase();
+            rec.status = v === 'paused' || v === 'מושהה' ? 'paused' : 'active';
+          } else {
+            rec[target] = String(value).trim();
+          }
+        });
+        return rec;
+      }).filter((r) => r.name);
+      setPreview(rows);
+      toast.success(isRtl ? `תצוגה מקדימה: ${rows.length} שורות` : `Preview: ${rows.length} rows`);
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -248,6 +285,15 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {isRtl ? 'ביטול' : 'Cancel'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={runDryTest}
+            disabled={testing || headers.length === 0}
+            className="gap-2"
+          >
+            {testing ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />}
+            {isRtl ? 'בדיקה (סימולציה)' : 'Test (dry-run)'}
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving && <Loader2 size={14} className="animate-spin mr-2" />}
