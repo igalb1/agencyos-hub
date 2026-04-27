@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { format, subYears, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, ArrowRight, ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,18 +31,46 @@ interface Props {
 }
 
 const overlaps = (cStart: string | undefined, cEnd: string | undefined, from: Date, to: Date) => {
-  // A campaign falls in the period if its [start..end] interval overlaps [from..to].
-  // Missing dates: treat start as -infinity, end as +infinity.
   const s = cStart ? new Date(cStart) : new Date(-8640000000000000);
   const e = cEnd ? new Date(cEnd) : new Date(8640000000000000);
   return s <= to && e >= from;
 };
 
-const aggregate = (campaigns: CampaignLike[], client: string, from: Date, to: Date) => {
-  const filtered = campaigns.filter(
-    (c) => (client === 'all' || c.clientName === client) && overlaps(c.startDate, c.endDate, from, to)
-  );
-  const sum = (k: keyof CampaignLike) => filtered.reduce((s, c) => s + (Number(c[k]) || 0), 0);
+const DAY_MS = 86400000;
+
+/**
+ * Returns the fraction of the campaign run that overlaps [from..to].
+ * - If campaign has no start AND no end date, returns 1 (counted in full).
+ * - If overlapDays / totalDays can be computed, returns that ratio (0..1).
+ */
+const overlapFraction = (cStart: string | undefined, cEnd: string | undefined, from: Date, to: Date): number => {
+  if (!cStart && !cEnd) return 1;
+  const s = cStart ? new Date(cStart) : new Date(-8640000000000000);
+  const e = cEnd ? new Date(cEnd) : new Date(8640000000000000);
+  if (s > to || e < from) return 0;
+  const overlapStart = s > from ? s : from;
+  const overlapEnd = e < to ? e : to;
+  const overlapDays = Math.max(1, Math.round((overlapEnd.getTime() - overlapStart.getTime()) / DAY_MS) + 1);
+  // Total run length: if either side missing, fallback to overlap (treat as fully attributed).
+  if (!cStart || !cEnd) return 1;
+  const totalDays = Math.max(1, Math.round((e.getTime() - s.getTime()) / DAY_MS) + 1);
+  return Math.min(1, overlapDays / totalDays);
+};
+
+const aggregate = (
+  campaigns: CampaignLike[],
+  client: string,
+  from: Date,
+  to: Date,
+  proRata: boolean
+) => {
+  const filtered = campaigns
+    .filter((c) => (client === 'all' || c.clientName === client) && overlaps(c.startDate, c.endDate, from, to))
+    .map((c) => ({ c, w: proRata ? overlapFraction(c.startDate, c.endDate, from, to) : 1 }));
+
+  const sum = (k: keyof CampaignLike) =>
+    filtered.reduce((s, { c, w }) => s + (Number(c[k]) || 0) * w, 0);
+
   const spend = sum('spend');
   const leads = sum('leads');
   const clicks = sum('clicks');
@@ -48,7 +78,9 @@ const aggregate = (campaigns: CampaignLike[], client: string, from: Date, to: Da
   const conversions = sum('conversions');
   const budget = sum('budget');
   return {
-    count: filtered.length,
+    count: proRata
+      ? filtered.reduce((s, { w }) => s + w, 0) // fractional "campaign-equivalents"
+      : filtered.length,
     spend, leads, clicks, impressions, conversions, budget,
     ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
     cpc: clicks > 0 ? spend / clicks : 0,
@@ -107,9 +139,10 @@ export function ComparisonPanel({ campaigns, clients, isHe }: Props) {
   const [toA, setToA] = useState<Date>(defEndA);
   const [fromB, setFromB] = useState<Date>(defStartB);
   const [toB, setToB] = useState<Date>(defEndB);
+  const [proRata, setProRata] = useState<boolean>(true);
 
-  const statsA = useMemo(() => aggregate(campaigns, clientA, fromA, toA), [campaigns, clientA, fromA, toA]);
-  const statsB = useMemo(() => aggregate(campaigns, clientB, fromB, toB), [campaigns, clientB, fromB, toB]);
+  const statsA = useMemo(() => aggregate(campaigns, clientA, fromA, toA, proRata), [campaigns, clientA, fromA, toA, proRata]);
+  const statsB = useMemo(() => aggregate(campaigns, clientB, fromB, toB, proRata), [campaigns, clientB, fromB, toB, proRata]);
 
   const applyPreset = (preset: 'yoy_month' | 'mom' | 'qoq' | 'ytd_lytd') => {
     if (preset === 'yoy_month') {
@@ -133,7 +166,7 @@ export function ComparisonPanel({ campaigns, clients, isHe }: Props) {
   const Arrow = isHe ? ArrowLeft : ArrowRight;
 
   const rows: { label: string; key: keyof Stats; format: (n: number) => string; invertDelta?: boolean }[] = [
-    { label: isHe ? 'מס׳ קמפיינים' : 'Campaigns', key: 'count', format: (n) => fmtN(n) },
+    { label: isHe ? (proRata ? 'קמפיינים (יחסי)' : 'מס׳ קמפיינים') : (proRata ? 'Campaigns (pro-rata)' : 'Campaigns'), key: 'count', format: (n) => proRata ? n.toFixed(1) : fmtN(n) },
     { label: isHe ? 'הוצאה' : 'Spend', key: 'spend', format: fmtMoney },
     { label: isHe ? 'תקציב' : 'Budget', key: 'budget', format: fmtMoney },
     { label: isHe ? 'ניצול תקציב' : 'Budget usage', key: 'usage', format: (n) => `${n.toFixed(0)}%` },
@@ -181,13 +214,21 @@ export function ComparisonPanel({ campaigns, clients, isHe }: Props) {
   return (
     <Card className="bg-card/60 backdrop-blur-sm border-border/50">
       <CardContent className="p-4 space-y-4">
-        {/* Presets */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-muted-foreground">{isHe ? 'תבניות מהירות:' : 'Quick presets:'}</span>
-          <Button size="sm" variant="outline" onClick={() => applyPreset('yoy_month')}>{isHe ? 'חודש נוכחי מול שנה שעברה' : 'This month vs last year'}</Button>
-          <Button size="sm" variant="outline" onClick={() => applyPreset('mom')}>{isHe ? 'חודש נוכחי מול חודש קודם' : 'MoM'}</Button>
-          <Button size="sm" variant="outline" onClick={() => applyPreset('qoq')}>{isHe ? 'רבעון מול רבעון' : 'QoQ'}</Button>
-          <Button size="sm" variant="outline" onClick={() => applyPreset('ytd_lytd')}>{isHe ? 'YTD מול שנה שעברה' : 'YTD vs LYTD'}</Button>
+        {/* Presets + Pro-rata toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground">{isHe ? 'תבניות מהירות:' : 'Quick presets:'}</span>
+            <Button size="sm" variant="outline" onClick={() => applyPreset('yoy_month')}>{isHe ? 'חודש נוכחי מול שנה שעברה' : 'This month vs last year'}</Button>
+            <Button size="sm" variant="outline" onClick={() => applyPreset('mom')}>{isHe ? 'חודש נוכחי מול חודש קודם' : 'MoM'}</Button>
+            <Button size="sm" variant="outline" onClick={() => applyPreset('qoq')}>{isHe ? 'רבעון מול רבעון' : 'QoQ'}</Button>
+            <Button size="sm" variant="outline" onClick={() => applyPreset('ytd_lytd')}>{isHe ? 'YTD מול שנה שעברה' : 'YTD vs LYTD'}</Button>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-border/50 px-3 py-1.5">
+            <Switch id="pro-rata" checked={proRata} onCheckedChange={setProRata} />
+            <Label htmlFor="pro-rata" className="text-xs font-medium cursor-pointer">
+              {isHe ? 'חישוב יחסי לימים בחפיפה' : 'Pro-rata by overlapping days'}
+            </Label>
+          </div>
         </div>
 
         {/* Two side-by-side period+client selectors */}
@@ -255,8 +296,12 @@ export function ComparisonPanel({ campaigns, clients, isHe }: Props) {
 
         <p className="text-[11px] text-muted-foreground">
           {isHe
-            ? 'קמפיין נכלל בתקופה אם תקופת ההפעלה שלו חופפת לתקופה. שינוי באחוזים: A מול B. עבור CPC/CPL — ירידה היא חיובית.'
-            : 'A campaign is included if its run period overlaps the selected window. Delta: A vs B. For CPC/CPL a drop is positive.'}
+            ? proRata
+              ? 'חישוב יחסי פעיל: לכל קמפיין נספר רק החלק היחסי לפי מספר הימים שחופפים לתקופה (למשל קמפיין 30 יום שחופף 10 ימים יתרום שליש מהמדדים שלו). שינוי באחוזים: A מול B. עבור CPC/CPL — ירידה היא חיובית.'
+              : 'חישוב יחסי כבוי: כל קמפיין שחופף לתקופה (אפילו ביום אחד) נספר במלואו. שינוי באחוזים: A מול B. עבור CPC/CPL — ירידה היא חיובית.'
+            : proRata
+              ? 'Pro-rata on: each campaign contributes only the share of its metrics matching its overlapping days with the window. Delta: A vs B. For CPC/CPL a drop is positive.'
+              : 'Pro-rata off: any campaign that touches the window is counted in full. Delta: A vs B. For CPC/CPL a drop is positive.'}
         </p>
       </CardContent>
     </Card>
