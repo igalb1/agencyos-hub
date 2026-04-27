@@ -5,9 +5,12 @@ import { useOrgData } from '@/hooks/useOrgData';
 import { Ad, Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
 import EditableCell from '@/components/campaigns/EditableCell';
+import AssignClientDialog from '@/components/campaigns/AssignClientDialog';
+import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
+import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -37,12 +40,14 @@ function groupCampaigns(campaigns: Campaign[]): GroupedData[] {
   const projectNames = new Map<string, string>();
 
   for (const c of campaigns) {
-    clientNames.set(c.clientId, c.clientName);
-    projectNames.set(c.projectId, c.projectName);
-    if (!map.has(c.clientId)) map.set(c.clientId, new Map());
-    const pm = map.get(c.clientId)!;
-    if (!pm.has(c.projectId)) pm.set(c.projectId, []);
-    pm.get(c.projectId)!.push(c);
+    const cid = c.clientId || '__unassigned__';
+    const pid = c.projectId || '__no_project__';
+    clientNames.set(cid, c.clientId ? c.clientName : '');
+    projectNames.set(pid, c.projectId ? c.projectName : '');
+    if (!map.has(cid)) map.set(cid, new Map());
+    const pm = map.get(cid)!;
+    if (!pm.has(pid)) pm.set(pid, []);
+    pm.get(pid)!.push(c);
   }
 
   return Array.from(map.entries()).map(([clientId, projects]) => ({
@@ -63,12 +68,15 @@ export default function CampaignsPage() {
   const { campaigns: dbCampaigns, clients: dbClients, loaded, upsertCampaign, updateCampaignField, deleteCampaigns } = useOrgData();
   const campaigns = dbCampaigns;
   void loaded;
+  const { columns: customColumns, values: customValues, addColumn, renameColumn, deleteColumn, setValue: setCustomValue } = useCustomColumns();
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showColumnsDialog, setShowColumnsDialog] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<Campaign | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
@@ -159,6 +167,14 @@ export default function CampaignsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowColumnsDialog(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title={lang === 'he' ? 'ניהול עמודות' : 'Manage columns'}
+          >
+            <Settings2 size={16} />
+            <span className="hidden sm:inline">{lang === 'he' ? 'עמודות' : 'Columns'}</span>
+          </button>
           <AnimatePresence>
             {selected.size > 0 && (
               <motion.button
