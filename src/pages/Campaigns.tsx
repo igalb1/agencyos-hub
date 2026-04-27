@@ -364,7 +364,7 @@ export default function CampaignsPage() {
                             "lg:[grid-template-columns:var(--cols)]",
                             selected.has(campaign.id) && "bg-primary/5"
                           )}
-                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 100px 100px 120px 120px 80px 80px 100px 100px ${customColumns.map(() => '110px ').join('')}40px` }}
+                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px ${customColumns.map(() => '110px ').join('')}40px` }}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
                           {/* Checkbox */}
