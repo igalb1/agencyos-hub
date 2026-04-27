@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Search, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
-import { useClientSheetSync, type SheetSyncConfig, type SyncFrequency } from '@/hooks/useClientSheetSync';
+import { useClientSheetSync, type SheetSyncConfig, type SyncFrequency, type SyncMode } from '@/hooks/useClientSheetSync';
 
 interface Props {
   open: boolean;
@@ -20,13 +20,28 @@ interface Props {
   isRtl: boolean;
 }
 
-const CLIENT_FIELDS = [
-  { value: '__skip__', label: { he: '— דלג —', en: '— Skip —' } },
+const SKIP_FIELD = { value: '__skip__', label: { he: '— דלג —', en: '— Skip —' } };
+
+const CLIENT_ONLY_FIELDS = [
   { value: 'name', label: { he: 'שם לקוח', en: 'Client name' } },
   { value: 'industry', label: { he: 'תחום', en: 'Industry' } },
-  { value: 'status', label: { he: 'סטטוס', en: 'Status' } },
-  { value: 'budget', label: { he: 'תקציב', en: 'Budget' } },
+  { value: 'status', label: { he: 'סטטוס לקוח', en: 'Client status' } },
+  { value: 'budget', label: { he: 'תקציב לקוח', en: 'Client budget' } },
   { value: 'color', label: { he: 'צבע', en: 'Color' } },
+];
+
+const CAMPAIGN_FIELDS = [
+  { value: 'campaign_name', label: { he: 'שם קמפיין', en: 'Campaign name' } },
+  { value: 'platform', label: { he: 'פלטפורמה', en: 'Platform' } },
+  { value: 'objective', label: { he: 'מטרת קמפיין', en: 'Campaign objective' } },
+  { value: 'budget', label: { he: 'תקציב קמפיין', en: 'Campaign budget' } },
+  { value: 'spend', label: { he: 'הוצאה', en: 'Spend' } },
+  { value: 'impressions', label: { he: 'חשיפות', en: 'Impressions' } },
+  { value: 'clicks', label: { he: 'קליקים', en: 'Clicks' } },
+  { value: 'leads', label: { he: 'לידים', en: 'Leads' } },
+  { value: 'conversions', label: { he: 'המרות', en: 'Conversions' } },
+  { value: 'start_date', label: { he: 'תאריך התחלה', en: 'Start date' } },
+  { value: 'end_date', label: { he: 'תאריך סיום', en: 'End date' } },
 ];
 
 const FREQS: { v: SyncFrequency; he: string; en: string }[] = [
@@ -46,6 +61,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
   const [headerRow, setHeaderRow] = useState(config?.header_row ?? 1);
   const [rangeA1, setRangeA1] = useState(config?.range_a1 ?? 'A1:Z1000');
   const [frequency, setFrequency] = useState<SyncFrequency>(config?.frequency ?? 'manual');
+  const [syncMode, setSyncMode] = useState<SyncMode>(config?.sync_mode ?? 'flat');
   const [matchField, setMatchField] = useState(config?.match_field ?? 'name');
   const [mapping, setMapping] = useState<Record<string, string>>(config?.column_mapping ?? {});
 
@@ -77,7 +93,17 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       meta.headers.forEach((h) => {
         if (next[h]) return;
         const lc = h.toLowerCase();
-        if (/name|שם/i.test(lc)) next[h] = 'name';
+        if (/campaign|קמפיין/i.test(lc) && /name|שם/i.test(lc)) next[h] = 'campaign_name';
+        else if (/platform|פלטפורמה|מקור/i.test(lc)) next[h] = 'platform';
+        else if (/objective|מטרה|יעד/i.test(lc)) next[h] = 'objective';
+        else if (/spend|הוצאה|בוזבז/i.test(lc)) next[h] = 'spend';
+        else if (/impression|חשיפ/i.test(lc)) next[h] = 'impressions';
+        else if (/click|קליק/i.test(lc)) next[h] = 'clicks';
+        else if (/lead|ליד/i.test(lc)) next[h] = 'leads';
+        else if (/conversion|המר/i.test(lc)) next[h] = 'conversions';
+        else if (/start|התחלה/i.test(lc)) next[h] = 'start_date';
+        else if (/end|סיום/i.test(lc)) next[h] = 'end_date';
+        else if (/name|שם/i.test(lc)) next[h] = 'name';
         else if (/industry|תחום/i.test(lc)) next[h] = 'industry';
         else if (/status|סטטוס/i.test(lc)) next[h] = 'status';
         else if (/budget|תקציב/i.test(lc)) next[h] = 'budget';
@@ -137,13 +163,19 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       toast.error(isRtl ? 'חובה למפות עמודה ל"שם לקוח"' : 'You must map a column to "Client name"');
       return;
     }
+    if (syncMode === 'hierarchical' && !Object.values(cleanMapping).includes('campaign_name')) {
+      toast.error(isRtl
+        ? 'במצב היררכי חובה למפות עמודה ל"שם קמפיין"'
+        : 'In hierarchical mode you must map a column to "Campaign name"');
+      return;
+    }
     setSaving(true);
     try {
       await upsertConfig({
         id: config?.id, name, spreadsheet_id: resolvedId,
         sheet_name: sheetName, range_a1: rangeA1, header_row: headerRow,
         column_mapping: cleanMapping, match_field: matchField,
-        frequency, is_active: true,
+        frequency, sync_mode: syncMode, is_active: true,
       });
       toast.success(isRtl ? 'נשמר' : 'Saved');
       onOpenChange(false);
@@ -174,6 +206,26 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
           <div className="space-y-1">
             <Label>{isRtl ? 'שם להגדרה' : 'Name'}</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
+          <div className="space-y-1">
+            <Label>{isRtl ? 'מבנה הגיליון' : 'Sheet structure'}</Label>
+            <Select value={syncMode} onValueChange={(v) => setSyncMode(v as SyncMode)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flat">
+                  {isRtl ? 'שורה אחת לכל לקוח (פשוט)' : 'One row per client (flat)'}
+                </SelectItem>
+                <SelectItem value="hierarchical">
+                  {isRtl ? 'כותרת לקוח + שורות קמפיינים מתחתיה (היררכי)' : 'Client header + campaign rows below (hierarchical)'}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {isRtl
+                ? 'במצב היררכי: שורה שיש בה רק שם לקוח (בלי שם קמפיין) מזוהה ככותרת לקוח, וכל שורה אחריה עם "שם קמפיין" משויכת אליו.'
+                : 'Hierarchical: a row with a client name and no campaign name is treated as a client header; following rows with a campaign name are attached to it.'}
+            </p>
           </div>
 
           <div className="space-y-1">
@@ -241,11 +293,27 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {CLIENT_FIELDS.map((f) => (
+                        <SelectItem value={SKIP_FIELD.value}>{SKIP_FIELD.label[isRtl ? 'he' : 'en']}</SelectItem>
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {isRtl ? 'לקוח' : 'Client'}
+                        </div>
+                        {CLIENT_ONLY_FIELDS.map((f) => (
                           <SelectItem key={f.value} value={f.value}>
                             {f.label[isRtl ? 'he' : 'en']}
                           </SelectItem>
                         ))}
+                        {syncMode === 'hierarchical' && (
+                          <>
+                            <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t border-border/40 mt-1">
+                              {isRtl ? 'קמפיין' : 'Campaign'}
+                            </div>
+                            {CAMPAIGN_FIELDS.map((f) => (
+                              <SelectItem key={f.value} value={f.value}>
+                                {f.label[isRtl ? 'he' : 'en']}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
