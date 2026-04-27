@@ -8,6 +8,7 @@ import { useOrgData } from '@/hooks/useOrgData';
 import { Campaign, Platform, CampaignStatus } from '@/lib/types';
 import { Lang } from '@/lib/i18n';
 import { toast } from 'sonner';
+import { detectObjective } from '@/lib/campaign-objectives';
 
 interface NewCampaignDialogProps {
   open: boolean;
@@ -49,6 +50,7 @@ export default function NewCampaignDialog({ open, onOpenChange, lang, onCampaign
       name,
       platform,
       status,
+      objective: detectObjective(name, platform) ?? 'leads',
       budget: Number(budget),
       spend: 0,
       leads: 0,
