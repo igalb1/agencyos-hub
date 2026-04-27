@@ -342,9 +342,11 @@ export default function CampaignsPage() {
                       <div key={campaign.id}>
                         <div
                           className={cn(
-                            "grid grid-cols-[1fr_auto] lg:grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            "grid grid-cols-[1fr_auto] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            "lg:[grid-template-columns:var(--cols)]",
                             selected.has(campaign.id) && "bg-primary/5"
                           )}
+                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 100px 100px 120px 120px 80px 80px 100px 100px ${customColumns.map(() => '110px ').join('')}40px` }}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
                           {/* Checkbox */}
@@ -453,8 +455,44 @@ export default function CampaignsPage() {
                             />
                           </div>
 
+                          {/* Custom columns */}
+                          {customColumns.map(col => {
+                            const v = customValues[campaign.id]?.[col.id] ?? '';
+                            return (
+                              <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                <EditableCell
+                                  value={col.type === 'number' ? (v === '' ? 0 : Number(v)) : v}
+                                  type={col.type === 'number' ? 'number' : 'text'}
+                                  formatDisplay={val => {
+                                    if (val === '' || val === null || val === undefined) return '—';
+                                    return col.type === 'number' ? fmtNum(Number(val)) : String(val);
+                                  }}
+                                  onSave={async (val) => {
+                                    try {
+                                      await setCustomValue(campaign.id, col.id, String(val));
+                                    } catch (e: any) {
+                                      toast.error(e?.message || 'Error');
+                                    }
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+
                           {/* Expand toggle / inline delete when selected */}
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => setAssignTarget(campaign)}
+                              title={lang === 'he' ? 'שייך ללקוח/פרויקט' : 'Link to client/project'}
+                              className={cn(
+                                "p-1 rounded transition-colors",
+                                campaign.clientId
+                                  ? "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                  : "text-amber-500 hover:bg-amber-500/10 animate-pulse"
+                              )}
+                            >
+                              <Link2 size={14} />
+                            </button>
                             {selected.has(campaign.id) && (
                               <button
                                 onClick={e => deleteOne(campaign.id, e)}
