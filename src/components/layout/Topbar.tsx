@@ -3,15 +3,26 @@ import { Link } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { t } from '@/lib/i18n';
-import { Bell, Menu, Search, LogOut, Upload, Building2 } from 'lucide-react';
+import { Bell, Menu, Search, LogOut, Upload, Building2, Loader2 } from 'lucide-react';
 import ImportDataDialog from '@/components/import/ImportDataDialog';
 
 export default function Topbar() {
   const { lang, sidebarOpen, setSidebarOpen } = useApp();
   const { profile, organization, organizations, signOut } = useAuth();
   const [importOpen, setImportOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const hasMultiple = organizations.length > 1;
   const isRtl = lang === 'he';
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
@@ -66,8 +77,14 @@ export default function Topbar() {
           </div>
           <span className="text-sm text-foreground hidden md:block">{profile?.full_name || ''}</span>
         </div>
-        <button onClick={signOut} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors" title="התנתק">
-          <LogOut size={18} />
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="התנתק"
+          aria-label="התנתק"
+        >
+          {signingOut ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
         </button>
       </div>
       <ImportDataDialog open={importOpen} onOpenChange={setImportOpen} />
