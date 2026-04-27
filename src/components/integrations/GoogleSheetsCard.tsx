@@ -6,6 +6,7 @@ import { FileText, Plus, RefreshCw, Loader2, Trash2, Pencil, Clock } from 'lucid
 import { format } from 'date-fns';
 import { useClientSheetSync, type SheetSyncConfig } from '@/hooks/useClientSheetSync';
 import { SheetSyncDialog } from './SheetSyncDialog';
+import { SyncProgressDialog } from './SyncProgressDialog';
 
 const FREQ_LABEL: Record<string, { he: string; en: string }> = {
   manual: { he: 'ידני בלבד', en: 'Manual only' },
@@ -16,9 +17,10 @@ const FREQ_LABEL: Record<string, { he: string; en: string }> = {
 };
 
 export function GoogleSheetsCard({ isRtl }: { isRtl: boolean }) {
-  const { configs, logs, loading, syncing, runSync, deleteConfig } = useClientSheetSync();
+  const { configs, logs, loading, syncing, deleteConfig } = useClientSheetSync();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SheetSyncConfig | null>(null);
+  const [progressFor, setProgressFor] = useState<SheetSyncConfig | null>(null);
 
   const lastLogFor = (cid: string) => logs.find((l) => l.config_id === cid);
 
@@ -90,7 +92,7 @@ export function GoogleSheetsCard({ isRtl }: { isRtl: boolean }) {
                     </div>
                     <div className="flex items-center gap-1">
                       <Button size="sm" variant="default" className="gap-1" disabled={syncing === cfg.id}
-                        onClick={() => runSync(cfg.id)}>
+                        onClick={() => setProgressFor(cfg)}>
                         {syncing === cfg.id ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                         {isRtl ? 'סנכרן' : 'Sync'}
                       </Button>
@@ -122,6 +124,14 @@ export function GoogleSheetsCard({ isRtl }: { isRtl: boolean }) {
           isRtl={isRtl}
         />
       )}
+
+      <SyncProgressDialog
+        open={!!progressFor}
+        onOpenChange={(v) => { if (!v) setProgressFor(null); }}
+        configId={progressFor?.id ?? null}
+        configName={progressFor?.name ?? ''}
+        isRtl={isRtl}
+      />
     </>
   );
 }
