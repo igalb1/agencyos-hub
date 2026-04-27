@@ -412,6 +412,37 @@ export default function CampaignsPage() {
                             )}
                           </div>
 
+                          {/* Objective selector */}
+                          <div className="hidden lg:block" onClick={e => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 hover:bg-muted text-xs font-medium text-foreground transition-colors w-full justify-start"
+                                  title={lang === 'he' ? 'שנה סוג קמפיין' : 'Change campaign objective'}
+                                >
+                                  <span className="text-sm">{objectiveIcon(campaign.objective)}</span>
+                                  <span className="truncate">{objectiveLabel(campaign.objective, lang === 'he' ? 'he' : 'en')}</span>
+                                  <ChevronDown size={12} className="ms-auto opacity-60 shrink-0" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="bg-popover">
+                                {ALL_OBJECTIVES.map(o => (
+                                  <DropdownMenuItem
+                                    key={o}
+                                    onClick={() => updateCampaign(campaign.id, 'objective' as keyof Campaign, o)}
+                                    className={cn(
+                                      'gap-2 cursor-pointer',
+                                      campaign.objective === o && 'bg-primary/10 text-primary'
+                                    )}
+                                  >
+                                    <span>{objectiveIcon(o)}</span>
+                                    <span>{objectiveLabel(o, lang === 'he' ? 'he' : 'en')}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
                           {/* Desktop columns - hidden on small */}
                           <div className="hidden lg:block text-end">
                             <EditableCell
