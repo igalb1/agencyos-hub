@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_custom_columns: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          organization_id: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          organization_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      campaign_custom_values: {
+        Row: {
+          campaign_id: string
+          column_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          campaign_id: string
+          column_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          column_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_custom_values_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_custom_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           budget: number | null
