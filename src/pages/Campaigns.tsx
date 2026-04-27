@@ -5,9 +5,12 @@ import { useOrgData } from '@/hooks/useOrgData';
 import { Ad, Campaign, Platform, CampaignStatus } from '@/lib/types';
 import NewCampaignDialog from '@/components/campaigns/NewCampaignDialog';
 import EditableCell from '@/components/campaigns/EditableCell';
+import AssignClientDialog from '@/components/campaigns/AssignClientDialog';
+import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
+import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -37,12 +40,14 @@ function groupCampaigns(campaigns: Campaign[]): GroupedData[] {
   const projectNames = new Map<string, string>();
 
   for (const c of campaigns) {
-    clientNames.set(c.clientId, c.clientName);
-    projectNames.set(c.projectId, c.projectName);
-    if (!map.has(c.clientId)) map.set(c.clientId, new Map());
-    const pm = map.get(c.clientId)!;
-    if (!pm.has(c.projectId)) pm.set(c.projectId, []);
-    pm.get(c.projectId)!.push(c);
+    const cid = c.clientId || '__unassigned__';
+    const pid = c.projectId || '__no_project__';
+    clientNames.set(cid, c.clientId ? c.clientName : '');
+    projectNames.set(pid, c.projectId ? c.projectName : '');
+    if (!map.has(cid)) map.set(cid, new Map());
+    const pm = map.get(cid)!;
+    if (!pm.has(pid)) pm.set(pid, []);
+    pm.get(pid)!.push(c);
   }
 
   return Array.from(map.entries()).map(([clientId, projects]) => ({
@@ -63,12 +68,15 @@ export default function CampaignsPage() {
   const { campaigns: dbCampaigns, clients: dbClients, loaded, upsertCampaign, updateCampaignField, deleteCampaigns } = useOrgData();
   const campaigns = dbCampaigns;
   void loaded;
+  const { columns: customColumns, values: customValues, addColumn, renameColumn, deleteColumn, setValue: setCustomValue } = useCustomColumns();
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showColumnsDialog, setShowColumnsDialog] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<Campaign | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
@@ -159,6 +167,14 @@ export default function CampaignsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowColumnsDialog(true)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title={lang === 'he' ? 'ניהול עמודות' : 'Manage columns'}
+          >
+            <Settings2 size={16} />
+            <span className="hidden sm:inline">{lang === 'he' ? 'עמודות' : 'Columns'}</span>
+          </button>
           <AnimatePresence>
             {selected.size > 0 && (
               <motion.button
@@ -246,28 +262,52 @@ export default function CampaignsPage() {
         {grouped.map(group => (
           <div key={group.clientId} className="glass-card rounded-xl overflow-hidden">
             {/* Client Header */}
-            <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                style={{ backgroundColor: `${mockClients_color(group.clientId)}20`, color: mockClients_color(group.clientId) }}
-              >
-                {group.clientName.charAt(0)}
-              </div>
-              <span className="text-sm font-semibold text-foreground">{group.clientName}</span>
-              <span className="text-xs text-muted-foreground">
-                {group.projects.reduce((s, p) => s + p.campaigns.length, 0)} {lang === 'he' ? 'קמפיינים' : 'campaigns'}
-              </span>
-            </div>
+            {(() => {
+              const isUnassigned = group.clientId === '__unassigned__';
+              const headerLabel = isUnassigned
+                ? (lang === 'he' ? 'לא משויך ללקוח' : 'Unassigned')
+                : (group.clientName || (lang === 'he' ? 'ללא שם' : 'Untitled'));
+              return (
+                <div className={cn(
+                  "px-5 py-3 border-b border-border flex items-center gap-3",
+                  isUnassigned ? "bg-amber-500/10" : "bg-muted/30"
+                )}>
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
+                      isUnassigned && "bg-amber-500/20 text-amber-500"
+                    )}
+                    style={!isUnassigned ? { backgroundColor: `${mockClients_color(group.clientId)}20`, color: mockClients_color(group.clientId) } : undefined}
+                  >
+                    {isUnassigned ? <AlertCircle size={16} /> : headerLabel.charAt(0)}
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">{headerLabel}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {group.projects.reduce((s, p) => s + p.campaigns.length, 0)} {lang === 'he' ? 'קמפיינים' : 'campaigns'}
+                  </span>
+                  {isUnassigned && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 ms-auto">
+                      {lang === 'he' ? 'לחץ על האייקון 🔗 כדי לשייך ידנית' : 'Click the 🔗 icon to link manually'}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
 
             {group.projects.map(project => (
               <div key={project.projectId}>
                 {/* Project sub-header */}
                 <div className="px-5 py-2 border-b border-border/50 bg-muted/10 flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">📁 {project.projectName}</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    📁 {project.projectName || (lang === 'he' ? 'ללא פרויקט' : 'No project')}
+                  </span>
                 </div>
 
                 {/* Table header - visible on desktop only */}
-                <div className="hidden lg:grid grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20">
+                <div
+                  className="hidden lg:grid gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20"
+                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 100px 100px 120px 120px 80px 80px 100px 100px ${customColumns.map(() => '110px ').join('')}40px` }}
+                >
                   <span></span>
                   <span>{lang === 'he' ? 'שם' : 'Name'}</span>
                   <span className="text-end">{t('budget', lang)}</span>
@@ -278,6 +318,9 @@ export default function CampaignsPage() {
                   <span className="text-end">CPL</span>
                   <span className="text-end">CTR</span>
                   <span className="text-end">{lang === 'he' ? 'המרות' : 'Conv.'}</span>
+                  {customColumns.map(col => (
+                    <span key={col.id} className="text-end truncate" title={col.name}>{col.name}</span>
+                  ))}
                   <span></span>
                 </div>
 
@@ -299,9 +342,11 @@ export default function CampaignsPage() {
                       <div key={campaign.id}>
                         <div
                           className={cn(
-                            "grid grid-cols-[1fr_auto] lg:grid-cols-[36px_minmax(200px,2fr)_100px_100px_120px_120px_80px_80px_100px_100px_40px] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            "grid grid-cols-[1fr_auto] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
+                            "lg:[grid-template-columns:var(--cols)]",
                             selected.has(campaign.id) && "bg-primary/5"
                           )}
+                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 100px 100px 120px 120px 80px 80px 100px 100px ${customColumns.map(() => '110px ').join('')}40px` }}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
                           {/* Checkbox */}
@@ -410,8 +455,44 @@ export default function CampaignsPage() {
                             />
                           </div>
 
+                          {/* Custom columns */}
+                          {customColumns.map(col => {
+                            const v = customValues[campaign.id]?.[col.id] ?? '';
+                            return (
+                              <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                <EditableCell
+                                  value={col.type === 'number' ? (v === '' ? 0 : Number(v)) : v}
+                                  type={col.type === 'number' ? 'number' : 'text'}
+                                  formatDisplay={val => {
+                                    if (val === '' || val === null || val === undefined) return '—';
+                                    return col.type === 'number' ? fmtNum(Number(val)) : String(val);
+                                  }}
+                                  onSave={async (val) => {
+                                    try {
+                                      await setCustomValue(campaign.id, col.id, String(val));
+                                    } catch (e: any) {
+                                      toast.error(e?.message || 'Error');
+                                    }
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+
                           {/* Expand toggle / inline delete when selected */}
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => setAssignTarget(campaign)}
+                              title={lang === 'he' ? 'שייך ללקוח/פרויקט' : 'Link to client/project'}
+                              className={cn(
+                                "p-1 rounded transition-colors",
+                                campaign.clientId
+                                  ? "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                  : "text-amber-500 hover:bg-amber-500/10 animate-pulse"
+                              )}
+                            >
+                              <Link2 size={14} />
+                            </button>
                             {selected.has(campaign.id) && (
                               <button
                                 onClick={e => deleteOne(campaign.id, e)}
@@ -513,6 +594,22 @@ export default function CampaignsPage() {
         )}
       </div>
       <NewCampaignDialog open={showNewDialog} onOpenChange={setShowNewDialog} lang={lang} onCampaignCreated={handleCampaignCreated} />
+      <ManageColumnsDialog
+        open={showColumnsDialog}
+        onOpenChange={setShowColumnsDialog}
+        lang={lang}
+        columns={customColumns}
+        onAdd={addColumn}
+        onRename={renameColumn}
+        onDelete={deleteColumn}
+      />
+      <AssignClientDialog
+        open={!!assignTarget}
+        onOpenChange={(o) => !o && setAssignTarget(null)}
+        campaign={assignTarget}
+        lang={lang}
+        onSaved={() => window.dispatchEvent(new Event('orgdata:refresh'))}
+      />
     </div>
   );
 }
