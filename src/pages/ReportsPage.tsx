@@ -6,14 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Download, FileText, TrendingUp, Users, Megaphone, CalendarIcon } from 'lucide-react';
+import { Download, FileText, TrendingUp, Users, Megaphone, CalendarIcon, GitCompare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { ComparisonPanel } from '@/components/reports/ComparisonPanel';
 
-type ReportType = 'overview' | 'campaigns' | 'clients' | 'ads';
+type ReportType = 'overview' | 'campaigns' | 'clients' | 'ads' | 'compare';
 
 export default function ReportsPage() {
   const { lang } = useApp();
@@ -201,10 +202,11 @@ export default function ReportsPage() {
 
   const dataGetters: Record<ReportType, () => { headers: string[]; rows: string[][] }> = {
     overview: getOverviewData, campaigns: getCampaignsData, clients: getClientsData, ads: getAdsData,
+    compare: () => ({ headers: [], rows: [] }),
   };
 
   const reportTitles: Record<ReportType, string> = {
-    overview: 'Overview Report', campaigns: 'Campaigns Report', clients: 'Clients Report', ads: 'Ads Report',
+    overview: 'Overview Report', campaigns: 'Campaigns Report', clients: 'Clients Report', ads: 'Ads Report', compare: 'Comparison Report',
   };
 
   const reportCards = [
@@ -212,6 +214,7 @@ export default function ReportsPage() {
     { type: 'campaigns' as const, icon: Megaphone, title: isHe ? 'קמפיינים' : 'Campaigns', desc: isHe ? 'פירוט לפי קמפיין' : 'Campaign-level breakdown' },
     { type: 'clients' as const, icon: Users, title: isHe ? 'לקוחות' : 'Clients', desc: isHe ? 'ביצועים לפי לקוח' : 'Client performance' },
     { type: 'ads' as const, icon: FileText, title: isHe ? 'מודעות' : 'Ads', desc: isHe ? 'ביצועי מודעות' : 'Ad performance' },
+    { type: 'compare' as const, icon: GitCompare, title: isHe ? 'השוואה' : 'Compare', desc: isHe ? 'השוואת תקופות / לקוחות' : 'Periods & clients side by side' },
   ];
 
   return (
@@ -258,7 +261,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Report Type Selector */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {reportCards.map(r => (
           <button
             key={r.type}
@@ -278,6 +281,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Export Buttons */}
+      {reportType !== 'compare' && (
       <div className="flex justify-end gap-2">
         <Button
           variant="outline"
@@ -303,6 +307,7 @@ export default function ReportsPage() {
           CSV
         </Button>
       </div>
+      )}
 
       {/* Report Content */}
       {reportType === 'overview' && (
@@ -485,6 +490,14 @@ export default function ReportsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {reportType === 'compare' && (
+        <ComparisonPanel
+          campaigns={orgCampaigns}
+          clients={clients}
+          isHe={isHe}
+        />
       )}
     </div>
   );
