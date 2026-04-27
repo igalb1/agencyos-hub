@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Client, Project, Campaign, Platform, CampaignStatus } from '@/lib/types';
+import { detectObjective, type CampaignObjective } from '@/lib/campaign-objectives';
 
 const DEFAULT_COLORS = ['#00D4FF', '#22C55E', '#A78BFA', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
 
@@ -92,6 +93,11 @@ export function useOrgData() {
       const client = c.client_id ? clientMap.get(c.client_id) : undefined;
       const platform = (['Meta', 'Google', 'TikTok', 'LinkedIn'].includes(c.platform ?? '') ? c.platform : 'Meta') as Platform;
       const status = (['Live', 'Planned', 'Paused'].includes(c.status) ? c.status : 'Planned') as CampaignStatus;
+      const allowedObjectives = ['leads','sales','video','awareness','traffic','engagement','app','other'];
+      const rawObj = (c as { objective?: string }).objective;
+      const objective: CampaignObjective = (rawObj && allowedObjectives.includes(rawObj))
+        ? (rawObj as CampaignObjective)
+        : (detectObjective(c.name ?? '', platform) ?? 'leads');
       return {
         id: c.id,
         clientId: c.client_id ?? '',
@@ -101,6 +107,7 @@ export function useOrgData() {
         name: c.name,
         platform,
         status,
+        objective,
         budget: Number(c.budget ?? 0),
         spend: Number(c.spend ?? 0),
         leads: c.leads ?? 0,
@@ -201,6 +208,7 @@ export function useOrgData() {
       name: campaign.name,
       platform: campaign.platform,
       status: campaign.status,
+      objective: campaign.objective ?? 'leads',
       budget: campaign.budget,
       spend: campaign.spend,
       leads: campaign.leads,
