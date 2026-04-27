@@ -594,6 +594,22 @@ export default function CampaignsPage() {
         )}
       </div>
       <NewCampaignDialog open={showNewDialog} onOpenChange={setShowNewDialog} lang={lang} onCampaignCreated={handleCampaignCreated} />
+      <ManageColumnsDialog
+        open={showColumnsDialog}
+        onOpenChange={setShowColumnsDialog}
+        lang={lang}
+        columns={customColumns}
+        onAdd={addColumn}
+        onRename={renameColumn}
+        onDelete={deleteColumn}
+      />
+      <AssignClientDialog
+        open={!!assignTarget}
+        onOpenChange={(o) => !o && setAssignTarget(null)}
+        campaign={assignTarget}
+        lang={lang}
+        onSaved={() => window.dispatchEvent(new Event('orgdata:refresh'))}
+      />
     </div>
   );
 }
