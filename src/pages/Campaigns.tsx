@@ -8,6 +8,7 @@ import EditableCell from '@/components/campaigns/EditableCell';
 import AssignClientDialog from '@/components/campaigns/AssignClientDialog';
 import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
 import { useCustomColumns } from '@/hooks/useCustomColumns';
+import { evaluateFormula } from '@/lib/formula';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
@@ -69,7 +70,6 @@ export default function CampaignsPage() {
   const campaigns = dbCampaigns;
   void loaded;
   const { columns: customColumns, values: customValues, addColumn, renameColumn, updateFormula, deleteColumn, setValue: setCustomValue } = useCustomColumns();
-  const evalFormulaImport = (await import('@/lib/formula')); // placeholder removed below
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
