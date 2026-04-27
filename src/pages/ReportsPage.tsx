@@ -202,6 +202,7 @@ export default function ReportsPage() {
 
   const dataGetters: Record<ReportType, () => { headers: string[]; rows: string[][] }> = {
     overview: getOverviewData, campaigns: getCampaignsData, clients: getClientsData, ads: getAdsData,
+    compare: () => ({ headers: [], rows: [] }),
   };
 
   const reportTitles: Record<ReportType, string> = {
