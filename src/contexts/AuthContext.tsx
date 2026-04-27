@@ -174,17 +174,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchOrganization]);
 
   const signOut = async () => {
-    localStorage.removeItem(ACTIVE_ORG_KEY);
-    sessionStorage.removeItem('agencyos_workspace_chosen');
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
-    setOrganization(null);
-    setOrganizations([]);
-    setPendingMemberships([]);
-    setIsSuperAdmin(false);
-    setHasAccess(null);
+    try {
+      localStorage.removeItem(ACTIVE_ORG_KEY);
+      sessionStorage.removeItem('agencyos_workspace_chosen');
+      sessionStorage.removeItem('agencyos_session_alive');
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('[signOut] error:', err);
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setOrganization(null);
+      setOrganizations([]);
+      setPendingMemberships([]);
+      setIsSuperAdmin(false);
+      setHasAccess(null);
+      // Hard redirect to clear any in-memory state and ensure a clean slate
+      window.location.replace('/auth');
+    }
   };
 
   const refreshOrganization = async () => {
