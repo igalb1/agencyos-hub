@@ -348,7 +348,6 @@ export default function CampaignsPage() {
                     const pace = calcPacing(campaign.spend, campaign.budget, campaign.startDate, campaign.endDate);
                     const statusStyle = getStatusColor(campaign.status);
                     const ctr = calcCtr(campaign.clicks, campaign.impressions);
-                    const cpl = calcCpl(campaign.spend, campaign.leads);
                     // No per-ad table for this org; keep an empty list so the
                     // expandable ad-row UI stays a no-op.
                     const ads: Ad[] = [];
