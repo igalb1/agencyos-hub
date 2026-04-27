@@ -68,7 +68,8 @@ export default function CampaignsPage() {
   const { campaigns: dbCampaigns, clients: dbClients, loaded, upsertCampaign, updateCampaignField, deleteCampaigns } = useOrgData();
   const campaigns = dbCampaigns;
   void loaded;
-  const { columns: customColumns, values: customValues, addColumn, renameColumn, deleteColumn, setValue: setCustomValue } = useCustomColumns();
+  const { columns: customColumns, values: customValues, addColumn, renameColumn, updateFormula, deleteColumn, setValue: setCustomValue } = useCustomColumns();
+  const evalFormulaImport = (await import('@/lib/formula')); // placeholder removed below
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
