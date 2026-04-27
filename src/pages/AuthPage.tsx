@@ -11,7 +11,40 @@ import { isPublicEmailDomain, getEmailDomain } from '@/lib/email-domain';
 
 type Mode = 'login' | 'signup' | 'reset';
 const REMEMBER_ME_KEY = 'agencyos_remember_me';
-const AUTH_REDIRECT_ORIGIN = 'https://login.agencyos.solutions';
+
+// Map Supabase auth errors to friendly Hebrew messages
+function authErrorToHebrew(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials') || m.includes('invalid_credentials')) {
+    return 'אימייל או סיסמה שגויים. נסה שוב.';
+  }
+  if (m.includes('email not confirmed')) {
+    return 'יש לאמת את כתובת האימייל. בדוק את תיבת הדוא"ל שלך.';
+  }
+  if (m.includes('user already registered') || m.includes('already been registered')) {
+    return 'משתמש עם אימייל זה כבר קיים. נסה להתחבר במקום.';
+  }
+  if (m.includes('password should be at least') || m.includes('password is too short')) {
+    return 'הסיסמה חייבת להכיל לפחות 6 תווים.';
+  }
+  if (m.includes('rate limit') || m.includes('too many requests') || m.includes('over_email_send_rate_limit')) {
+    return 'יותר מדי ניסיונות. נסה שוב בעוד מספר דקות.';
+  }
+  if (m.includes('signup') && m.includes('disabled')) {
+    return 'הרשמה אינה זמינה כרגע. צור קשר עם התמיכה.';
+  }
+  if (m.includes('failed to fetch') || m.includes('network') || m.includes('networkerror')) {
+    return 'בעיית רשת. בדוק את החיבור לאינטרנט ונסה שוב.';
+  }
+  if (m.includes('weak password') || m.includes('pwned')) {
+    return 'הסיסמה חלשה מדי או הודלפה במאגרי סיסמאות ידועים. בחר סיסמה חזקה יותר.';
+  }
+  return message;
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login');
@@ -41,17 +74,45 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    if (!isValidEmail(email)) {
+      return toast({ title: 'שגיאה', description: 'אנא הזן כתובת אימייל תקינה.', variant: 'destructive' });
+    }
+    if (!password) {
+      return toast({ title: 'שגיאה', description: 'אנא הזן סיסמה.', variant: 'destructive' });
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
-    localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : 'false');
-    navigate('/dashboard');
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        toast({ title: 'שגיאה בהתחברות', description: authErrorToHebrew(error.message), variant: 'destructive' });
+        return;
+      }
+      localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : 'false');
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast({
+        title: 'שגיאה בהתחברות',
+        description: authErrorToHebrew(err?.message || 'בעיית רשת. נסה שוב.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!domain) return toast({ title: 'שגיאה', description: 'הזן אימייל תקין', variant: 'destructive' });
+    if (loading) return;
+    if (!isValidEmail(email)) {
+      return toast({ title: 'שגיאה', description: 'אנא הזן כתובת אימייל תקינה.', variant: 'destructive' });
+    }
+    if (!fullName.trim()) {
+      return toast({ title: 'שגיאה', description: 'אנא הזן שם מלא.', variant: 'destructive' });
+    }
+    if (password.length < 6) {
+      return toast({ title: 'שגיאה', description: 'הסיסמה חייבת להכיל לפחות 6 תווים.', variant: 'destructive' });
+    }
 
     // Decide what metadata to send to the signup trigger
     let metaOrgName: string | undefined = undefined;
@@ -73,36 +134,64 @@ export default function AuthPage() {
     }
 
     setLoading(true);
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, org_name: metaOrgName },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    setLoading(false);
-    if (authError) return toast({ title: 'שגיאה', description: authError.message, variant: 'destructive' });
-
-    toast({
-      title: 'נרשמת בהצלחה!',
-      description: isPublic || signupChoice === 'create'
-        ? 'בדוק את האימייל שלך לאימות החשבון.'
-        : 'בקשת הצטרפות נשלחה. תקבל גישה לאחר אישור המנהל. בדוק את האימייל לאימות.',
-    });
-    setMode('login');
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim(), org_name: metaOrgName },
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (authError) {
+        toast({ title: 'שגיאה בהרשמה', description: authErrorToHebrew(authError.message), variant: 'destructive' });
+        return;
+      }
+      toast({
+        title: 'נרשמת בהצלחה!',
+        description: isPublic || signupChoice === 'create'
+          ? 'בדוק את האימייל שלך לאימות החשבון.'
+          : 'בקשת הצטרפות נשלחה. תקבל גישה לאחר אישור המנהל. בדוק את האימייל לאימות.',
+      });
+      setMode('login');
+      setPassword('');
+    } catch (err: any) {
+      toast({
+        title: 'שגיאה בהרשמה',
+        description: authErrorToHebrew(err?.message || 'בעיית רשת. נסה שוב.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    if (!isValidEmail(email)) {
+      return toast({ title: 'שגיאה', description: 'אנא הזן כתובת אימייל תקינה.', variant: 'destructive' });
+    }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${AUTH_REDIRECT_ORIGIN}/reset-password`,
-    });
-    setLoading(false);
-    if (error) return toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
-    toast({ title: 'נשלח!', description: 'בדוק את האימייל שלך לאיפוס הסיסמה.' });
-    setMode('login');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        toast({ title: 'שגיאה', description: authErrorToHebrew(error.message), variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'נשלח!', description: 'אם קיים חשבון עם אימייל זה, נשלח קישור לאיפוס הסיסמה.' });
+      setMode('login');
+    } catch (err: any) {
+      toast({
+        title: 'שגיאה',
+        description: authErrorToHebrew(err?.message || 'בעיית רשת. נסה שוב.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
