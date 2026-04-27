@@ -1,0 +1,105 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
+
+function extractSpreadsheetId(input: string): string {
+  const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : input.trim();
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    const sheetsKey = Deno.env.get("GOOGLE_SHEETS_API_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    if (!lovableKey) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!sheetsKey) throw new Error("Google Sheets connector not linked");
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claims, error: claimsErr } = await userClient.auth.getClaims();
+    if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
+
+    const body = await req.json().catch(() => ({}));
+    const rawId = String(body?.spreadsheet_id ?? "").trim();
+    if (!rawId) throw new Error("Missing spreadsheet_id");
+    const spreadsheetId = extractSpreadsheetId(rawId);
+    const sheetName: string | undefined = body?.sheet_name;
+    const headerRow: number = Number(body?.header_row ?? 1);
+
+    // Get spreadsheet metadata (sheet names + title)
+    const metaRes = await fetch(
+      `${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(title,sheetId,gridProperties)`,
+      {
+        headers: {
+          Authorization: `Bearer ${lovableKey}`,
+          "X-Connection-Api-Key": sheetsKey,
+        },
+      },
+    );
+    const meta = await metaRes.json();
+    if (!metaRes.ok) {
+      throw new Error(`Sheets API error [${metaRes.status}]: ${JSON.stringify(meta)}`);
+    }
+
+    const sheets = (meta.sheets ?? []).map((s: any) => ({
+      title: s.properties?.title,
+      sheetId: s.properties?.sheetId,
+      rowCount: s.properties?.gridProperties?.rowCount,
+      columnCount: s.properties?.gridProperties?.columnCount,
+    }));
+
+    // Read just the header row from the chosen sheet
+    const targetSheet = sheetName || sheets[0]?.title;
+    let headers: string[] = [];
+    let sample: string[][] = [];
+    if (targetSheet) {
+      const range = `${targetSheet}!A${headerRow}:Z${headerRow + 5}`;
+      const valsRes = await fetch(
+        `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`,
+        {
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "X-Connection-Api-Key": sheetsKey,
+          },
+        },
+      );
+      const valsData = await valsRes.json();
+      if (valsRes.ok) {
+        const rows: string[][] = valsData.values ?? [];
+        headers = (rows[0] ?? []).map((h) => String(h ?? "").trim());
+        sample = rows.slice(1, 4);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        spreadsheet_id: spreadsheetId,
+        title: meta.properties?.title,
+        sheets,
+        headers,
+        sample,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("google-sheet-metadata error:", message);
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

@@ -173,6 +173,110 @@ export type Database = {
           },
         ]
       }
+      client_sheet_sync_configs: {
+        Row: {
+          column_mapping: Json
+          created_at: string
+          created_by: string
+          frequency: string
+          header_row: number
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          match_field: string
+          name: string
+          next_run_at: string | null
+          organization_id: string
+          range_a1: string
+          sheet_name: string
+          spreadsheet_id: string
+          updated_at: string
+        }
+        Insert: {
+          column_mapping?: Json
+          created_at?: string
+          created_by: string
+          frequency?: string
+          header_row?: number
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          match_field?: string
+          name?: string
+          next_run_at?: string | null
+          organization_id: string
+          range_a1?: string
+          sheet_name?: string
+          spreadsheet_id: string
+          updated_at?: string
+        }
+        Update: {
+          column_mapping?: Json
+          created_at?: string
+          created_by?: string
+          frequency?: string
+          header_row?: number
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          match_field?: string
+          name?: string
+          next_run_at?: string | null
+          organization_id?: string
+          range_a1?: string
+          sheet_name?: string
+          spreadsheet_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_sheet_sync_logs: {
+        Row: {
+          clients_created: number | null
+          clients_updated: number | null
+          config_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          organization_id: string
+          rows_read: number | null
+          status: string
+          triggered_by: string
+        }
+        Insert: {
+          clients_created?: number | null
+          clients_updated?: number | null
+          config_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          organization_id: string
+          rows_read?: number | null
+          status: string
+          triggered_by?: string
+        }
+        Update: {
+          clients_created?: number | null
+          clients_updated?: number | null
+          config_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          organization_id?: string
+          rows_read?: number | null
+          status?: string
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_sheet_sync_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "client_sheet_sync_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           budget: number | null
@@ -1313,6 +1417,7 @@ export type Database = {
         Args: { _new_owner_user_id: string; _org_id: string }
         Returns: Json
       }
+      trigger_client_sheet_auto_sync: { Args: never; Returns: undefined }
       trigger_google_ads_auto_sync: { Args: never; Returns: undefined }
       trigger_linkedin_ads_auto_sync: { Args: never; Returns: undefined }
     }
