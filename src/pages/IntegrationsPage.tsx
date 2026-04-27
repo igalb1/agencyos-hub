@@ -389,6 +389,7 @@ export default function IntegrationsPage() {
             <h2 className="text-lg font-semibold text-foreground">
               {categoryLabels[cat][lang]}
             </h2>
+            {cat === 'analytics' && <GoogleSheetsCard isRtl={isRtl} />}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {items.map(item => {
                 const isGoogleAds = item.id === 'google';
