@@ -74,18 +74,29 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (password.length < 6) {
       toast({ title: 'הסיסמה חייבת להכיל לפחות 6 תווים', variant: 'destructive' });
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-    if (error) {
-      toast({ title: 'שגיאה', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'הסיסמה עודכנה בהצלחה!' });
-      navigate('/dashboard');
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        const m = error.message.toLowerCase();
+        let desc = error.message;
+        if (m.includes('same') && m.includes('password')) desc = 'הסיסמה החדשה זהה לסיסמה הנוכחית. בחר סיסמה אחרת.';
+        else if (m.includes('weak') || m.includes('pwned')) desc = 'הסיסמה חלשה או הודלפה במאגרים ידועים. בחר סיסמה חזקה יותר.';
+        else if (m.includes('network') || m.includes('failed to fetch')) desc = 'בעיית רשת. בדוק את החיבור ונסה שוב.';
+        toast({ title: 'שגיאה', description: desc, variant: 'destructive' });
+      } else {
+        toast({ title: 'הסיסמה עודכנה בהצלחה!' });
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      toast({ title: 'שגיאה', description: 'בעיית רשת. נסה שוב.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
   };
 
