@@ -1121,6 +1121,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_cron_service_role_key: { Args: never; Returns: string }
       get_effective_plan: {
         Args: { _user_id: string }
         Returns: {
