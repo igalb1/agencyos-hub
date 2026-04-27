@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { GoogleSheetsCard } from '@/components/integrations/GoogleSheetsCard';
+import { useClientSheetSync } from '@/hooks/useClientSheetSync';
 
 interface Integration {
   id: string;
@@ -58,6 +60,7 @@ export default function IntegrationsPage() {
   const gadsSync = useGoogleAdsSync();
   const linkedInAds = useLinkedInAdsConnect();
   const liSync = useLinkedInAdsSync();
+  const sheetSync = useClientSheetSync();
 
   // Default: last 30 days
   const today = new Date();
@@ -72,6 +75,7 @@ export default function IntegrationsPage() {
   const getConnectedState = (item: Integration) => {
     if (item.id === 'google') return googleAds.connection?.is_connected ?? false;
     if (item.id === 'linkedin') return linkedInAds.connection?.is_connected ?? false;
+    if (item.id === 'sheets') return sheetSync.configs.length > 0;
     return false;
   };
 
