@@ -98,6 +98,7 @@ export type Database = {
           impressions: number | null
           leads: number | null
           name: string
+          objective: string
           organization_id: string
           platform: string | null
           project_id: string | null
@@ -118,6 +119,7 @@ export type Database = {
           impressions?: number | null
           leads?: number | null
           name: string
+          objective?: string
           organization_id: string
           platform?: string | null
           project_id?: string | null
@@ -138,6 +140,7 @@ export type Database = {
           impressions?: number | null
           leads?: number | null
           name?: string
+          objective?: string
           organization_id?: string
           platform?: string | null
           project_id?: string | null
