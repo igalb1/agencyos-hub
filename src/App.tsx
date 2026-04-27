@@ -36,6 +36,7 @@ import UnsubscribePage from "@/pages/UnsubscribePage";
 import NotFound from "./pages/NotFound.tsx";
 import SupportBot from "@/components/support/SupportBot";
 import SupportAdminPage from "@/pages/SupportAdminPage";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +134,7 @@ const App = () => (
               <Route path="/*" element={<ProtectedRoutes />} />
             </Routes>
             <SupportBot />
+            <CookieConsent />
           </BrowserRouter>
         </AppProvider>
       </AuthProvider>
