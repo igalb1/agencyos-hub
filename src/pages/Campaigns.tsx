@@ -488,10 +488,6 @@ export default function CampaignsPage() {
                             />
                           </div>
                           <div className="hidden lg:block text-end">
-                            <p className="text-sm text-foreground">{cpl}</p>
-                            <p className="text-[10px] text-muted-foreground">CPL</p>
-                          </div>
-                          <div className="hidden lg:block text-end">
                             <p className="text-sm text-foreground">{ctr}</p>
                             <p className="text-[10px] text-muted-foreground">CTR</p>
                           </div>
@@ -503,6 +499,35 @@ export default function CampaignsPage() {
                               onSave={v => updateCampaign(campaign.id, 'conversions', v)}
                             />
                           </div>
+                          {/* Goal KPI — primary metric for the campaign objective */}
+                          {(() => {
+                            const metric = computeObjectiveMetric(campaign.objective, {
+                              spend: campaign.spend,
+                              leads: campaign.leads,
+                              conversions: campaign.conversions,
+                              impressions: campaign.impressions,
+                              clicks: campaign.clicks,
+                            }, lang === 'he' ? 'he' : 'en');
+                            return (
+                              <div className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                <TooltipProvider delayDuration={200}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="cursor-help">
+                                        <p className="text-sm font-semibold text-primary tabular-nums">{metric.primary}</p>
+                                        <p className="text-[10px] text-muted-foreground truncate">
+                                          {metric.label}{metric.secondary ? ` · ${metric.secondary}` : ''}
+                                        </p>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[260px] text-xs">
+                                      {metric.tooltip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            );
+                          })()}
 
                           {/* Custom columns */}
                           {customColumns.map(col => {
