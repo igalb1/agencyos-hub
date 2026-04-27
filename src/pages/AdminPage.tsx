@@ -6,7 +6,7 @@ import { t } from '@/lib/i18n';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, Building2, CreditCard, Search } from 'lucide-react';
+import { Shield, Users, Building2, CreditCard, Search, KeyRound, Loader2 } from 'lucide-react';
 import { Headset } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +45,7 @@ export default function AdminPage() {
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -70,6 +71,21 @@ export default function AdminPage() {
 
   const deleteOrg = (id: string) => {
     setOrgs(prev => prev.filter(o => o.id !== id));
+  };
+
+  const seedCronKey = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-cron-key', { body: {} });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed');
+      toast({ title: 'הצליח', description: 'מפתח הסנכרון האוטומטי הוגדר בהצלחה' });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast({ title: 'שגיאה', description: msg, variant: 'destructive' });
+    } finally {
+      setSeeding(false);
+    }
   };
 
   if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
@@ -110,6 +126,20 @@ export default function AdminPage() {
           <Headset size={16} />
           תמיכה
         </Link>
+      </div>
+
+      {/* One-shot operator action: seed cron service role key into Vault */}
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <KeyRound size={20} className="text-amber-500" />
+          <div>
+            <p className="text-sm font-medium text-foreground">הפעלת סנכרון אוטומטי ברקע</p>
+            <p className="text-xs text-muted-foreground">לחץ פעם אחת כדי להזין את מפתח השירות לכספת המאובטחת. נדרש כדי שסנכרוני Google/LinkedIn Ads ירוצו אוטומטית.</p>
+          </div>
+        </div>
+        <Button onClick={seedCronKey} disabled={seeding} size="sm">
+          {seeding ? <Loader2 size={14} className="animate-spin" /> : 'הפעל'}
+        </Button>
       </div>
 
       {/* Stats */}
