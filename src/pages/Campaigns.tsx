@@ -11,6 +11,21 @@ import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { evaluateFormula } from '@/lib/formula';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
+import {
+  ALL_OBJECTIVES,
+  computeObjectiveMetric,
+  detectObjective,
+  objectiveIcon,
+  objectiveLabel,
+  type CampaignObjective,
+} from '@/lib/campaign-objectives';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
