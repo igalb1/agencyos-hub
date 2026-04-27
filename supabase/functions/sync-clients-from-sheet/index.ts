@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
     const mapping = (config.column_mapping ?? {}) as Record<string, string>;
     // mapping = { sheetColumnName: clientField }
     const matchField: string = config.match_field || "name";
+    const syncMode: "flat" | "hierarchical" = (config.sync_mode === "hierarchical") ? "hierarchical" : "flat";
 
     // Pre-load existing clients for matching
     const { data: existingClients } = await admin
@@ -118,26 +119,228 @@ Deno.serve(async (req) => {
     let updated = 0;
     let skipped = 0;
     let failed = 0;
-    const allowedFields = new Set(["name", "industry", "status", "color", "budget"]);
+    let campaignsCreated = 0;
+    let campaignsUpdated = 0;
+    const allowedClientFields = new Set(["name", "industry", "status", "color", "budget"]);
+    const allowedCampaignFields = new Set([
+      "campaign_name", "platform", "objective", "status",
+      "budget", "spend", "impressions", "clicks", "leads", "conversions",
+      "start_date", "end_date",
+    ]);
 
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      const record: Record<string, any> = {};
+    // Helpers
+    const cleanNumber = (v: unknown): number | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const num = Number(String(v).replace(/[^0-9.\-]/g, ""));
+      return Number.isNaN(num) ? null : num;
+    };
+    const cleanDate = (v: unknown): string | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const s = String(v).trim();
+      // dd/mm/yyyy or dd-mm-yyyy
+      const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (m) {
+        const [_, d, mo, y] = m;
+        const yy = y.length === 2 ? `20${y}` : y;
+        return `${yy}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      }
+      const dt = new Date(s);
+      if (!Number.isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
+      return null;
+    };
+    const normalizeStatus = (v: unknown): string | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const s = String(v).trim().toLowerCase();
+      if (s === "paused" || s === "מושהה" || s === "מושהית") return "paused";
+      if (s === "planned" || s === "מתוכנן" || s === "מתוכננת") return "Planned";
+      if (s === "active" || s === "פעיל" || s === "פעילה" || s === "running") return "Active";
+      if (s === "completed" || s === "הסתיים" || s === "הסתיימה") return "Completed";
+      return s;
+    };
+
+    // Build a per-row record from headers + row using the mapping, restricted to allowed targets.
+    const buildRecord = (row: string[], allowed: Set<string>): Record<string, any> => {
+      const rec: Record<string, any> = {};
       headers.forEach((h, i) => {
         const target = mapping[h];
-        if (!target || !allowedFields.has(target)) return;
+        if (!target || !allowed.has(target)) return;
         const value = row[i];
         if (value === undefined || value === null || value === "") return;
-        if (target === "budget") {
-          const num = Number(String(value).replace(/[^0-9.\-]/g, ""));
-          if (!Number.isNaN(num)) record.budget = num;
+        if (
+          target === "budget" || target === "spend" ||
+          target === "impressions" || target === "clicks" ||
+          target === "leads" || target === "conversions"
+        ) {
+          const n = cleanNumber(value);
+          if (n !== null) rec[target] = n;
+        } else if (target === "start_date" || target === "end_date") {
+          const d = cleanDate(value);
+          if (d) rec[target] = d;
         } else if (target === "status") {
-          const v = String(value).trim().toLowerCase();
-          record.status = v === "paused" || v === "מושהה" ? "paused" : "active";
+          const s = normalizeStatus(value);
+          if (s) rec.status = s;
         } else {
-          record[target] = String(value).trim();
+          rec[target] = String(value).trim();
         }
       });
+      return rec;
+    };
+
+    // Identify which mapped target a column points to (for hierarchical detection)
+    const targetsByIndex = headers.map((h) => mapping[h] ?? null);
+    const clientNameColIdx = targetsByIndex.findIndex((t) => t === "name");
+    const campaignNameColIdx = targetsByIndex.findIndex((t) => t === "campaign_name");
+
+    // Cache campaigns per client to allow upsert by (client_id, campaign name)
+    const campaignCache = new Map<string, Map<string, { id: string }>>();
+    const loadCampaignsFor = async (clientId: string) => {
+      if (campaignCache.has(clientId)) return campaignCache.get(clientId)!;
+      const { data: camps } = await admin
+        .from("campaigns").select("id,name")
+        .eq("organization_id", orgId)
+        .eq("client_id", clientId);
+      const m = new Map<string, { id: string }>();
+      (camps ?? []).forEach((c: any) => {
+        const k = String(c.name ?? "").trim().toLowerCase();
+        if (k) m.set(k, { id: c.id });
+      });
+      campaignCache.set(clientId, m);
+      return m;
+    };
+
+    // Upsert a client and return its row (id + fields)
+    const upsertClient = async (rec: Record<string, any>, rowIndex: number): Promise<{ id: string } | null> => {
+      const matchKey = String(rec[matchField] ?? "").trim().toLowerCase();
+      const existing = matchKey ? matchMap.get(matchKey) : undefined;
+      if (existing) {
+        const { error } = await admin.from("clients").update(rec)
+          .eq("id", existing.id).eq("organization_id", orgId);
+        if (error) {
+          failed++;
+          emit({ type: "row", row: rowIndex, action: "error", name: rec.name, error: error.message });
+          return null;
+        }
+        updated++;
+        emit({ type: "row", row: rowIndex, action: "updated", name: rec.name });
+        return { id: existing.id };
+      } else {
+        const { data: ins, error } = await admin.from("clients")
+          .insert({ ...rec, organization_id: orgId })
+          .select("id,name,industry,status,color").single();
+        if (error || !ins) {
+          failed++;
+          emit({ type: "row", row: rowIndex, action: "error", name: rec.name, error: error?.message ?? "insert failed" });
+          return null;
+        }
+        created++;
+        const k = String((ins as any)[matchField] ?? "").trim().toLowerCase();
+        if (k) matchMap.set(k, ins);
+        emit({ type: "row", row: rowIndex, action: "created", name: rec.name });
+        return { id: (ins as any).id };
+      }
+    };
+
+    // ---------------- Hierarchical mode ----------------
+    if (syncMode === "hierarchical") {
+      let currentClientId: string | null = null;
+      let currentClientName: string | null = null;
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const rowIndex = i + 1;
+        const rawClientName = clientNameColIdx >= 0 ? String(row[clientNameColIdx] ?? "").trim() : "";
+        const rawCampaignName = campaignNameColIdx >= 0 ? String(row[campaignNameColIdx] ?? "").trim() : "";
+
+        // Treat as client header row when: client name is present AND no campaign name on that row.
+        if (rawClientName && !rawCampaignName) {
+          const clientRec = buildRecord(row, allowedClientFields);
+          if (!clientRec.name) {
+            skipped++;
+            emit({ type: "row", row: rowIndex, action: "skipped", reason: "missing client name" });
+            continue;
+          }
+          const res = await upsertClient(clientRec, rowIndex);
+          currentClientId = res?.id ?? null;
+          currentClientName = clientRec.name;
+          continue;
+        }
+
+        // Otherwise: treat as a campaign row under the current client.
+        if (!rawCampaignName) {
+          skipped++;
+          emit({ type: "row", row: rowIndex, action: "skipped", reason: "no campaign name" });
+          continue;
+        }
+        if (!currentClientId) {
+          // No active client context — skip campaign row to avoid orphan.
+          skipped++;
+          emit({ type: "row", row: rowIndex, action: "skipped", reason: "no client context for campaign" });
+          continue;
+        }
+        const campaignRec = buildRecord(row, allowedCampaignFields);
+        // Map campaign_name -> name
+        const campaignName = String(campaignRec.campaign_name ?? rawCampaignName).trim();
+        delete campaignRec.campaign_name;
+        const finalRec: Record<string, any> = {
+          ...campaignRec,
+          name: campaignName,
+          client_id: currentClientId,
+        };
+        // Ensure objective defaults to leads if not provided (table requires not-null)
+        if (!finalRec.objective) finalRec.objective = "leads";
+        if (!finalRec.status) finalRec.status = "Planned";
+
+        const cache = await loadCampaignsFor(currentClientId);
+        const key = campaignName.toLowerCase();
+        const existingCamp = cache.get(key);
+        if (existingCamp) {
+          const { error } = await admin.from("campaigns")
+            .update(finalRec).eq("id", existingCamp.id).eq("organization_id", orgId);
+          if (error) {
+            failed++;
+            emit({ type: "row", row: rowIndex, action: "error", name: `${currentClientName} / ${campaignName}`, error: error.message });
+          } else {
+            campaignsUpdated++;
+            emit({ type: "row", row: rowIndex, action: "updated", name: `${currentClientName} / ${campaignName}` });
+          }
+        } else {
+          const { data: ins, error } = await admin.from("campaigns")
+            .insert({ ...finalRec, organization_id: orgId })
+            .select("id").single();
+          if (error || !ins) {
+            failed++;
+            emit({ type: "row", row: rowIndex, action: "error", name: `${currentClientName} / ${campaignName}`, error: error?.message ?? "insert failed" });
+          } else {
+            campaignsCreated++;
+            cache.set(key, { id: (ins as any).id });
+            emit({ type: "row", row: rowIndex, action: "created", name: `${currentClientName} / ${campaignName}` });
+          }
+        }
+      }
+
+      await admin.from("client_sheet_sync_logs").insert({
+        config_id: configId, organization_id: orgId, triggered_by: triggeredBy,
+        status: "success", rows_read: dataRows.length,
+        clients_created: created, clients_updated: updated,
+        campaigns_created: campaignsCreated, campaigns_updated: campaignsUpdated,
+      });
+      await admin.from("client_sheet_sync_configs").update({
+        last_synced_at: new Date().toISOString(),
+        next_run_at: nextRunFor(config.frequency),
+      }).eq("id", configId);
+
+      emit({
+        type: "done", success: true,
+        rows_read: dataRows.length, created, updated, skipped, failed,
+        campaigns_created: campaignsCreated, campaigns_updated: campaignsUpdated,
+      });
+      return { rows_read: dataRows.length, created, updated };
+    }
+
+    // ---------------- Flat mode (legacy) ----------------
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      const record = buildRecord(row, allowedClientFields);
 
       const rowIndex = i + 1;
       if (!record.name) {
@@ -145,35 +348,11 @@ Deno.serve(async (req) => {
         emit({ type: "row", row: rowIndex, action: "skipped", reason: "missing name" });
         continue;
       }
-
-      const matchKey = String(record[matchField] ?? "").trim().toLowerCase();
-      const existing = matchKey ? matchMap.get(matchKey) : undefined;
-
-      if (existing) {
-        const { error } = await admin
-          .from("clients")
-          .update(record)
-          .eq("id", existing.id)
-          .eq("organization_id", orgId);
-        if (!error) {
-          updated++;
-          emit({ type: "row", row: rowIndex, action: "updated", name: record.name });
-        } else {
-          failed++;
-          emit({ type: "row", row: rowIndex, action: "error", name: record.name, error: error.message });
-        }
-      } else {
-        const { error } = await admin
-          .from("clients")
-          .insert({ ...record, organization_id: orgId });
-        if (!error) {
-          created++;
-          emit({ type: "row", row: rowIndex, action: "created", name: record.name });
-        } else {
-          failed++;
-          emit({ type: "row", row: rowIndex, action: "error", name: record.name, error: error.message });
-        }
+      // For flat mode the status normalization should keep the existing 'active' default
+      if (record.status && record.status !== "paused") {
+        record.status = "active";
       }
+      await upsertClient(record, rowIndex);
     }
 
     await admin.from("client_sheet_sync_logs").insert({

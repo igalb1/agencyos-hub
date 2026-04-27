@@ -190,6 +190,7 @@ export type Database = {
           range_a1: string
           sheet_name: string
           spreadsheet_id: string
+          sync_mode: string
           updated_at: string
         }
         Insert: {
@@ -208,6 +209,7 @@ export type Database = {
           range_a1?: string
           sheet_name?: string
           spreadsheet_id: string
+          sync_mode?: string
           updated_at?: string
         }
         Update: {
@@ -226,12 +228,15 @@ export type Database = {
           range_a1?: string
           sheet_name?: string
           spreadsheet_id?: string
+          sync_mode?: string
           updated_at?: string
         }
         Relationships: []
       }
       client_sheet_sync_logs: {
         Row: {
+          campaigns_created: number | null
+          campaigns_updated: number | null
           clients_created: number | null
           clients_updated: number | null
           config_id: string
@@ -244,6 +249,8 @@ export type Database = {
           triggered_by: string
         }
         Insert: {
+          campaigns_created?: number | null
+          campaigns_updated?: number | null
           clients_created?: number | null
           clients_updated?: number | null
           config_id: string
@@ -256,6 +263,8 @@ export type Database = {
           triggered_by?: string
         }
         Update: {
+          campaigns_created?: number | null
+          campaigns_updated?: number | null
           clients_created?: number | null
           clients_updated?: number | null
           config_id?: string
