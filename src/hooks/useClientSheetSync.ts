@@ -34,6 +34,28 @@ export interface SheetSyncLog {
   created_at: string;
 }
 
+export type SyncStreamEvent =
+  | { type: 'stage'; stage: 'loading_config' | 'fetching_sheet' | 'empty'; sheet?: string }
+  | { type: 'rows_read'; total: number; headers: string[] }
+  | {
+      type: 'row';
+      row: number;
+      action: 'created' | 'updated' | 'skipped' | 'error';
+      name?: string;
+      reason?: string;
+      error?: string;
+    }
+  | {
+      type: 'done';
+      success: boolean;
+      rows_read?: number;
+      created?: number;
+      updated?: number;
+      skipped?: number;
+      failed?: number;
+      error?: string;
+    };
+
 export function useClientSheetSync() {
   const { organization } = useAuth();
   const [configs, setConfigs] = useState<SheetSyncConfig[]>([]);
@@ -133,5 +155,69 @@ export function useClientSheetSync() {
     }
   };
 
-  return { configs, logs, loading, syncing, fetchMetadata, upsertConfig, deleteConfig, runSync, refresh: fetchAll };
+  const runSyncStream = async (
+    configId: string,
+    onEvent: (event: SyncStreamEvent) => void,
+  ) => {
+    setSyncing(configId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-clients-from-sheet`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ config_id: configId, triggered_by: 'manual', stream: true }),
+      });
+      if (!res.ok || !res.body) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let lastDone: SyncStreamEvent | null = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (!line) continue;
+          try {
+            const evt = JSON.parse(line) as SyncStreamEvent;
+            onEvent(evt);
+            if (evt.type === 'done') lastDone = evt;
+          } catch { /* ignore malformed line */ }
+        }
+      }
+
+      if (lastDone?.type === 'done') {
+        if (lastDone.success) {
+          toast.success(`סונכרן: ${lastDone.created ?? 0} נוצרו, ${lastDone.updated ?? 0} עודכנו`);
+        } else {
+          toast.error(`סנכרון נכשל: ${lastDone.error ?? 'Unknown error'}`);
+        }
+      }
+      await fetchAll();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Sync failed';
+      toast.error(`סנכרון נכשל: ${msg}`);
+      onEvent({ type: 'done', success: false, error: msg });
+      await fetchAll();
+    } finally {
+      setSyncing(null);
+    }
+  };
+
+  return { configs, logs, loading, syncing, fetchMetadata, upsertConfig, deleteConfig, runSync, runSyncStream, refresh: fetchAll };
 }

@@ -10,6 +10,7 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
 interface SyncRequest {
   config_id: string;
   triggered_by?: "manual" | "cron";
+  stream?: boolean;
 }
 
 function nextRunFor(frequency: string): string | null {
@@ -35,32 +36,26 @@ Deno.serve(async (req) => {
   let configId: string | null = null;
   let orgId: string | null = null;
   let triggeredBy: "manual" | "cron" = "manual";
+  let wantsStream = false;
   const admin = createClient(supabaseUrl, serviceKey);
 
+  // Stream plumbing — only used when wantsStream === true.
+  const encoder = new TextEncoder();
+  let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const emit = (event: Record<string, unknown>) => {
+    if (!wantsStream || !controllerRef) return;
+    try {
+      controllerRef.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+    } catch (_) { /* stream closed */ }
+  };
+
+  const runSync = async (): Promise<{ rows_read: number; created: number; updated: number }> => {
   try {
     if (!lovableKey) throw new Error("LOVABLE_API_KEY is not configured");
     if (!sheetsKey) throw new Error("GOOGLE_SHEETS_API_KEY is not configured (Google Sheets connector not linked)");
 
-    const body = (await req.json().catch(() => ({}))) as SyncRequest;
-    if (!body.config_id) throw new Error("Missing config_id");
-    configId = body.config_id;
-    triggeredBy = body.triggered_by ?? "manual";
-
-    const authHeader = req.headers.get("Authorization");
-    if (triggeredBy === "manual") {
-      if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
-      const userClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: claims, error: claimsErr } = await userClient.auth.getClaims();
-      if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
-    } else {
-      if (!authHeader || authHeader !== `Bearer ${serviceKey}`) {
-        throw new Error("Unauthorized cron call");
-      }
-    }
-
     // Load config
+    emit({ type: "stage", stage: "loading_config" });
     const { data: config, error: cfgErr } = await admin
       .from("client_sheet_sync_configs")
       .select("*")
@@ -68,6 +63,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (cfgErr || !config) throw new Error("Sync config not found");
     orgId = config.organization_id;
+    emit({ type: "stage", stage: "fetching_sheet", sheet: `${config.sheet_name}!${config.range_a1}` });
 
     const range = `${config.sheet_name}!${config.range_a1}`;
     const sheetsRes = await fetch(
@@ -86,6 +82,7 @@ Deno.serve(async (req) => {
 
     const rows: string[][] = sheetsData.values ?? [];
     if (rows.length === 0) {
+      emit({ type: "stage", stage: "empty" });
       await admin.from("client_sheet_sync_logs").insert({
         config_id: configId, organization_id: orgId, triggered_by: triggeredBy,
         status: "success", rows_read: 0, clients_created: 0, clients_updated: 0,
@@ -94,14 +91,14 @@ Deno.serve(async (req) => {
         last_synced_at: new Date().toISOString(),
         next_run_at: nextRunFor(config.frequency),
       }).eq("id", configId);
-      return new Response(JSON.stringify({ success: true, rows_read: 0, created: 0, updated: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      emit({ type: "done", success: true, rows_read: 0, created: 0, updated: 0 });
+      return { rows_read: 0, created: 0, updated: 0 };
     }
 
     const headerIdx = Math.max(0, (config.header_row ?? 1) - 1);
     const headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
     const dataRows = rows.slice(headerIdx + 1);
+    emit({ type: "rows_read", total: dataRows.length, headers });
 
     const mapping = (config.column_mapping ?? {}) as Record<string, string>;
     // mapping = { sheetColumnName: clientField }
@@ -119,9 +116,12 @@ Deno.serve(async (req) => {
 
     let created = 0;
     let updated = 0;
+    let skipped = 0;
+    let failed = 0;
     const allowedFields = new Set(["name", "industry", "status", "color", "budget"]);
 
-    for (const row of dataRows) {
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
       const record: Record<string, any> = {};
       headers.forEach((h, i) => {
         const target = mapping[h];
@@ -139,7 +139,12 @@ Deno.serve(async (req) => {
         }
       });
 
-      if (!record.name) continue;
+      const rowIndex = i + 1;
+      if (!record.name) {
+        skipped++;
+        emit({ type: "row", row: rowIndex, action: "skipped", reason: "missing name" });
+        continue;
+      }
 
       const matchKey = String(record[matchField] ?? "").trim().toLowerCase();
       const existing = matchKey ? matchMap.get(matchKey) : undefined;
@@ -150,12 +155,24 @@ Deno.serve(async (req) => {
           .update(record)
           .eq("id", existing.id)
           .eq("organization_id", orgId);
-        if (!error) updated++;
+        if (!error) {
+          updated++;
+          emit({ type: "row", row: rowIndex, action: "updated", name: record.name });
+        } else {
+          failed++;
+          emit({ type: "row", row: rowIndex, action: "error", name: record.name, error: error.message });
+        }
       } else {
         const { error } = await admin
           .from("clients")
           .insert({ ...record, organization_id: orgId });
-        if (!error) created++;
+        if (!error) {
+          created++;
+          emit({ type: "row", row: rowIndex, action: "created", name: record.name });
+        } else {
+          failed++;
+          emit({ type: "row", row: rowIndex, action: "error", name: record.name, error: error.message });
+        }
       }
     }
 
@@ -169,10 +186,11 @@ Deno.serve(async (req) => {
       next_run_at: nextRunFor(config.frequency),
     }).eq("id", configId);
 
-    return new Response(
-      JSON.stringify({ success: true, rows_read: dataRows.length, created, updated }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    emit({
+      type: "done", success: true,
+      rows_read: dataRows.length, created, updated, skipped, failed,
+    });
+    return { rows_read: dataRows.length, created, updated };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("sync-clients-from-sheet error:", message);
@@ -184,6 +202,69 @@ Deno.serve(async (req) => {
         });
       } catch (_) { /* ignore */ }
     }
+    emit({ type: "done", success: false, error: message });
+    throw error;
+  }
+  };
+
+  // -------- Request parsing & auth (shared by streaming and JSON paths) --------
+  try {
+    const body = (await req.json().catch(() => ({}))) as SyncRequest;
+    if (!body.config_id) throw new Error("Missing config_id");
+    configId = body.config_id;
+    triggeredBy = body.triggered_by ?? "manual";
+    wantsStream = body.stream === true;
+
+    const authHeader = req.headers.get("Authorization");
+    if (triggeredBy === "manual") {
+      if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claims, error: claimsErr } = await userClient.auth.getClaims();
+      if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
+    } else {
+      if (!authHeader || authHeader !== `Bearer ${serviceKey}`) {
+        throw new Error("Unauthorized cron call");
+      }
+    }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (wantsStream) {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controllerRef = controller;
+        runSync()
+          .catch(() => { /* already emitted "done" with success:false */ })
+          .finally(() => {
+            try { controller.close(); } catch (_) { /* noop */ }
+          });
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/x-ndjson",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
+  // Non-streaming JSON path (cron, legacy callers)
+  try {
+    const result = await runSync();
+    return new Response(JSON.stringify({ success: true, ...result }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ success: false, error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
