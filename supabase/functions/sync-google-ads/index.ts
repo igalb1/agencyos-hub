@@ -54,18 +54,14 @@ Deno.serve(async (req) => {
     // Auth: either user JWT (manual) or service-role with explicit user_id (cron)
     const authHeader = req.headers.get("Authorization");
     if (triggeredBy === "cron" && body.user_id) {
-      // Verify caller is using service role
-      if (!authHeader?.includes(serviceKey.slice(0, 20))) {
-        // soft-check; cron job calls with anon key + user_id won't be allowed
-        const userClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: authHeader ?? "" } },
-        });
-        const { data: claims } = await userClient.auth.getClaims();
-        if (!claims?.claims?.sub) throw new Error("Unauthorized cron call");
-        userId = claims.claims.sub;
-      } else {
-        userId = body.user_id;
+      // SECURITY: cron path must be invoked with the exact service-role key.
+      // The previous substring check could be partially spoofed and the fallback
+      // silently authenticated the caller (not the body.user_id), masking misuse.
+      const expected = `Bearer ${serviceKey}`;
+      if (!authHeader || authHeader !== expected) {
+        throw new Error("Unauthorized cron call");
       }
+      userId = body.user_id;
     } else {
       if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
       const userClient = createClient(supabaseUrl, anonKey, {
