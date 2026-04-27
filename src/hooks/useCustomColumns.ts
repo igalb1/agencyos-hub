@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface CustomColumn {
   id: string;
   name: string;
-  type: 'text' | 'number';
+  type: 'text' | 'number' | 'formula';
+  formula: string | null;
   display_order: number;
 }
 
@@ -24,7 +25,7 @@ export function useCustomColumns() {
     const [{ data: cols }, { data: vals }] = await Promise.all([
       supabase
         .from('campaign_custom_columns')
-        .select('id,name,type,display_order')
+        .select('id,name,type,formula,display_order')
         .eq('organization_id', orgId)
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: true }),
@@ -45,12 +46,12 @@ export function useCustomColumns() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addColumn = useCallback(async (name: string, type: 'text' | 'number') => {
+  const addColumn = useCallback(async (name: string, type: 'text' | 'number' | 'formula', formula?: string | null) => {
     if (!orgId) return;
     const display_order = columns.length;
     const { error } = await supabase
       .from('campaign_custom_columns')
-      .insert({ organization_id: orgId, name, type, display_order });
+      .insert({ organization_id: orgId, name, type, formula: formula ?? null, display_order });
     if (error) throw error;
     await fetchAll();
   }, [orgId, columns.length, fetchAll]);
@@ -59,6 +60,15 @@ export function useCustomColumns() {
     const { error } = await supabase
       .from('campaign_custom_columns')
       .update({ name })
+      .eq('id', id);
+    if (error) throw error;
+    await fetchAll();
+  }, [fetchAll]);
+
+  const updateFormula = useCallback(async (id: string, formula: string) => {
+    const { error } = await supabase
+      .from('campaign_custom_columns')
+      .update({ formula })
       .eq('id', id);
     if (error) throw error;
     await fetchAll();
@@ -89,5 +99,5 @@ export function useCustomColumns() {
     }));
   }, [orgId]);
 
-  return { columns, values, loaded, addColumn, renameColumn, deleteColumn, setValue, refetch: fetchAll };
+  return { columns, values, loaded, addColumn, renameColumn, updateFormula, deleteColumn, setValue, refetch: fetchAll };
 }

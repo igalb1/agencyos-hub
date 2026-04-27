@@ -8,6 +8,7 @@ import EditableCell from '@/components/campaigns/EditableCell';
 import AssignClientDialog from '@/components/campaigns/AssignClientDialog';
 import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
 import { useCustomColumns } from '@/hooks/useCustomColumns';
+import { evaluateFormula } from '@/lib/formula';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
@@ -68,7 +69,7 @@ export default function CampaignsPage() {
   const { campaigns: dbCampaigns, clients: dbClients, loaded, upsertCampaign, updateCampaignField, deleteCampaigns } = useOrgData();
   const campaigns = dbCampaigns;
   void loaded;
-  const { columns: customColumns, values: customValues, addColumn, renameColumn, deleteColumn, setValue: setCustomValue } = useCustomColumns();
+  const { columns: customColumns, values: customValues, addColumn, renameColumn, updateFormula, deleteColumn, setValue: setCustomValue } = useCustomColumns();
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
@@ -457,6 +458,25 @@ export default function CampaignsPage() {
 
                           {/* Custom columns */}
                           {customColumns.map(col => {
+                            // Calculated (formula) column — read-only, derived from campaign metrics
+                            if (col.type === 'formula') {
+                              const result = evaluateFormula(col.formula ?? '', {
+                                budget: campaign.budget,
+                                spend: campaign.spend,
+                                leads: campaign.leads,
+                                impressions: campaign.impressions,
+                                clicks: campaign.clicks,
+                                conversions: campaign.conversions,
+                              });
+                              return (
+                                <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                  <p className="text-sm text-foreground tabular-nums" title={col.formula ?? ''}>
+                                    {result === null ? '—' : (Math.abs(result) >= 1000 ? fmtNum(Math.round(result)) : result.toFixed(2))}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate" title={col.formula ?? ''}>ƒ {col.formula}</p>
+                                </div>
+                              );
+                            }
                             const v = customValues[campaign.id]?.[col.id] ?? '';
                             return (
                               <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
@@ -601,6 +621,7 @@ export default function CampaignsPage() {
         columns={customColumns}
         onAdd={addColumn}
         onRename={renameColumn}
+        onUpdateFormula={updateFormula}
         onDelete={deleteColumn}
       />
       <AssignClientDialog
