@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getClientKey, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Ad-hoc rate limit: 5 imports per minute per IP/user
+    const rl = checkRateLimit(`ai-import:${getClientKey(req)}`, 5, 60);
+    if (!rl.allowed) {
+      return rateLimitResponse(rl.retryAfterSec, corsHeaders);
+    }
+
     const { rows } = await req.json();
     if (!Array.isArray(rows) || rows.length === 0) {
       return new Response(JSON.stringify({ error: "No rows provided" }), {
