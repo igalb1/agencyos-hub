@@ -140,6 +140,13 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (triggeredBy === "cron" && body.user_id) {
+      // SECURITY: cron path must be invoked with the service-role key.
+      // Without this, anyone could pass triggered_by:"cron" + user_id:<victim>
+      // and impersonate another tenant.
+      const expected = `Bearer ${serviceKey}`;
+      if (!authHeader || authHeader !== expected) {
+        throw new Error("Unauthorized cron call");
+      }
       userId = body.user_id;
     } else {
       if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
