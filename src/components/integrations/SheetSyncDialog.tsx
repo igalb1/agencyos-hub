@@ -149,7 +149,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
 
   const buildPreview = useMemo(() => () => {
     if (headers.length === 0 || sample.length === 0) return null;
-    const CLIENT_FIELDS = new Set(['name', 'industry', 'status', 'color', 'budget']);
+    const CLIENT_FIELDS = new Set(['name', 'industry', 'status', 'color', 'budget', 'spend', 'leads']);
     const CAMPAIGN_FIELDS = new Set([
       'campaign_name', 'platform', 'objective', 'status', 'budget',
       'spend', 'impressions', 'clicks', 'leads', 'conversions',
