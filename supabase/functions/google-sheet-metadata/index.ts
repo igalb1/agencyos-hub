@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const rawId = String(body?.spreadsheet_id ?? "").trim();
     if (!rawId) throw new Error("Missing spreadsheet_id");
-    const spreadsheetId = extractSpreadsheetId(rawId);
+    const { spreadsheetId, gid } = parseSpreadsheetInput(rawId);
     const sheetName: string | undefined = body?.sheet_name;
     const headerRow: number = Number(body?.header_row ?? 1);
 
@@ -106,20 +106,15 @@ Deno.serve(async (req) => {
       columnCount: s.properties?.gridProperties?.columnCount,
     }));
 
-    // Read just the header row from the chosen sheet
-    const targetSheet = sheetName || sheets[0]?.title;
+    // Pick a worksheet from the explicit name, URL gid, or first tab.
+    const targetSheet = sheetName || sheets.find((s: any) => String(s.sheetId) === gid)?.title || sheets[0]?.title;
     let headers: string[] = [];
     let sample: string[][] = [];
     let effectiveHeaderRow = headerRow;
+    let effectiveRangeA1 = "A1:ZZ1000";
     if (targetSheet) {
-      // Use batchGet with the range as a query parameter. When a range is sent
-      // in the URL path, fetch/browser URL handling turns sheet-name spaces into
-      // %20 and the gateway forwards that literal value to Sheets. Query params
-      // are decoded correctly by the Sheets API, so quoted names like
-      // 'All Clients' work reliably.
-      const needsQuotes = /[^A-Za-z0-9_]/.test(targetSheet);
-      const quoted = needsQuotes ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
-      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 25}`;
+      const quoted = quoteSheetName(targetSheet);
+      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 80}`;
       const valsRes = await fetch(
         `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
         {
@@ -133,26 +128,27 @@ Deno.serve(async (req) => {
       if (!valsRes.ok) {
         throw new Error(`Sheets API error [${valsRes.status}]: ${JSON.stringify(valsData)}`);
       }
-      const rows: string[][] = valsData.valueRanges?.[0]?.values ?? [];
-      // Pick the most likely header row. This skips blank rows and one-cell
-      // title rows such as "All Clients" that often appear above the real table.
+      const rawRows: string[][] = valsData.valueRanges?.[0]?.values ?? [];
       let headerIdx = 0;
       let bestScore = -Infinity;
-      rows.forEach((row, idx) => {
+      rawRows.forEach((row, idx) => {
         const score = scoreHeaderRow(row ?? []);
         if (score > bestScore) {
           bestScore = score;
           headerIdx = idx;
         }
       });
-      headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
-      // Trim trailing empty header cells
-      while (headers.length > 0 && headers[headers.length - 1] === "") headers.pop();
-      sample = rows.slice(headerIdx + 1, headerIdx + 6);
+      const bodyRows = rawRows.slice(headerIdx + 1);
+      const headerWidth = (rawRows[headerIdx] ?? []).length;
+      const dataWidth = Math.max(0, ...bodyRows.slice(0, 25).map((row) => row.length));
+      const width = Math.max(headerWidth, dataWidth);
+      headers = normalizeHeaders(normalizeRows([rawRows[headerIdx] ?? []], width)[0] ?? [], width);
+      sample = normalizeRows(bodyRows, width).filter((row) => row.some(Boolean)).slice(0, 10);
       effectiveHeaderRow = headerRow + headerIdx;
+      effectiveRangeA1 = `A${effectiveHeaderRow}:${columnName(Math.max(width, 1))}1000`;
       if (headers.length === 0) {
         console.log("google-sheet-metadata: no headers found", {
-          spreadsheetId, sheet: targetSheet, headerRow, rowCount: rows.length,
+          spreadsheetId, sheet: targetSheet, headerRow, rowCount: rawRows.length,
         });
       }
     }
@@ -166,6 +162,7 @@ Deno.serve(async (req) => {
         headers,
         sample,
         effective_header_row: effectiveHeaderRow,
+        effective_range_a1: effectiveRangeA1,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
