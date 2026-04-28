@@ -502,7 +502,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
                     const Icon = row.kind === 'client' ? User : row.kind === 'campaign' ? Target : Minus;
                     const tone =
                       row.kind === 'client' ? 'text-primary' :
-                      row.kind === 'campaign' ? 'text-[#A78BFA]' :
+                      row.kind === 'campaign' ? 'text-secondary' :
                       'text-muted-foreground';
                     const bg =
                       row.kind === 'client' ? 'bg-primary/5' :
