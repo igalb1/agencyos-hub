@@ -9,6 +9,7 @@ import AssignClientDialog from '@/components/campaigns/AssignClientDialog';
 import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
 import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { evaluateFormula } from '@/lib/formula';
+import { detectAutoColumn, computeAutoColumn } from '@/lib/auto-columns';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import {
