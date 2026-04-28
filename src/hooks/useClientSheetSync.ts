@@ -152,6 +152,7 @@ export function useClientSheetSync() {
       if (!data?.success) throw new Error(data?.error || 'Sync failed');
       toast.success(`סונכרן: ${data.created} נוצרו, ${data.updated} עודכנו`);
       await fetchAll();
+      window.dispatchEvent(new Event('orgdata:refresh'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sync failed';
       toast.error(`סנכרון נכשל: ${msg}`);
@@ -210,6 +211,7 @@ export function useClientSheetSync() {
       if (lastDone?.type === 'done') {
         if (lastDone.success) {
           toast.success(`סונכרן: ${lastDone.created ?? 0} נוצרו, ${lastDone.updated ?? 0} עודכנו`);
+          window.dispatchEvent(new Event('orgdata:refresh'));
         } else {
           toast.error(`סנכרון נכשל: ${lastDone.error ?? 'Unknown error'}`);
         }
