@@ -67,9 +67,13 @@ Deno.serve(async (req) => {
     let sample: string[][] = [];
     let effectiveHeaderRow = headerRow;
     if (targetSheet) {
-      // Quote sheet name if needed and use a wide range to catch many columns.
-      const quoted = /[^A-Za-z0-9_]/.test(targetSheet) ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
-      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 25}`;
+      // Quote sheet name if needed, then URL-encode just that segment so spaces/specials
+      // survive the gateway without being double-decoded. Keep the `!A1:ZZ26` part raw
+      // because the colon must stay a literal colon for the Sheets API.
+      const needsQuotes = /[^A-Za-z0-9_]/.test(targetSheet);
+      const quoted = needsQuotes ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
+      const encodedSheet = encodeURIComponent(quoted);
+      const range = `${encodedSheet}!A${headerRow}:ZZ${headerRow + 25}`;
       const valsRes = await fetch(
         `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`,
         {
