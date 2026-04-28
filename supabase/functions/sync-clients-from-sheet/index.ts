@@ -354,11 +354,25 @@ Deno.serve(async (req) => {
         if (!col) continue;
         const raw = row[idx];
         if (raw === undefined || raw === null || String(raw).trim() === "") continue;
+        let value = String(raw);
+        const headerIsDate = /date|תאריך|start|end|התחל|סיום/i.test(name);
+        if (headerIsDate && /^\d{4,5}(\.\d+)?$/.test(value.trim())) {
+          const n = Number(value);
+          if (n >= 20000 && n <= 80000) {
+            const dt = new Date((n - 25569) * 86400 * 1000);
+            if (!Number.isNaN(dt.getTime())) {
+              const dd = String(dt.getUTCDate()).padStart(2, "0");
+              const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+              const yy = dt.getUTCFullYear();
+              value = `${dd}/${mm}/${yy}`;
+            }
+          }
+        }
         valueRows.push({
           organization_id: orgId!,
           campaign_id: campaignId,
           column_id: col.id,
-          value: String(raw),
+          value,
         });
       }
       if (valueRows.length > 0) {
