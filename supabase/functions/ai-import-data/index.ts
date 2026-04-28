@@ -151,7 +151,6 @@ serve(async (req) => {
                       required: ["title"],
                     },
                   },
-                },
                   unmapped_columns: {
                     type: "array",
                     description: "Unique original header names that did not map to any canonical field (campaigns only).",
