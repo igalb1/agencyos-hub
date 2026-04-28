@@ -190,6 +190,7 @@ Deno.serve(async (req) => {
     const targetsByIndex = headers.map((h) => mapping[h] ?? null);
     const clientNameColIdx = targetsByIndex.findIndex((t) => t === "name");
     const campaignNameColIdx = targetsByIndex.findIndex((t) => t === "campaign_name");
+    const sharedNameColIdx = targetsByIndex.findIndex((t) => t === "client_or_campaign_name");
 
     // ----- Custom-column auto-creation for unmapped headers (hierarchical campaigns only) -----
     // A header is "unmapped" if it has no mapping at all OR its mapping target is not a
@@ -344,6 +345,116 @@ Deno.serve(async (req) => {
     if (syncMode === "hierarchical") {
       let currentClientId: string | null = null;
       let currentClientName: string | null = null;
+
+      // Shared-column mode: one column holds both client and campaign names.
+      // Heuristic: the FIRST non-empty value in that column starts a new client;
+      // subsequent non-empty values are campaigns under that client; empty rows
+      // are skipped; a row that has the shared name AND no other campaign-data
+      // mapped fields filled is treated as a new client header (resets context).
+      if (sharedNameColIdx >= 0 && clientNameColIdx < 0 && campaignNameColIdx < 0) {
+        // Determine which column indexes contribute campaign-only signal
+        const campaignSignalIdx = headers
+          .map((h, i) => ({ h, i, t: mapping[h] }))
+          .filter(({ t }) => t && allowedCampaignFields.has(t) && t !== "campaign_name")
+          .map(({ i }) => i);
+
+        for (let i = 0; i < dataRows.length; i++) {
+          const row = dataRows[i];
+          const rowIndex = i + 1;
+          const sharedName = String(row[sharedNameColIdx] ?? "").trim();
+          if (!sharedName) {
+            // Empty name row: end current client group
+            currentClientId = null;
+            currentClientName = null;
+            skipped++;
+            emit({ type: "row", row: rowIndex, action: "skipped", reason: "empty name" });
+            continue;
+          }
+
+          const hasCampaignData = campaignSignalIdx.some((idx) => {
+            const v = row[idx];
+            return v !== undefined && v !== null && String(v).trim() !== "";
+          });
+
+          // No active client yet → this row MUST be a client header
+          if (!currentClientId) {
+            const clientRec = buildRecord(row, allowedClientFields);
+            clientRec.name = sharedName;
+            const res = await upsertClient(clientRec, rowIndex);
+            currentClientId = res?.id ?? null;
+            currentClientName = sharedName;
+            continue;
+          }
+
+          // Active client + this row has no campaign data → treat as a new client header
+          if (!hasCampaignData) {
+            const clientRec = buildRecord(row, allowedClientFields);
+            clientRec.name = sharedName;
+            const res = await upsertClient(clientRec, rowIndex);
+            currentClientId = res?.id ?? null;
+            currentClientName = sharedName;
+            continue;
+          }
+
+          // Otherwise: campaign row under current client
+          const campaignRec = buildRecord(row, allowedCampaignFields);
+          delete campaignRec.campaign_name;
+          const finalRec: Record<string, any> = {
+            ...campaignRec,
+            name: sharedName,
+            client_id: currentClientId,
+          };
+          if (!finalRec.objective) finalRec.objective = "leads";
+          if (!finalRec.status) finalRec.status = "Planned";
+
+          const cache = await loadCampaignsFor(currentClientId);
+          const key = sharedName.toLowerCase();
+          const existingCamp = cache.get(key);
+          if (existingCamp) {
+            const { error } = await admin.from("campaigns")
+              .update(finalRec).eq("id", existingCamp.id).eq("organization_id", orgId);
+            if (error) {
+              failed++;
+              emit({ type: "row", row: rowIndex, action: "error", name: `${currentClientName} / ${sharedName}`, error: error.message });
+            } else {
+              campaignsUpdated++;
+              await writeCustomValuesForCampaign(existingCamp.id, row);
+              emit({ type: "row", row: rowIndex, action: "updated", name: `${currentClientName} / ${sharedName}` });
+            }
+          } else {
+            const { data: ins, error } = await admin.from("campaigns")
+              .insert({ ...finalRec, organization_id: orgId })
+              .select("id").single();
+            if (error || !ins) {
+              failed++;
+              emit({ type: "row", row: rowIndex, action: "error", name: `${currentClientName} / ${sharedName}`, error: error?.message ?? "insert failed" });
+            } else {
+              campaignsCreated++;
+              cache.set(key, { id: (ins as any).id });
+              await writeCustomValuesForCampaign((ins as any).id, row);
+              emit({ type: "row", row: rowIndex, action: "created", name: `${currentClientName} / ${sharedName}` });
+            }
+          }
+        }
+
+        await admin.from("client_sheet_sync_logs").insert({
+          config_id: configId, organization_id: orgId, triggered_by: triggeredBy,
+          status: "success", rows_read: dataRows.length,
+          clients_created: created, clients_updated: updated,
+          campaigns_created: campaignsCreated, campaigns_updated: campaignsUpdated,
+        });
+        await admin.from("client_sheet_sync_configs").update({
+          last_synced_at: new Date().toISOString(),
+          next_run_at: nextRunFor(config.frequency),
+        }).eq("id", configId);
+
+        emit({
+          type: "done", success: true,
+          rows_read: dataRows.length, created, updated, skipped, failed,
+          campaigns_created: campaignsCreated, campaigns_updated: campaignsUpdated,
+        });
+        return { rows_read: dataRows.length, created, updated };
+      }
 
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
