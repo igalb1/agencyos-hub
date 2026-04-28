@@ -463,7 +463,12 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
 
           {preview && (
             <div className="space-y-2">
-              <Label>{isRtl ? 'תצוגה מקדימה (סימולציה — לא נשמר)' : 'Preview (dry-run — not saved)'}</Label>
+              <Label>{isRtl ? 'תצוגה מקדימה — סיווג שורות' : 'Preview — row classification'}</Label>
+              <p className="text-xs text-muted-foreground">
+                {isRtl
+                  ? 'כך השורות יפורשו בעת סנכרון. ודא שהסיווג נכון לפני שמירה.'
+                  : 'How rows will be parsed during sync. Verify before saving.'}
+              </p>
               {preview.length === 0 ? (
                 <div className="text-xs text-muted-foreground rounded-md border border-border/60 p-3">
                   {isRtl
@@ -471,25 +476,34 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
                     : 'No valid rows. Make sure a column is mapped to "Client name" and sample has data.'}
                 </div>
               ) : (
-                <div className="rounded-md border border-border/60 overflow-x-auto text-xs">
-                  <table className="w-full">
-                    <thead className="bg-muted/40">
-                      <tr>
-                        {Object.keys(preview[0]).map((k) => (
-                          <th key={k} className="text-start px-2 py-1.5 font-medium">{k}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/40">
-                      {preview.map((row, i) => (
-                        <tr key={i}>
-                          {Object.keys(preview[0]).map((k) => (
-                            <td key={k} className="px-2 py-1.5 truncate max-w-[160px]">{String(row[k] ?? '')}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="rounded-md border border-border/60 divide-y divide-border/40 text-xs overflow-hidden">
+                  {preview.map((row, i) => {
+                    const Icon = row.kind === 'client' ? User : row.kind === 'campaign' ? Target : Minus;
+                    const tone =
+                      row.kind === 'client' ? 'text-primary' :
+                      row.kind === 'campaign' ? 'text-[#A78BFA]' :
+                      'text-muted-foreground';
+                    const bg =
+                      row.kind === 'client' ? 'bg-primary/5' :
+                      row.kind === 'campaign' ? 'bg-secondary/5 ps-6' :
+                      'bg-transparent opacity-60';
+                    return (
+                      <div key={i} className={`flex items-center gap-2 px-2 py-1.5 ${bg}`}>
+                        <Icon size={12} className={tone} />
+                        <span className={`uppercase tracking-wide text-[10px] ${tone} shrink-0`}>
+                          {row.kind === 'client'
+                            ? (isRtl ? 'לקוח' : 'Client')
+                            : row.kind === 'campaign'
+                              ? (isRtl ? 'קמפיין' : 'Campaign')
+                              : (isRtl ? 'דילוג' : 'Skip')}
+                        </span>
+                        <span className="truncate flex-1">{row.label}</span>
+                        {row.reason && (
+                          <span className="text-muted-foreground text-[10px] shrink-0">({row.reason})</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
