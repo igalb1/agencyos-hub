@@ -222,18 +222,28 @@ Deno.serve(async (req) => {
     // Build a per-row record from headers + row using the mapping, restricted to allowed targets.
     const buildRecord = (row: string[], allowed: Set<string>): Record<string, any> => {
       const rec: Record<string, any> = {};
+      const numericTargets = new Set([
+        "budget", "spend", "impressions", "clicks", "leads", "conversions",
+      ]);
       headers.forEach((h, i) => {
         const target = mapping[h];
         if (!target || !allowed.has(target)) return;
         const value = row[i];
         if (value === undefined || value === null || value === "") return;
-        if (
-          target === "budget" || target === "spend" ||
-          target === "impressions" || target === "clicks" ||
-          target === "leads" || target === "conversions"
-        ) {
-          const n = cleanNumber(value);
-          if (n !== null) rec[target] = n;
+        if (numericTargets.has(target)) {
+          // Skip percentage cells (e.g. "0%", "85%") — these are ratios, not amounts.
+          // They should never overwrite a real budget/spend value coming from another column.
+          const sv = String(value).trim();
+          if (/%/.test(sv)) return;
+          const n = cleanNumber(sv);
+          if (n === null) return;
+          // When multiple sheet columns map to the same numeric target (e.g. תקציב נטו +
+          // תקציב ברוטו → "budget"), keep the LARGEST magnitude so a stray 0 from a
+          // "required daily spend" column can't wipe out the real total.
+          const prev = rec[target];
+          if (typeof prev !== "number" || Math.abs(n) > Math.abs(prev)) {
+            rec[target] = n;
+          }
         } else if (target === "start_date" || target === "end_date") {
           const d = cleanDate(value);
           if (d) rec[target] = d;
@@ -244,7 +254,10 @@ Deno.serve(async (req) => {
           const objective = normalizeObjective(value);
           if (objective) rec.objective = objective;
         } else {
-          rec[target] = String(value).trim();
+          // For text targets, prefer the first non-empty value (don't overwrite).
+          if (rec[target] === undefined || rec[target] === null || rec[target] === "") {
+            rec[target] = String(value).trim();
+          }
         }
       });
       return rec;
