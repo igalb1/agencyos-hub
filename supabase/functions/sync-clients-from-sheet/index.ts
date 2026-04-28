@@ -176,6 +176,16 @@ Deno.serve(async (req) => {
     const cleanDate = (v: unknown): string | null => {
       if (v === undefined || v === null || v === "") return null;
       const s = String(v).trim();
+      // Excel serial number (e.g. 46113 → 2026-04-01)
+      // Range guard: ~1990-01-01 (32874) to ~2100-01-01 (73050)
+      if (/^\d{4,5}(\.\d+)?$/.test(s)) {
+        const n = Number(s);
+        if (n >= 20000 && n <= 80000) {
+          const ms = (n - 25569) * 86400 * 1000;
+          const dt = new Date(ms);
+          if (!Number.isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
+        }
+      }
       // dd/mm/yyyy or dd-mm-yyyy
       const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
       if (m) {
