@@ -93,6 +93,7 @@ export function useClientSheetSync() {
     if (!data?.success) throw new Error(data?.error || 'Failed to load sheet');
     return data as {
       success: true; spreadsheet_id: string; title: string;
+      sheet_name?: string;
       sheets: { title: string; sheetId: number; rowCount: number; columnCount: number }[];
       headers: string[]; sample: string[][]; effective_header_row?: number; effective_range_a1?: string;
     };
