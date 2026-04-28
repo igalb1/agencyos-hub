@@ -7,9 +7,41 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
 
-function extractSpreadsheetId(input: string): string {
-  const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  return m ? m[1] : input.trim();
+function parseSpreadsheetInput(input: string): { spreadsheetId: string; gid?: string } {
+  const trimmed = input.trim();
+  const id = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] ?? trimmed;
+  const gid = trimmed.match(/[?#&]gid=(\d+)/)?.[1];
+  return { spreadsheetId: id, gid };
+}
+
+function columnName(index: number): string {
+  let n = Math.max(1, index);
+  let out = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    out = String.fromCharCode(65 + r) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function quoteSheetName(name: string): string {
+  return /[^A-Za-z0-9_]/.test(name) ? `'${name.replace(/'/g, "''")}'` : name;
+}
+
+function normalizeRows(rows: unknown[][], width: number): string[][] {
+  return rows.map((row) => Array.from({ length: width }, (_, i) => String(row?.[i] ?? "").trim()));
+}
+
+function normalizeHeaders(row: string[], width: number): string[] {
+  const seen = new Map<string, number>();
+  return Array.from({ length: width }, (_, i) => {
+    const base = String(row[i] ?? "").trim() || `Column ${columnName(i + 1)}`;
+    const key = base.toLowerCase();
+    const count = seen.get(key) ?? 0;
+    seen.set(key, count + 1);
+    return count === 0 ? base : `${base} ${count + 1}`;
+  });
 }
 
 function scoreHeaderRow(row: unknown[]): number {
@@ -17,12 +49,12 @@ function scoreHeaderRow(row: unknown[]): number {
   if (cells.length === 0) return -100;
   const joined = cells.join(" ").toLowerCase();
   const knownHeaderHits = cells.filter((cell) => (
-    /name|client|campaign|platform|objective|budget|spend|impression|click|lead|conversion|status|date|שם|לקוח|קמפיין|פלטפורמה|תקציב|הוצאה|חשיפ|קליק|ליד|המר|סטטוס|תאריך/i
+    /name|client|customer|campaign|platform|objective|budget|spend|cost|impression|click|lead|conversion|status|date|industry|שם|לקוח|לקוחות|קמפיין|פלטפורמה|תקציב|הוצאה|עלות|חשיפ|קליק|ליד|המר|סטטוס|תאריך|תחום/i
       .test(cell)
   )).length;
   const dataLikePenalty = cells.filter((cell) => /^\d+[\d,.:/ -]*$/.test(cell)).length;
-  const titlePenalty = cells.length === 1 && /client|clients|לקוחות|לקוח/i.test(joined) ? 8 : 0;
-  return cells.length * 2 + knownHeaderHits * 6 - dataLikePenalty * 2 - titlePenalty;
+  const titlePenalty = cells.length <= 2 && /client|clients|customers|לקוחות|לקוח/i.test(joined) ? 12 : 0;
+  return cells.length * 3 + knownHeaderHits * 8 - dataLikePenalty * 3 - titlePenalty;
 }
 
 Deno.serve(async (req) => {
