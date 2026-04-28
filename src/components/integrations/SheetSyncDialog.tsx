@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  SelectGroup, SelectLabel,
 } from '@/components/ui/select';
 import { Loader2, Search, FlaskConical, User, Target, Minus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -409,33 +410,37 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value={SKIP_FIELD.value}>{SKIP_FIELD.label[isRtl ? 'he' : 'en']}</SelectItem>
-                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {isRtl ? 'שם (חובה)' : 'Name (required)'}
-                        </div>
-                        {NAME_FIELDS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>
-                            {f.label[isRtl ? 'he' : 'en']}
-                          </SelectItem>
-                        ))}
-                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t border-border/40 mt-1">
-                          {isRtl ? 'פרטי לקוח' : 'Client details'}
-                        </div>
-                        {CLIENT_ONLY_FIELDS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>
-                            {f.label[isRtl ? 'he' : 'en']}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {isRtl ? 'שם (חובה)' : 'Name (required)'}
+                          </SelectLabel>
+                          {NAME_FIELDS.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>
+                              {f.label[isRtl ? 'he' : 'en']}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {isRtl ? 'פרטי לקוח' : 'Client details'}
+                          </SelectLabel>
+                          {CLIENT_ONLY_FIELDS.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>
+                              {f.label[isRtl ? 'he' : 'en']}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                         {syncMode === 'hierarchical' && (
-                          <>
-                            <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t border-border/40 mt-1">
+                          <SelectGroup>
+                            <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
                               {isRtl ? 'קמפיין' : 'Campaign'}
-                            </div>
+                            </SelectLabel>
                             {CAMPAIGN_FIELDS.map((f) => (
                               <SelectItem key={f.value} value={f.value}>
                                 {f.label[isRtl ? 'he' : 'en']}
                               </SelectItem>
                             ))}
-                          </>
+                          </SelectGroup>
                         )}
                       </SelectContent>
                     </Select>
