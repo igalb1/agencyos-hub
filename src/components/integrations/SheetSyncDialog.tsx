@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Search, FlaskConical } from 'lucide-react';
+import { Loader2, Search, FlaskConical, User, Target, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClientSheetSync, type SheetSyncConfig, type SyncFrequency, type SyncMode } from '@/hooks/useClientSheetSync';
 
@@ -69,7 +69,10 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [preview, setPreview] = useState<Record<string, any>[] | null>(null);
+  const [preview, setPreview] = useState<
+    | { kind: 'client' | 'campaign' | 'skip'; label: string; reason?: string; data: Record<string, any> }[]
+    | null
+  >(null);
   const [sheets, setSheets] = useState<{ title: string }[]>(
     config?.sheet_name ? [{ title: config.sheet_name }] : []
   );
@@ -91,6 +94,8 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       setPreview(null);
       // Pre-fill mapping by header name match
       const next: Record<string, string> = { ...mapping };
+      // Detect potential "name" columns to enable shared-column auto-mapping
+      const nameLikeIdx: number[] = [];
       meta.headers.forEach((h) => {
         if (next[h]) return;
         const lc = h.toLowerCase();
@@ -110,6 +115,19 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         else if (/budget|תקציב/i.test(lc)) next[h] = 'budget';
         else if (/color|צבע/i.test(lc)) next[h] = 'color';
       });
+      meta.headers.forEach((h) => {
+        if (/client|לקוח|name|שם/i.test(h.toLowerCase())) nameLikeIdx.push(meta.headers.indexOf(h));
+      });
+      // Smart auto: in hierarchical mode with exactly one name-like column AND no campaign_name,
+      // promote it to the shared "client_or_campaign_name" target.
+      if (syncMode === 'hierarchical') {
+        const targets = Object.values(next);
+        const nameMappings = Object.entries(next).filter(([, v]) => v === 'name');
+        const hasCampaignName = targets.includes('campaign_name');
+        if (nameMappings.length === 1 && !hasCampaignName) {
+          next[nameMappings[0][0]] = 'client_or_campaign_name';
+        }
+      }
       setMapping(next);
       toast.success(isRtl ? `נטענו ${meta.headers.length} עמודות` : `Loaded ${meta.headers.length} columns`);
     } catch (err) {
@@ -120,6 +138,97 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
     }
   };
 
+  const buildPreview = useMemo(() => () => {
+    if (headers.length === 0 || sample.length === 0) return null;
+    const CLIENT_FIELDS = new Set(['name', 'industry', 'status', 'color', 'budget']);
+    const CAMPAIGN_FIELDS = new Set([
+      'campaign_name', 'platform', 'objective', 'status', 'budget',
+      'spend', 'impressions', 'clicks', 'leads', 'conversions',
+      'start_date', 'end_date',
+    ]);
+    const targetsByIndex = headers.map((h) => mapping[h] ?? null);
+    const clientIdx = targetsByIndex.findIndex((t) => t === 'name');
+    const campIdx = targetsByIndex.findIndex((t) => t === 'campaign_name');
+    const sharedIdx = targetsByIndex.findIndex((t) => t === 'client_or_campaign_name');
+    const campaignDataIdx = headers
+      .map((h, i) => ({ i, t: mapping[h] }))
+      .filter(({ t }) => t && CAMPAIGN_FIELDS.has(t) && t !== 'campaign_name')
+      .map(({ i }) => i);
+
+    const out: { kind: 'client' | 'campaign' | 'skip'; label: string; reason?: string; data: Record<string, any> }[] = [];
+    const recOf = (row: string[], allowed: Set<string>) => {
+      const r: Record<string, any> = {};
+      headers.forEach((h, i) => {
+        const t = mapping[h];
+        if (!t || t === '__skip__' || !allowed.has(t)) return;
+        const v = row[i];
+        if (v === undefined || v === null || v === '') return;
+        r[t] = String(v).trim();
+      });
+      return r;
+    };
+
+    let activeClient: string | null = null;
+    for (const row of sample.slice(0, 8)) {
+      // FLAT
+      if (syncMode === 'flat') {
+        const rec = recOf(row, CLIENT_FIELDS);
+        if (!rec.name) {
+          out.push({ kind: 'skip', label: '—', reason: isRtl ? 'חסר שם לקוח' : 'missing client name', data: {} });
+        } else {
+          out.push({ kind: 'client', label: rec.name, data: rec });
+        }
+        continue;
+      }
+
+      // HIERARCHICAL — shared column
+      if (sharedIdx >= 0 && clientIdx < 0 && campIdx < 0) {
+        const name = String(row[sharedIdx] ?? '').trim();
+        if (!name) {
+          activeClient = null;
+          out.push({ kind: 'skip', label: '—', reason: isRtl ? 'שורה ריקה' : 'empty row', data: {} });
+          continue;
+        }
+        const hasCampaign = campaignDataIdx.some((idx) => {
+          const v = row[idx]; return v !== undefined && v !== null && String(v).trim() !== '';
+        });
+        if (!activeClient || !hasCampaign) {
+          activeClient = name;
+          const rec = recOf(row, CLIENT_FIELDS);
+          rec.name = name;
+          out.push({ kind: 'client', label: name, data: rec });
+        } else {
+          const rec = recOf(row, CAMPAIGN_FIELDS);
+          delete rec.campaign_name;
+          rec.name = name;
+          out.push({ kind: 'campaign', label: `${activeClient} / ${name}`, data: rec });
+        }
+        continue;
+      }
+
+      // HIERARCHICAL — separate columns
+      const cn = clientIdx >= 0 ? String(row[clientIdx] ?? '').trim() : '';
+      const mn = campIdx >= 0 ? String(row[campIdx] ?? '').trim() : '';
+      if (cn && !mn) {
+        const rec = recOf(row, CLIENT_FIELDS);
+        activeClient = cn;
+        out.push({ kind: 'client', label: cn, data: rec });
+      } else if (mn) {
+        if (!activeClient) {
+          out.push({ kind: 'skip', label: mn, reason: isRtl ? 'אין הקשר לקוח' : 'no client context', data: {} });
+        } else {
+          const rec = recOf(row, CAMPAIGN_FIELDS);
+          delete rec.campaign_name;
+          rec.name = mn;
+          out.push({ kind: 'campaign', label: `${activeClient} / ${mn}`, data: rec });
+        }
+      } else {
+        out.push({ kind: 'skip', label: '—', reason: isRtl ? 'אין שם' : 'no name', data: {} });
+      }
+    }
+    return out;
+  }, [headers, sample, mapping, syncMode, isRtl]);
+
   const runDryTest = () => {
     if (headers.length === 0) {
       toast.error(isRtl ? 'יש לטעון את הגיליון תחילה' : 'Load the sheet first');
@@ -127,32 +236,27 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
     }
     setTesting(true);
     try {
-      const allowed = new Set(['name', 'industry', 'status', 'color', 'budget']);
-      const rows = sample.slice(0, 5).map((row) => {
-        const rec: Record<string, any> = {};
-        headers.forEach((h, i) => {
-          const target = mapping[h];
-          if (!target || target === '__skip__' || !allowed.has(target)) return;
-          const value = row[i];
-          if (value === undefined || value === null || value === '') return;
-          if (target === 'budget') {
-            const num = Number(String(value).replace(/[^0-9.\-]/g, ''));
-            if (!Number.isNaN(num)) rec.budget = num;
-          } else if (target === 'status') {
-            const v = String(value).trim().toLowerCase();
-            rec.status = v === 'paused' || v === 'מושהה' ? 'paused' : 'active';
-          } else {
-            rec[target] = String(value).trim();
-          }
-        });
-        return rec;
-      }).filter((r) => r.name);
+      const rows = buildPreview();
       setPreview(rows);
-      toast.success(isRtl ? `תצוגה מקדימה: ${rows.length} שורות` : `Preview: ${rows.length} rows`);
+      const clientCount = rows?.filter((r) => r.kind === 'client').length ?? 0;
+      const campCount = rows?.filter((r) => r.kind === 'campaign').length ?? 0;
+      toast.success(isRtl
+        ? `תצוגה מקדימה: ${clientCount} לקוחות, ${campCount} קמפיינים`
+        : `Preview: ${clientCount} clients, ${campCount} campaigns`);
     } finally {
       setTesting(false);
     }
   };
+
+  // Auto-refresh preview whenever mapping/mode/sample changes and a name target exists
+  useEffect(() => {
+    if (headers.length === 0 || sample.length === 0) return;
+    const hasAnyName = Object.values(mapping).some((v) =>
+      v === 'name' || v === 'client_or_campaign_name',
+    );
+    if (!hasAnyName) { setPreview(null); return; }
+    setPreview(buildPreview());
+  }, [mapping, syncMode, headers, sample, buildPreview]);
 
   const handleSave = async () => {
     if (!resolvedId) { toast.error(isRtl ? 'יש לטעון את הגיליון תחילה' : 'Load the sheet first'); return; }
