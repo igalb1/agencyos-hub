@@ -96,6 +96,12 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       setHeaders(meta.headers);
       setSample(meta.sample);
       setPreview(null);
+      if (meta.headers.length === 0) {
+        toast.error(isRtl
+          ? `לא נמצאו כותרות בגיליון "${chosen}" החל משורה ${headerRow}. ודא ששם הגיליון נכון ושיש כותרות בשורה זו.`
+          : `No headers found in "${chosen}" starting at row ${headerRow}. Check the worksheet name and that headers exist in that row.`);
+        return;
+      }
       // Pre-fill mapping by header name match
       const next: Record<string, string> = { ...mapping };
       // Detect potential "name" columns to enable shared-column auto-mapping

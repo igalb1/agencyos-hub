@@ -65,8 +65,11 @@ Deno.serve(async (req) => {
     const targetSheet = sheetName || sheets[0]?.title;
     let headers: string[] = [];
     let sample: string[][] = [];
+    let effectiveHeaderRow = headerRow;
     if (targetSheet) {
-      const range = `${targetSheet}!A${headerRow}:Z${headerRow + 5}`;
+      // Quote sheet name if needed and use a wide range to catch many columns.
+      const quoted = /[^A-Za-z0-9_]/.test(targetSheet) ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
+      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 25}`;
       const valsRes = await fetch(
         `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`,
         {
@@ -77,10 +80,27 @@ Deno.serve(async (req) => {
         },
       );
       const valsData = await valsRes.json();
-      if (valsRes.ok) {
-        const rows: string[][] = valsData.values ?? [];
-        headers = (rows[0] ?? []).map((h) => String(h ?? "").trim());
-        sample = rows.slice(1, 4);
+      if (!valsRes.ok) {
+        throw new Error(`Sheets API error [${valsRes.status}]: ${JSON.stringify(valsData)}`);
+      }
+      const rows: string[][] = valsData.values ?? [];
+      // Find first non-empty row to use as headers (skip leading blank rows).
+      let headerIdx = 0;
+      while (
+        headerIdx < rows.length &&
+        (rows[headerIdx] ?? []).every((c) => String(c ?? "").trim() === "")
+      ) {
+        headerIdx++;
+      }
+      headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
+      // Trim trailing empty header cells
+      while (headers.length > 0 && headers[headers.length - 1] === "") headers.pop();
+      sample = rows.slice(headerIdx + 1, headerIdx + 6);
+      effectiveHeaderRow = headerRow + headerIdx;
+      if (headers.length === 0) {
+        console.log("google-sheet-metadata: no headers found", {
+          spreadsheetId, sheet: targetSheet, headerRow, rowCount: rows.length,
+        });
       }
     }
 
@@ -92,6 +112,7 @@ Deno.serve(async (req) => {
         sheets,
         headers,
         sample,
+        effective_header_row: effectiveHeaderRow,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
