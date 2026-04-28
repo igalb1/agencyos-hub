@@ -675,8 +675,9 @@ Deno.serve(async (req) => {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: claims, error: claimsErr } = await userClient.auth.getClaims();
-      if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
+      const token = authHeader.replace(/^Bearer\s+/i, "");
+      const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+      if (userErr || !userData?.user?.id) throw new Error("Unauthorized");
     } else {
       if (!authHeader || authHeader !== `Bearer ${serviceKey}`) {
         throw new Error("Unauthorized cron call");
