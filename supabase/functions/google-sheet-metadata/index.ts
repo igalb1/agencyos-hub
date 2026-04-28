@@ -159,6 +159,7 @@ Deno.serve(async (req) => {
         spreadsheet_id: spreadsheetId,
         title: meta.properties?.title,
         sheets,
+        sheet_name: targetSheet,
         headers,
         sample,
         effective_header_row: effectiveHeaderRow,
