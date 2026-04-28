@@ -27,6 +27,7 @@ interface ParsedData {
   projects: any[];
   campaigns: any[];
   tasks: any[];
+  unmapped_columns?: string[];
 }
 
 interface Props {
@@ -236,6 +237,100 @@ export default function ImportDataDialog({ open, onOpenChange }: Props) {
         .eq('organization_id', orgId);
       const campaignByName = new Map<string, string>();
       (allCampaigns ?? []).forEach((c) => campaignByName.set(c.name.trim().toLowerCase(), c.id));
+
+      // 3b. Auto-create custom columns for unmapped fields and store per-campaign values
+      const unmappedColumns = (parsed.unmapped_columns ?? []).filter(
+        (n) => typeof n === 'string' && n.trim().length > 0,
+      );
+      let createdCustomColumns = 0;
+      let customValuesWritten = 0;
+      if (unmappedColumns.length > 0) {
+        // Load existing custom columns to avoid duplicates (case-insensitive name match)
+        const { data: existingCols } = await supabase
+          .from('campaign_custom_columns')
+          .select('id, name, display_order')
+          .eq('organization_id', orgId);
+        const colByName = new Map<string, string>();
+        let nextOrder = 0;
+        (existingCols ?? []).forEach((c: any) => {
+          colByName.set(c.name.trim().toLowerCase(), c.id);
+          if (typeof c.display_order === 'number' && c.display_order >= nextOrder) {
+            nextOrder = c.display_order + 1;
+          }
+        });
+
+        const colsToCreate = unmappedColumns.filter(
+          (n) => !colByName.has(n.trim().toLowerCase()),
+        );
+        if (colsToCreate.length > 0) {
+          // Heuristic: detect numeric vs text by sampling first non-empty incoming value
+          const sampleValue = (colName: string) => {
+            for (const c of parsed.campaigns ?? []) {
+              const v = c?.extra_fields?.[colName];
+              if (v !== undefined && v !== null && String(v).trim() !== '') return String(v);
+            }
+            return '';
+          };
+          const isNumericLike = (s: string) =>
+            s !== '' && !isNaN(Number(s.replace(/[,₪$%\s]/g, '')));
+
+          const { data: createdRows, error: createColErr } = await supabase
+            .from('campaign_custom_columns')
+            .insert(
+              colsToCreate.map((name, idx) => ({
+                organization_id: orgId,
+                name,
+                type: isNumericLike(sampleValue(name)) ? 'number' : 'text',
+                display_order: nextOrder + idx,
+              })),
+            )
+            .select();
+          if (createColErr) throw createColErr;
+          (createdRows ?? []).forEach((c: any) =>
+            colByName.set(c.name.trim().toLowerCase(), c.id),
+          );
+          createdCustomColumns = createdRows?.length ?? 0;
+        }
+
+        // Build value rows: campaign_id × column_id from extra_fields
+        const valueRows: Array<{
+          organization_id: string;
+          campaign_id: string;
+          column_id: string;
+          value: string;
+        }> = [];
+        for (const c of parsed.campaigns ?? []) {
+          if (!c?.name || !c.extra_fields) continue;
+          const campaignId = campaignByName.get(c.name.trim().toLowerCase());
+          if (!campaignId) continue;
+          for (const [colName, rawVal] of Object.entries(c.extra_fields)) {
+            if (rawVal === null || rawVal === undefined || String(rawVal).trim() === '')
+              continue;
+            const colId = colByName.get(colName.trim().toLowerCase());
+            if (!colId) continue;
+            valueRows.push({
+              organization_id: orgId,
+              campaign_id: campaignId,
+              column_id: colId,
+              value: String(rawVal),
+            });
+          }
+        }
+        if (valueRows.length > 0) {
+          const { error: valErr } = await supabase
+            .from('campaign_custom_values')
+            .upsert(valueRows, { onConflict: 'campaign_id,column_id' });
+          if (valErr) throw valErr;
+          customValuesWritten = valueRows.length;
+        }
+      }
+
+      if (createdCustomColumns > 0) {
+        toast.success(`נוספו ${createdCustomColumns} עמודות מותאמות חדשות לקמפיינים`);
+      }
+      if (customValuesWritten > 0) {
+        console.log(`Wrote ${customValuesWritten} custom values across campaigns`);
+      }
 
       // 4. Insert tasks
       const tasksToInsert = (parsed.tasks ?? []).filter((t) => t.title);

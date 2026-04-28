@@ -16,7 +16,14 @@ Given a raw table (rows of objects) from an Excel/CSV file, classify each row in
 
 Then map the row's columns to our canonical schema using the provided tool. Be tolerant of Hebrew/English headers and synonyms.
 For numbers, strip currency/commas. For dates, output ISO YYYY-MM-DD when possible (else null).
-Reuse the same client_name / project_name strings across rows so we can link them by name.`;
+Reuse the same client_name / project_name strings across rows so we can link them by name.
+
+IMPORTANT — unmapped columns:
+- Some columns in the source file may NOT correspond to any canonical field (e.g. "סוג מודעה", "Account Manager", "Region", custom KPIs).
+- For each campaign row, collect such columns into "extra_fields" as an object { originalColumnName: value }.
+- Only include extras for CAMPAIGN rows (clients/projects/tasks ignore extras for now).
+- Do NOT invent values; copy the raw string/number from the source row.
+- Also return a top-level "unmapped_columns" array — the unique original header names that ended up in any extra_fields.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -117,6 +124,11 @@ serve(async (req) => {
                         conversions: { type: "number" },
                         start_date: { type: "string" },
                         end_date: { type: "string" },
+                        extra_fields: {
+                          type: "object",
+                          description: "Map of original column name -> raw value for columns not covered by the canonical schema.",
+                          additionalProperties: { type: "string" },
+                        },
                       },
                       required: ["name"],
                     },
@@ -138,6 +150,11 @@ serve(async (req) => {
                       },
                       required: ["title"],
                     },
+                  },
+                  unmapped_columns: {
+                    type: "array",
+                    description: "Unique original header names that did not map to any canonical field (campaigns only).",
+                    items: { type: "string" },
                   },
                 },
                 required: ["clients", "projects", "campaigns", "tasks"],
