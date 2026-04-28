@@ -139,7 +139,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
   const renderIcon = (kind: LogLine['icon']) => {
     switch (kind) {
       case 'create': return <Plus size={14} className="text-primary shrink-0 mt-0.5" />;
-      case 'update': return <RefreshCw size={14} className="text-blue-500 shrink-0 mt-0.5" />;
+      case 'update': return <RefreshCw size={14} className="text-secondary shrink-0 mt-0.5" />;
       case 'skip':   return <Minus size={14} className="text-muted-foreground shrink-0 mt-0.5" />;
       case 'error':  return <AlertTriangle size={14} className="text-destructive shrink-0 mt-0.5" />;
       default:       return <Loader2 size={14} className="text-muted-foreground shrink-0 mt-0.5" />;
@@ -177,7 +177,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
               {isRtl ? 'נוצרו' : 'Created'}: {counts.created}
             </Badge>
             <Badge variant="outline" className="gap-1">
-              <RefreshCw size={11} className="text-blue-500" />
+              <RefreshCw size={11} className="text-secondary" />
               {isRtl ? 'עודכנו' : 'Updated'}: {counts.updated}
             </Badge>
             <Badge variant="outline" className="gap-1">
