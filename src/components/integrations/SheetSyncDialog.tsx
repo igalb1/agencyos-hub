@@ -108,8 +108,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       }
       // Pre-fill mapping by header name match
       const next: Record<string, string> = {};
-      // Detect potential "name" columns to enable shared-column auto-mapping
-      const nameLikeIdx: number[] = [];
+      // Auto-map known column names from the loaded sheet.
       meta.headers.forEach((h) => {
         const lc = h.toLowerCase();
         if (/campaign|קמפיין/i.test(lc) && /name|שם/i.test(lc)) next[h] = 'campaign_name';
@@ -127,9 +126,6 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         else if (/status|סטטוס/i.test(lc)) next[h] = 'status';
         else if (/budget|תקציב/i.test(lc)) next[h] = 'budget';
         else if (/color|צבע/i.test(lc)) next[h] = 'color';
-      });
-      meta.headers.forEach((h) => {
-        if (/client|customer|לקוח|לקוחות|name|שם/i.test(h.toLowerCase())) nameLikeIdx.push(nameLikeIdx.length);
       });
       // Smart auto: in hierarchical mode with exactly one name-like column AND no campaign_name,
       // promote it to the shared "client_or_campaign_name" target.
