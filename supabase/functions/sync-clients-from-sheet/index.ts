@@ -255,6 +255,7 @@ Deno.serve(async (req) => {
     const clientNameColIdx = targetsByIndex.findIndex((t) => t === "name");
     const campaignNameColIdx = targetsByIndex.findIndex((t) => t === "campaign_name");
     const sharedNameColIdx = targetsByIndex.findIndex((t) => t === "client_or_campaign_name");
+    const effectiveClientNameColIdx = clientNameColIdx >= 0 ? clientNameColIdx : (campaignNameColIdx >= 0 ? sharedNameColIdx : -1);
 
     // ----- Custom-column auto-creation for unmapped headers (hierarchical campaigns only) -----
     // A header is "unmapped" if it has no mapping at all OR its mapping target is not a
@@ -262,6 +263,7 @@ Deno.serve(async (req) => {
     const recognizedTargets = new Set<string>([
       ...allowedClientFields,
       ...allowedCampaignFields,
+        "client_or_campaign_name",
     ]);
     const unmappedHeaderIdx: number[] = [];
     headers.forEach((h, i) => {
@@ -522,7 +524,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
         const rowIndex = i + 1;
-        const rawClientName = clientNameColIdx >= 0 ? String(row[clientNameColIdx] ?? "").trim() : "";
+        const rawClientName = effectiveClientNameColIdx >= 0 ? String(row[effectiveClientNameColIdx] ?? "").trim() : "";
         const rawCampaignName = campaignNameColIdx >= 0 ? String(row[campaignNameColIdx] ?? "").trim() : "";
 
         // Treat as client header row when: client name is present AND no campaign name on that row.
