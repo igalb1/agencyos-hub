@@ -101,9 +101,9 @@ Deno.serve(async (req) => {
     orgId = config.organization_id;
     emit({ type: "stage", stage: "fetching_sheet", sheet: `${config.sheet_name}!${config.range_a1}` });
 
-    const range = `${config.sheet_name}!${config.range_a1}`;
+    const range = `${quoteSheetName(config.sheet_name)}!${config.range_a1}`;
     const sheetsRes = await fetch(
-      `${GATEWAY_URL}/spreadsheets/${config.spreadsheet_id}/values/${range}`,
+      `${GATEWAY_URL}/spreadsheets/${config.spreadsheet_id}/values:batchGet?ranges=${encodeURIComponent(range)}`,
       {
         headers: {
           Authorization: `Bearer ${lovableKey}`,
@@ -116,7 +116,9 @@ Deno.serve(async (req) => {
       throw new Error(`Sheets API error [${sheetsRes.status}]: ${JSON.stringify(sheetsData)}`);
     }
 
-    const rows: string[][] = sheetsData.values ?? [];
+    const rawRows: string[][] = sheetsData.valueRanges?.[0]?.values ?? sheetsData.values ?? [];
+    const width = Math.max(0, ...rawRows.map((row) => row.length));
+    const rows = normalizeRows(rawRows, width);
     if (rows.length === 0) {
       emit({ type: "stage", stage: "empty" });
       await admin.from("client_sheet_sync_logs").insert({
@@ -131,9 +133,10 @@ Deno.serve(async (req) => {
       return { rows_read: 0, created: 0, updated: 0 };
     }
 
-    const headerIdx = Math.max(0, (config.header_row ?? 1) - 1);
-    const headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
-    const dataRows = rows.slice(headerIdx + 1);
+    const rangeStartRow = startRowFromRange(config.range_a1 ?? "A1:Z1000");
+    const headerIdx = Math.max(0, Number(config.header_row ?? rangeStartRow) - rangeStartRow);
+    const headers = normalizeHeaders(rows[headerIdx] ?? [], width);
+    const dataRows = rows.slice(headerIdx + 1).filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""));
     emit({ type: "rows_read", total: dataRows.length, headers });
 
     const mapping = (config.column_mapping ?? {}) as Record<string, string>;
