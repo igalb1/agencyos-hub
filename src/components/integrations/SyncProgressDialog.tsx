@@ -35,6 +35,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
     headers: string[];
     sample: string[][];
     mapping: Record<string, string>;
+    syncMode: 'flat' | 'hierarchical';
   } | null>(null);
   const [stageLabel, setStageLabel] = useState<string>('');
   const [total, setTotal] = useState(0);
@@ -73,6 +74,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
           headers: meta.headers,
           sample: meta.sample.slice(0, 5),
           mapping: cfg.column_mapping,
+          syncMode: cfg.sync_mode,
         });
       })
       .catch((err) => {
