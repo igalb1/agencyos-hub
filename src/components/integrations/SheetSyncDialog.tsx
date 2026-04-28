@@ -22,9 +22,12 @@ interface Props {
 
 const SKIP_FIELD = { value: '__skip__', label: { he: '— דלג —', en: '— Skip —' } };
 
+const NAME_FIELDS = [
+  { value: 'name', label: { he: '⭐ שם לקוח', en: '⭐ Client name' } },
+  { value: 'client_or_campaign_name', label: { he: '⭐ שם לקוח / קמפיין (עמודה משותפת)', en: '⭐ Client / Campaign name (shared column)' } },
+];
+
 const CLIENT_ONLY_FIELDS = [
-  { value: 'name', label: { he: 'שם לקוח', en: 'Client name' } },
-  { value: 'client_or_campaign_name', label: { he: 'שם לקוח / קמפיין (עמודה משותפת)', en: 'Client / Campaign name (shared column)' } },
   { value: 'industry', label: { he: 'תחום', en: 'Industry' } },
   { value: 'status', label: { he: 'סטטוס לקוח', en: 'Client status' } },
   { value: 'budget', label: { he: 'תקציב לקוח', en: 'Client budget' } },
@@ -407,7 +410,15 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
                       <SelectContent>
                         <SelectItem value={SKIP_FIELD.value}>{SKIP_FIELD.label[isRtl ? 'he' : 'en']}</SelectItem>
                         <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {isRtl ? 'לקוח' : 'Client'}
+                          {isRtl ? 'שם (חובה)' : 'Name (required)'}
+                        </div>
+                        {NAME_FIELDS.map((f) => (
+                          <SelectItem key={f.value} value={f.value}>
+                            {f.label[isRtl ? 'he' : 'en']}
+                          </SelectItem>
+                        ))}
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t border-border/40 mt-1">
+                          {isRtl ? 'פרטי לקוח' : 'Client details'}
                         </div>
                         {CLIENT_ONLY_FIELDS.map((f) => (
                           <SelectItem key={f.value} value={f.value}>
