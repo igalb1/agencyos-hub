@@ -135,6 +135,9 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         const hasCampaignName = targets.includes('campaign_name');
         if (nameMappings.length === 1 && !hasCampaignName) {
           next[nameMappings[0][0]] = 'client_or_campaign_name';
+        } else if (nameMappings.length === 0 && hasCampaignName) {
+          const groupColumn = meta.headers.find((h) => /^Column [A-Z]+$/i.test(h));
+          if (groupColumn) next[groupColumn] = 'name';
         }
       }
       setMapping(next);
