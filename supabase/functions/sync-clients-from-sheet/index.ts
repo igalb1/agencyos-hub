@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
     let failed = 0;
     let campaignsCreated = 0;
     let campaignsUpdated = 0;
-    const allowedClientFields = new Set(["name", "industry", "status", "color", "budget"]);
+    const allowedClientFields = new Set(["name", "industry", "status", "color", "budget", "spend", "leads"]);
     const allowedCampaignFields = new Set([
       "campaign_name", "platform", "objective", "status",
       "budget", "spend", "impressions", "clicks", "leads", "conversions",
@@ -191,10 +191,22 @@ Deno.serve(async (req) => {
       if (v === undefined || v === null || v === "") return null;
       const s = String(v).trim().toLowerCase();
       if (s === "paused" || s === "מושהה" || s === "מושהית") return "paused";
-      if (s === "planned" || s === "מתוכנן" || s === "מתוכננת") return "Planned";
-      if (s === "active" || s === "פעיל" || s === "פעילה" || s === "running") return "Active";
+      if (s === "planned" || s === "מתוכנן" || s === "מתוכננת" || s === "draft") return "Planned";
+      if (s === "active" || s === "פעיל" || s === "פעילה" || s === "running" || s === "live") return "Live";
       if (s === "completed" || s === "הסתיים" || s === "הסתיימה") return "Completed";
       return s;
+    };
+    const normalizeObjective = (v: unknown): string | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const s = String(v).trim().toLowerCase();
+      if (/lead|ליד/.test(s)) return "leads";
+      if (/sale|purchase|רכיש|מכיר/.test(s)) return "sales";
+      if (/video|וידאו/.test(s)) return "video";
+      if (/aware|reach|חשיפ|מודעות/.test(s)) return "awareness";
+      if (/traffic|תנועה/.test(s)) return "traffic";
+      if (/engagement|מעורבות/.test(s)) return "engagement";
+      if (/app|אפליק/.test(s)) return "app";
+      return "other";
     };
 
     // Build a per-row record from headers + row using the mapping, restricted to allowed targets.
