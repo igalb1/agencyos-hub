@@ -24,6 +24,7 @@ const SKIP_FIELD = { value: '__skip__', label: { he: '— דלג —', en: '— 
 
 const CLIENT_ONLY_FIELDS = [
   { value: 'name', label: { he: 'שם לקוח', en: 'Client name' } },
+  { value: 'client_or_campaign_name', label: { he: 'שם לקוח / קמפיין (עמודה משותפת)', en: 'Client / Campaign name (shared column)' } },
   { value: 'industry', label: { he: 'תחום', en: 'Industry' } },
   { value: 'status', label: { he: 'סטטוס לקוח', en: 'Client status' } },
   { value: 'budget', label: { he: 'תקציב לקוח', en: 'Client budget' } },
@@ -160,13 +161,20 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       if (v && v !== '__skip__') cleanMapping[k] = v;
     });
     if (!Object.values(cleanMapping).includes('name')) {
-      toast.error(isRtl ? 'חובה למפות עמודה ל"שם לקוח"' : 'You must map a column to "Client name"');
-      return;
+      // Allow client_or_campaign_name as alternative in hierarchical mode
+      if (syncMode === 'hierarchical' && Object.values(cleanMapping).includes('client_or_campaign_name')) {
+        // OK — shared column mode
+      } else {
+        toast.error(isRtl ? 'חובה למפות עמודה ל"שם לקוח"' : 'You must map a column to "Client name"');
+        return;
+      }
     }
-    if (syncMode === 'hierarchical' && !Object.values(cleanMapping).includes('campaign_name')) {
+    if (syncMode === 'hierarchical'
+      && !Object.values(cleanMapping).includes('campaign_name')
+      && !Object.values(cleanMapping).includes('client_or_campaign_name')) {
       toast.error(isRtl
-        ? 'במצב היררכי חובה למפות עמודה ל"שם קמפיין"'
-        : 'In hierarchical mode you must map a column to "Campaign name"');
+        ? 'במצב היררכי חובה למפות עמודה ל"שם קמפיין" או להשתמש בעמודה משותפת'
+        : 'In hierarchical mode you must map a column to "Campaign name" or use a shared column');
       return;
     }
     setSaving(true);
