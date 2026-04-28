@@ -276,6 +276,22 @@ export default function CampaignsPage() {
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">{lang === 'he' ? 'לקוח' : 'Client'}</label>
+                <div className="flex gap-2 flex-wrap">
+                  <FilterChip active={clientFilter === 'all'} onClick={() => setClientFilter('all')}>{lang === 'he' ? 'הכל' : 'All'}</FilterChip>
+                  {dbClients.map(c => (
+                    <FilterChip key={c.id} active={clientFilter === c.id} onClick={() => setClientFilter(c.id)}>
+                      {c.name}
+                    </FilterChip>
+                  ))}
+                  {campaigns.some(c => !c.clientId) && (
+                    <FilterChip active={clientFilter === '__unassigned__'} onClick={() => setClientFilter('__unassigned__')}>
+                      {lang === 'he' ? 'לא משויך' : 'Unassigned'}
+                    </FilterChip>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
