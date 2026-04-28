@@ -147,6 +147,8 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
               ? `סיום: ${evt.created ?? 0} נוצרו · ${evt.updated ?? 0} עודכנו · ${evt.skipped ?? 0} דולגו · ${evt.failed ?? 0} שגיאות`
               : `Done: ${evt.created ?? 0} created · ${evt.updated ?? 0} updated · ${evt.skipped ?? 0} skipped · ${evt.failed ?? 0} errors`,
           }]);
+          // Ensure clients & campaigns lists refresh immediately, no page reload needed
+          window.dispatchEvent(new Event('orgdata:refresh'));
         } else {
           setStage('error');
           setDoneError(evt.error ?? 'Unknown error');
