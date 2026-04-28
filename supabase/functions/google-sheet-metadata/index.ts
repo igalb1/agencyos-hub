@@ -12,6 +12,19 @@ function extractSpreadsheetId(input: string): string {
   return m ? m[1] : input.trim();
 }
 
+function scoreHeaderRow(row: unknown[]): number {
+  const cells = row.map((c) => String(c ?? "").trim()).filter(Boolean);
+  if (cells.length === 0) return -100;
+  const joined = cells.join(" ").toLowerCase();
+  const knownHeaderHits = cells.filter((cell) => (
+    /name|client|campaign|platform|objective|budget|spend|impression|click|lead|conversion|status|date|שם|לקוח|קמפיין|פלטפורמה|תקציב|הוצאה|חשיפ|קליק|ליד|המר|סטטוס|תאריך/i
+      .test(cell)
+  )).length;
+  const dataLikePenalty = cells.filter((cell) => /^\d+[\d,.:/ -]*$/.test(cell)).length;
+  const titlePenalty = cells.length === 1 && /client|clients|לקוחות|לקוח/i.test(joined) ? 8 : 0;
+  return cells.length * 2 + knownHeaderHits * 6 - dataLikePenalty * 2 - titlePenalty;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -89,14 +102,17 @@ Deno.serve(async (req) => {
         throw new Error(`Sheets API error [${valsRes.status}]: ${JSON.stringify(valsData)}`);
       }
       const rows: string[][] = valsData.valueRanges?.[0]?.values ?? [];
-      // Find first non-empty row to use as headers (skip leading blank rows).
+      // Pick the most likely header row. This skips blank rows and one-cell
+      // title rows such as "All Clients" that often appear above the real table.
       let headerIdx = 0;
-      while (
-        headerIdx < rows.length &&
-        (rows[headerIdx] ?? []).every((c) => String(c ?? "").trim() === "")
-      ) {
-        headerIdx++;
-      }
+      let bestScore = -Infinity;
+      rows.forEach((row, idx) => {
+        const score = scoreHeaderRow(row ?? []);
+        if (score > bestScore) {
+          bestScore = score;
+          headerIdx = idx;
+        }
+      });
       headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
       // Trim trailing empty header cells
       while (headers.length > 0 && headers[headers.length - 1] === "") headers.pop();
