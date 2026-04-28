@@ -88,6 +88,7 @@ export default function CampaignsPage() {
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
+  const [clientFilter, setClientFilter] = useState<string>('all');
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -153,9 +154,16 @@ export default function CampaignsPage() {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
       if (platformFilter !== 'all' && c.platform !== platformFilter) return false;
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+      if (clientFilter !== 'all') {
+        if (clientFilter === '__unassigned__') {
+          if (c.clientId) return false;
+        } else if (c.clientId !== clientFilter) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [campaigns, search, platformFilter, statusFilter]);
+  }, [campaigns, search, platformFilter, statusFilter, clientFilter]);
 
   const grouped = useMemo(() => groupCampaigns(filtered), [filtered]);
 
