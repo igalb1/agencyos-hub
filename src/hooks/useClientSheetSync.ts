@@ -94,7 +94,7 @@ export function useClientSheetSync() {
     return data as {
       success: true; spreadsheet_id: string; title: string;
       sheets: { title: string; sheetId: number; rowCount: number; columnCount: number }[];
-      headers: string[]; sample: string[][];
+      headers: string[]; sample: string[][]; effective_header_row?: number;
     };
   };
 
