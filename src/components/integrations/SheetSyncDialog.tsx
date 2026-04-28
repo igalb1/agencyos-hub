@@ -32,6 +32,8 @@ const CLIENT_ONLY_FIELDS = [
   { value: 'industry', label: { he: 'תחום', en: 'Industry' } },
   { value: 'status', label: { he: 'סטטוס לקוח', en: 'Client status' } },
   { value: 'budget', label: { he: 'תקציב לקוח', en: 'Client budget' } },
+  { value: 'spend', label: { he: 'הוצאה לקוח', en: 'Client spend' } },
+  { value: 'leads', label: { he: 'לידים לקוח', en: 'Client leads' } },
   { value: 'color', label: { he: 'צבע', en: 'Color' } },
 ];
 
@@ -113,7 +115,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         if (/campaign|קמפיין/i.test(lc) && /name|שם/i.test(lc)) next[h] = 'campaign_name';
         else if (/platform|פלטפורמה|מקור/i.test(lc)) next[h] = 'platform';
         else if (/objective|מטרה|יעד/i.test(lc)) next[h] = 'objective';
-        else if (/spend|הוצאה|בוזבז/i.test(lc)) next[h] = 'spend';
+        else if (/spend|expense|cost|הוצאה|עלות|בוזבז/i.test(lc)) next[h] = 'spend';
         else if (/impression|חשיפ/i.test(lc)) next[h] = 'impressions';
         else if (/click|קליק/i.test(lc)) next[h] = 'clicks';
         else if (/lead|ליד/i.test(lc)) next[h] = 'leads';
