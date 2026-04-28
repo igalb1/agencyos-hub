@@ -24,6 +24,42 @@ function nextRunFor(frequency: string): string | null {
   }
 }
 
+function quoteSheetName(name: string): string {
+  return /[^A-Za-z0-9_]/.test(name) ? `'${name.replace(/'/g, "''")}'` : name;
+}
+
+function columnName(index: number): string {
+  let n = Math.max(1, index);
+  let out = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    out = String.fromCharCode(65 + r) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function startRowFromRange(rangeA1: string): number {
+  const firstPart = rangeA1.split(":")[0]?.trim() ?? "A1";
+  const match = firstPart.match(/\d+/);
+  return match ? Math.max(1, Number(match[0])) : 1;
+}
+
+function normalizeRows(rows: unknown[][], width: number): string[][] {
+  return rows.map((row) => Array.from({ length: width }, (_, i) => String(row?.[i] ?? "").trim()));
+}
+
+function normalizeHeaders(row: string[], width: number): string[] {
+  const seen = new Map<string, number>();
+  return Array.from({ length: width }, (_, i) => {
+    const base = String(row[i] ?? "").trim() || `Column ${columnName(i + 1)}`;
+    const key = base.toLowerCase();
+    const count = seen.get(key) ?? 0;
+    seen.set(key, count + 1);
+    return count === 0 ? base : `${base} ${count + 1}`;
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
