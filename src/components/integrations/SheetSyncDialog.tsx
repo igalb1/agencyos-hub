@@ -103,7 +103,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         else if (/conversion|המר/i.test(lc)) next[h] = 'conversions';
         else if (/start|התחלה/i.test(lc)) next[h] = 'start_date';
         else if (/end|סיום/i.test(lc)) next[h] = 'end_date';
-        else if (/name|שם/i.test(lc)) next[h] = 'name';
+        else if (/client|לקוח|name|שם/i.test(lc)) next[h] = 'name';
         else if (/industry|תחום/i.test(lc)) next[h] = 'industry';
         else if (/status|סטטוס/i.test(lc)) next[h] = 'status';
         else if (/budget|תקציב/i.test(lc)) next[h] = 'budget';
