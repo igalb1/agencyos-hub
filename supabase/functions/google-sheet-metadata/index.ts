@@ -33,6 +33,19 @@ function normalizeRows(rows: unknown[][], width: number): string[][] {
   return rows.map((row) => Array.from({ length: width }, (_, i) => String(row?.[i] ?? "").trim()));
 }
 
+function formatExcelSerialIfApplicable(value: string): string {
+  const s = value.trim();
+  if (!/^\d{4,5}(\.\d+)?$/.test(s)) return value;
+  const n = Number(s);
+  if (n < 20000 || n > 80000) return value;
+  const dt = new Date((n - 25569) * 86400 * 1000);
+  if (Number.isNaN(dt.getTime())) return value;
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const yy = dt.getUTCFullYear();
+  return `${dd}/${mm}/${yy}`;
+}
+
 function normalizeHeaders(row: string[], width: number): string[] {
   const seen = new Map<string, number>();
   return Array.from({ length: width }, (_, i) => {
@@ -144,6 +157,12 @@ Deno.serve(async (req) => {
       const width = Math.max(headerWidth, dataWidth);
       headers = normalizeHeaders(normalizeRows([rawRows[headerIdx] ?? []], width)[0] ?? [], width);
       sample = normalizeRows(bodyRows, width).filter((row) => row.some(Boolean)).slice(0, 10);
+      // Convert Excel serial dates in date-like columns for preview readability
+      const dateColIdx = new Set<number>();
+      headers.forEach((h, i) => {
+        if (/date|תאריך|start|end|התחל|סיום/i.test(h)) dateColIdx.add(i);
+      });
+      sample = sample.map((row) => row.map((cell, i) => dateColIdx.has(i) ? formatExcelSerialIfApplicable(cell) : cell));
       effectiveHeaderRow = headerRow + headerIdx;
       effectiveRangeA1 = `A${effectiveHeaderRow}:${columnName(Math.max(width, 1))}1000`;
       if (headers.length === 0) {
