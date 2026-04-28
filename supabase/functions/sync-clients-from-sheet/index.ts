@@ -191,6 +191,106 @@ Deno.serve(async (req) => {
     const clientNameColIdx = targetsByIndex.findIndex((t) => t === "name");
     const campaignNameColIdx = targetsByIndex.findIndex((t) => t === "campaign_name");
 
+    // ----- Custom-column auto-creation for unmapped headers (hierarchical campaigns only) -----
+    // A header is "unmapped" if it has no mapping at all OR its mapping target is not a
+    // recognized client/campaign field. Such columns become campaign custom columns.
+    const recognizedTargets = new Set<string>([
+      ...allowedClientFields,
+      ...allowedCampaignFields,
+    ]);
+    const unmappedHeaderIdx: number[] = [];
+    headers.forEach((h, i) => {
+      if (!h) return;
+      const t = mapping[h];
+      if (!t || !recognizedTargets.has(t)) unmappedHeaderIdx.push(i);
+    });
+    // colName -> custom column row { id, type }
+    const customColByName = new Map<string, { id: string; type: string }>();
+    if (syncMode === "hierarchical" && unmappedHeaderIdx.length > 0) {
+      const { data: existingCols } = await admin
+        .from("campaign_custom_columns")
+        .select("id,name,type,display_order")
+        .eq("organization_id", orgId);
+      let nextOrder = 0;
+      (existingCols ?? []).forEach((c: any) => {
+        customColByName.set(String(c.name).trim().toLowerCase(), { id: c.id, type: c.type });
+        if (typeof c.display_order === "number" && c.display_order >= nextOrder) {
+          nextOrder = c.display_order + 1;
+        }
+      });
+      // Heuristic: sample a value from data rows for type detection
+      const sampleValueAt = (idx: number): string => {
+        for (const r of dataRows) {
+          const v = r[idx];
+          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
+        }
+        return "";
+      };
+      const isNumericLike = (s: string) =>
+        s !== "" && !isNaN(Number(s.replace(/[,₪$%\s]/g, "")));
+
+      const toCreate: Array<{ idx: number; name: string; type: string }> = [];
+      for (const idx of unmappedHeaderIdx) {
+        const name = headers[idx];
+        const key = name.trim().toLowerCase();
+        if (customColByName.has(key)) continue;
+        toCreate.push({
+          idx,
+          name,
+          type: isNumericLike(sampleValueAt(idx)) ? "number" : "text",
+        });
+      }
+      if (toCreate.length > 0) {
+        const { data: created, error: createErr } = await admin
+          .from("campaign_custom_columns")
+          .insert(
+            toCreate.map((c, i) => ({
+              organization_id: orgId,
+              name: c.name,
+              type: c.type,
+              display_order: nextOrder + i,
+            })),
+          )
+          .select("id,name,type");
+        if (createErr) {
+          console.error("custom column create failed:", createErr.message);
+        } else {
+          (created ?? []).forEach((c: any) =>
+            customColByName.set(String(c.name).trim().toLowerCase(), { id: c.id, type: c.type }),
+          );
+        }
+      }
+    }
+
+    // Helper: write custom values for a campaign row (hierarchical mode)
+    const writeCustomValuesForCampaign = async (campaignId: string, row: string[]) => {
+      if (unmappedHeaderIdx.length === 0 || customColByName.size === 0) return;
+      const valueRows: Array<{
+        organization_id: string;
+        campaign_id: string;
+        column_id: string;
+        value: string;
+      }> = [];
+      for (const idx of unmappedHeaderIdx) {
+        const name = headers[idx];
+        const col = customColByName.get(name.trim().toLowerCase());
+        if (!col) continue;
+        const raw = row[idx];
+        if (raw === undefined || raw === null || String(raw).trim() === "") continue;
+        valueRows.push({
+          organization_id: orgId!,
+          campaign_id: campaignId,
+          column_id: col.id,
+          value: String(raw),
+        });
+      }
+      if (valueRows.length > 0) {
+        await admin
+          .from("campaign_custom_values")
+          .upsert(valueRows, { onConflict: "campaign_id,column_id" });
+      }
+    };
+
     // Cache campaigns per client to allow upsert by (client_id, campaign name)
     const campaignCache = new Map<string, Map<string, { id: string }>>();
     const loadCampaignsFor = async (clientId: string) => {
@@ -301,6 +401,7 @@ Deno.serve(async (req) => {
             emit({ type: "row", row: rowIndex, action: "error", name: `${currentClientName} / ${campaignName}`, error: error.message });
           } else {
             campaignsUpdated++;
+            await writeCustomValuesForCampaign(existingCamp.id, row);
             emit({ type: "row", row: rowIndex, action: "updated", name: `${currentClientName} / ${campaignName}` });
           }
         } else {
@@ -313,6 +414,7 @@ Deno.serve(async (req) => {
           } else {
             campaignsCreated++;
             cache.set(key, { id: (ins as any).id });
+            await writeCustomValuesForCampaign((ins as any).id, row);
             emit({ type: "row", row: rowIndex, action: "created", name: `${currentClientName} / ${campaignName}` });
           }
         }
