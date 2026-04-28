@@ -555,6 +555,25 @@ export default function CampaignsPage() {
 
                           {/* Custom columns */}
                           {customColumns.map(col => {
+                            // Auto-computed columns (days in month, optimal pace, projected spend, …)
+                            const autoKind = detectAutoColumn(col.name);
+                            if (autoKind) {
+                              const auto = computeAutoColumn(autoKind, campaign, lang as 'he' | 'en');
+                              const cls =
+                                auto.severity === 'danger' ? 'text-destructive font-semibold' :
+                                auto.severity === 'warn'   ? 'text-amber-500 font-semibold' :
+                                'text-foreground';
+                              return (
+                                <div key={col.id} className="hidden lg:block text-end" onClick={e => e.stopPropagation()}>
+                                  <p className={cn('text-sm tabular-nums', cls)} title={auto.tooltip}>
+                                    {auto.display}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {lang === 'he' ? 'מחושב אוטומטית' : 'Auto'}
+                                  </p>
+                                </div>
+                              );
+                            }
                             // Calculated (formula) column — read-only, derived from campaign metrics
                             if (col.type === 'formula') {
                               const result = evaluateFormula(col.formula ?? '', {
