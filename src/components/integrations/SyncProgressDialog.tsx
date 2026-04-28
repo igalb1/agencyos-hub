@@ -5,8 +5,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, XCircle, Loader2, Plus, RefreshCw, Minus, AlertTriangle } from 'lucide-react';
-import { useClientSheetSync, type SyncStreamEvent } from '@/hooks/useClientSheetSync';
+import { CheckCircle2, XCircle, Loader2, Plus, RefreshCw, Minus, AlertTriangle, FileSpreadsheet, Eye } from 'lucide-react';
+import { useClientSheetSync, type SyncStreamEvent, type SheetSyncConfig } from '@/hooks/useClientSheetSync';
 
 interface Props {
   open: boolean;
@@ -24,8 +24,18 @@ interface LogLine {
 }
 
 export function SyncProgressDialog({ open, onOpenChange, configId, configName, isRtl }: Props) {
-  const { runSyncStream } = useClientSheetSync();
-  const [stage, setStage] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const { runSyncStream, fetchMetadata, configs } = useClientSheetSync();
+  const [stage, setStage] = useState<'idle' | 'preview' | 'running' | 'success' | 'error'>('idle');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    sheetName: string;
+    headerRow: number;
+    rangeA1: string;
+    headers: string[];
+    sample: string[][];
+    mapping: Record<string, string>;
+  } | null>(null);
   const [stageLabel, setStageLabel] = useState<string>('');
   const [total, setTotal] = useState(0);
   const [processed, setProcessed] = useState(0);
@@ -35,18 +45,46 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
   const startedRef = useRef<string | null>(null);
   const logEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset & start when opened
+  // When opened: load preview (do NOT auto-sync)
   useEffect(() => {
     if (!open || !configId) return;
     if (startedRef.current === configId) return;
     startedRef.current = configId;
 
-    setStage('running');
-    setStageLabel(isRtl ? 'מתחיל…' : 'Starting…');
+    const cfg: SheetSyncConfig | undefined = configs.find((c) => c.id === configId);
+    if (!cfg) return;
+
+    setStage('preview');
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewData(null);
+    setStageLabel('');
     setTotal(0); setProcessed(0);
     setCounts({ created: 0, updated: 0, skipped: 0, failed: 0 });
     setLines([]);
     setDoneError(null);
+
+    fetchMetadata(cfg.spreadsheet_id, cfg.sheet_name, cfg.header_row)
+      .then((meta) => {
+        setPreviewData({
+          sheetName: meta.sheet_name || cfg.sheet_name,
+          headerRow: meta.effective_header_row ?? cfg.header_row,
+          rangeA1: meta.effective_range_a1 ?? cfg.range_a1,
+          headers: meta.headers,
+          sample: meta.sample.slice(0, 5),
+          mapping: cfg.column_mapping,
+        });
+      })
+      .catch((err) => {
+        setPreviewError(err instanceof Error ? err.message : 'Failed to load preview');
+      })
+      .finally(() => setPreviewLoading(false));
+  }, [open, configId, configs, fetchMetadata]);
+
+  const startSync = () => {
+    if (!configId) return;
+    setStage('running');
+    setStageLabel(isRtl ? 'מתחיל…' : 'Starting…');
 
     const handle = (evt: SyncStreamEvent) => {
       if (evt.type === 'stage') {
@@ -121,7 +159,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
     };
 
     runSyncStream(configId, handle);
-  }, [open, configId, isRtl, runSyncStream]);
+  };
 
   // Reset start guard when closed
   useEffect(() => {
@@ -135,6 +173,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
 
   const pct = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : (stage === 'success' ? 100 : 0);
   const running = stage === 'running';
+  const isPreview = stage === 'preview';
 
   const renderIcon = (kind: LogLine['icon']) => {
     switch (kind) {
@@ -148,17 +187,104 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!running) onOpenChange(v); }}>
-      <DialogContent className="max-w-xl" dir={isRtl ? 'rtl' : 'ltr'}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir={isRtl ? 'rtl' : 'ltr'}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {stage === 'success' ? <CheckCircle2 size={18} className="text-primary" />
+            {isPreview ? <Eye size={18} className="text-primary" />
+              : stage === 'success' ? <CheckCircle2 size={18} className="text-primary" />
               : stage === 'error' ? <XCircle size={18} className="text-destructive" />
               : <Loader2 size={18} className="animate-spin text-primary" />}
-            {isRtl ? 'סנכרון Google Sheets' : 'Google Sheets sync'}
+            {isPreview
+              ? (isRtl ? 'אישור לפני סנכרון' : 'Confirm before sync')
+              : (isRtl ? 'סנכרון Google Sheets' : 'Google Sheets sync')}
           </DialogTitle>
           <DialogDescription className="truncate">{configName}</DialogDescription>
         </DialogHeader>
 
+        {isPreview ? (
+          <div className="space-y-4">
+            {previewLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
+                <Loader2 size={16} className="animate-spin" />
+                {isRtl ? 'טוען תצוגה מקדימה מהגיליון…' : 'Loading preview from sheet…'}
+              </div>
+            )}
+            {previewError && (
+              <div className="text-xs text-destructive p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                {previewError}
+              </div>
+            )}
+            {previewData && (
+              <>
+                <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-1.5 text-sm">
+                  <div className="flex items-center gap-2 font-medium">
+                    <FileSpreadsheet size={14} className="text-primary" />
+                    {isRtl ? 'גיליון שזוהה' : 'Detected sheet'}: <span className="text-primary">{previewData.sheetName}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground grid grid-cols-2 gap-2">
+                    <div>{isRtl ? 'שורת כותרות' : 'Header row'}: <span className="text-foreground tabular-nums">{previewData.headerRow}</span></div>
+                    <div>{isRtl ? 'טווח' : 'Range'}: <span className="text-foreground font-mono">{previewData.rangeA1}</span></div>
+                    <div>{isRtl ? 'עמודות' : 'Columns'}: <span className="text-foreground tabular-nums">{previewData.headers.length}</span></div>
+                    <div>{isRtl ? 'שורות לדוגמה' : 'Sample rows'}: <span className="text-foreground tabular-nums">{previewData.sample.length}</span></div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    {isRtl ? 'דוגמת שדות ממופים' : 'Mapped fields sample'}
+                  </div>
+                  {previewData.sample.length === 0 ? (
+                    <div className="text-xs text-muted-foreground rounded-md border border-border/60 p-3">
+                      {isRtl ? 'אין שורות נתונים בגיליון.' : 'No data rows in the sheet.'}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-border/60 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-muted/40">
+                            <tr>
+                              {previewData.headers.map((h, i) => {
+                                const target = previewData.mapping[h];
+                                const mapped = target && target !== '__skip__';
+                                return (
+                                  <th key={i} className={`text-start px-2 py-1.5 font-medium border-b border-border/60 whitespace-nowrap ${mapped ? '' : 'opacity-40'}`}>
+                                    <div className="truncate max-w-[160px]">{h}</div>
+                                    <div className={`text-[10px] font-normal ${mapped ? 'text-primary' : 'text-muted-foreground'}`}>
+                                      {mapped ? `→ ${target}` : (isRtl ? '— דילוג —' : '— skip —')}
+                                    </div>
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previewData.sample.map((row, ri) => (
+                              <tr key={ri} className="border-b border-border/30 last:border-0">
+                                {previewData.headers.map((h, ci) => {
+                                  const mapped = previewData.mapping[h] && previewData.mapping[h] !== '__skip__';
+                                  return (
+                                    <td key={ci} className={`px-2 py-1.5 align-top whitespace-nowrap ${mapped ? '' : 'opacity-40'}`}>
+                                      <div className="truncate max-w-[160px]">{row[ci] ?? ''}</div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    {isRtl
+                      ? 'בדוק שהגיליון, שורת הכותרות והשדות הממופים נכונים. עמודות לא ממופות יסומנו עמומות.'
+                      : 'Check the sheet, header row and mapped fields are correct. Unmapped columns are dimmed.'}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">{stageLabel}</span>
@@ -219,13 +345,30 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
             )}
           </div>
         </div>
+        )}
 
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} disabled={running} variant={stage === 'success' ? 'default' : 'outline'}>
-            {running
-              ? (isRtl ? 'מסנכרן…' : 'Syncing…')
-              : (isRtl ? 'סגור' : 'Close')}
-          </Button>
+          {isPreview ? (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                {isRtl ? 'ביטול' : 'Cancel'}
+              </Button>
+              <Button
+                onClick={startSync}
+                disabled={previewLoading || !!previewError || !previewData}
+                className="gap-2"
+              >
+                <RefreshCw size={14} />
+                {isRtl ? 'אשר וסנכרן' : 'Confirm & sync'}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => onOpenChange(false)} disabled={running} variant={stage === 'success' ? 'default' : 'outline'}>
+              {running
+                ? (isRtl ? 'מסנכרן…' : 'Syncing…')
+                : (isRtl ? 'סגור' : 'Close')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
