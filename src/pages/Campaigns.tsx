@@ -88,6 +88,7 @@ export default function CampaignsPage() {
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
+  const [clientFilter, setClientFilter] = useState<string>('all');
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -153,9 +154,16 @@ export default function CampaignsPage() {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
       if (platformFilter !== 'all' && c.platform !== platformFilter) return false;
       if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+      if (clientFilter !== 'all') {
+        if (clientFilter === '__unassigned__') {
+          if (c.clientId) return false;
+        } else if (c.clientId !== clientFilter) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [campaigns, search, platformFilter, statusFilter]);
+  }, [campaigns, search, platformFilter, statusFilter, clientFilter]);
 
   const grouped = useMemo(() => groupCampaigns(filtered), [filtered]);
 
@@ -266,6 +274,22 @@ export default function CampaignsPage() {
                   {allStatuses.map(s => (
                     <FilterChip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</FilterChip>
                   ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">{lang === 'he' ? 'לקוח' : 'Client'}</label>
+                <div className="flex gap-2 flex-wrap">
+                  <FilterChip active={clientFilter === 'all'} onClick={() => setClientFilter('all')}>{lang === 'he' ? 'הכל' : 'All'}</FilterChip>
+                  {dbClients.map(c => (
+                    <FilterChip key={c.id} active={clientFilter === c.id} onClick={() => setClientFilter(c.id)}>
+                      {c.name}
+                    </FilterChip>
+                  ))}
+                  {campaigns.some(c => !c.clientId) && (
+                    <FilterChip active={clientFilter === '__unassigned__'} onClick={() => setClientFilter('__unassigned__')}>
+                      {lang === 'he' ? 'לא משויך' : 'Unassigned'}
+                    </FilterChip>
+                  )}
                 </div>
               </div>
             </div>
