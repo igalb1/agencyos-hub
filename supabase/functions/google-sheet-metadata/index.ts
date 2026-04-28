@@ -67,16 +67,16 @@ Deno.serve(async (req) => {
     let sample: string[][] = [];
     let effectiveHeaderRow = headerRow;
     if (targetSheet) {
-      // Quote sheet name if needed, then URL-encode just that segment so spaces/specials
-      // survive the gateway without being double-decoded. Keep the `!A1:ZZ26` part raw
-      // because the colon must stay a literal colon for the Sheets API.
-      // Per gateway docs: do NOT URL-encode the range. Pass sheet name raw,
-      // quoting it only when it contains spaces/specials.
+      // Use batchGet with the range as a query parameter. When a range is sent
+      // in the URL path, fetch/browser URL handling turns sheet-name spaces into
+      // %20 and the gateway forwards that literal value to Sheets. Query params
+      // are decoded correctly by the Sheets API, so quoted names like
+      // 'All Clients' work reliably.
       const needsQuotes = /[^A-Za-z0-9_]/.test(targetSheet);
       const quoted = needsQuotes ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
       const range = `${quoted}!A${headerRow}:ZZ${headerRow + 25}`;
       const valsRes = await fetch(
-        `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`,
+        `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
         {
           headers: {
             Authorization: `Bearer ${lovableKey}`,
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       if (!valsRes.ok) {
         throw new Error(`Sheets API error [${valsRes.status}]: ${JSON.stringify(valsData)}`);
       }
-      const rows: string[][] = valsData.values ?? [];
+      const rows: string[][] = valsData.valueRanges?.[0]?.values ?? [];
       // Find first non-empty row to use as headers (skip leading blank rows).
       let headerIdx = 0;
       while (
