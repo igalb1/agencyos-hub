@@ -230,6 +230,9 @@ Deno.serve(async (req) => {
         } else if (target === "status") {
           const s = normalizeStatus(value);
           if (s) rec.status = s;
+        } else if (target === "objective") {
+          const objective = normalizeObjective(value);
+          if (objective) rec.objective = objective;
         } else {
           rec[target] = String(value).trim();
         }
