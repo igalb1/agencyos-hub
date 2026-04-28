@@ -7,9 +7,41 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
 
-function extractSpreadsheetId(input: string): string {
-  const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  return m ? m[1] : input.trim();
+function parseSpreadsheetInput(input: string): { spreadsheetId: string; gid?: string } {
+  const trimmed = input.trim();
+  const id = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] ?? trimmed;
+  const gid = trimmed.match(/[?#&]gid=(\d+)/)?.[1];
+  return { spreadsheetId: id, gid };
+}
+
+function columnName(index: number): string {
+  let n = Math.max(1, index);
+  let out = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    out = String.fromCharCode(65 + r) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function quoteSheetName(name: string): string {
+  return /[^A-Za-z0-9_]/.test(name) ? `'${name.replace(/'/g, "''")}'` : name;
+}
+
+function normalizeRows(rows: unknown[][], width: number): string[][] {
+  return rows.map((row) => Array.from({ length: width }, (_, i) => String(row?.[i] ?? "").trim()));
+}
+
+function normalizeHeaders(row: string[], width: number): string[] {
+  const seen = new Map<string, number>();
+  return Array.from({ length: width }, (_, i) => {
+    const base = String(row[i] ?? "").trim() || `Column ${columnName(i + 1)}`;
+    const key = base.toLowerCase();
+    const count = seen.get(key) ?? 0;
+    seen.set(key, count + 1);
+    return count === 0 ? base : `${base} ${count + 1}`;
+  });
 }
 
 function scoreHeaderRow(row: unknown[]): number {
@@ -17,12 +49,12 @@ function scoreHeaderRow(row: unknown[]): number {
   if (cells.length === 0) return -100;
   const joined = cells.join(" ").toLowerCase();
   const knownHeaderHits = cells.filter((cell) => (
-    /name|client|campaign|platform|objective|budget|spend|impression|click|lead|conversion|status|date|שם|לקוח|קמפיין|פלטפורמה|תקציב|הוצאה|חשיפ|קליק|ליד|המר|סטטוס|תאריך/i
+    /name|client|customer|campaign|platform|objective|budget|spend|cost|impression|click|lead|conversion|status|date|industry|שם|לקוח|לקוחות|קמפיין|פלטפורמה|תקציב|הוצאה|עלות|חשיפ|קליק|ליד|המר|סטטוס|תאריך|תחום/i
       .test(cell)
   )).length;
   const dataLikePenalty = cells.filter((cell) => /^\d+[\d,.:/ -]*$/.test(cell)).length;
-  const titlePenalty = cells.length === 1 && /client|clients|לקוחות|לקוח/i.test(joined) ? 8 : 0;
-  return cells.length * 2 + knownHeaderHits * 6 - dataLikePenalty * 2 - titlePenalty;
+  const titlePenalty = cells.length <= 2 && /client|clients|customers|לקוחות|לקוח/i.test(joined) ? 12 : 0;
+  return cells.length * 3 + knownHeaderHits * 8 - dataLikePenalty * 3 - titlePenalty;
 }
 
 Deno.serve(async (req) => {
@@ -48,7 +80,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const rawId = String(body?.spreadsheet_id ?? "").trim();
     if (!rawId) throw new Error("Missing spreadsheet_id");
-    const spreadsheetId = extractSpreadsheetId(rawId);
+    const { spreadsheetId, gid } = parseSpreadsheetInput(rawId);
     const sheetName: string | undefined = body?.sheet_name;
     const headerRow: number = Number(body?.header_row ?? 1);
 
@@ -74,20 +106,15 @@ Deno.serve(async (req) => {
       columnCount: s.properties?.gridProperties?.columnCount,
     }));
 
-    // Read just the header row from the chosen sheet
-    const targetSheet = sheetName || sheets[0]?.title;
+    // Pick a worksheet from the explicit name, URL gid, or first tab.
+    const targetSheet = sheetName || sheets.find((s: any) => String(s.sheetId) === gid)?.title || sheets[0]?.title;
     let headers: string[] = [];
     let sample: string[][] = [];
     let effectiveHeaderRow = headerRow;
+    let effectiveRangeA1 = "A1:ZZ1000";
     if (targetSheet) {
-      // Use batchGet with the range as a query parameter. When a range is sent
-      // in the URL path, fetch/browser URL handling turns sheet-name spaces into
-      // %20 and the gateway forwards that literal value to Sheets. Query params
-      // are decoded correctly by the Sheets API, so quoted names like
-      // 'All Clients' work reliably.
-      const needsQuotes = /[^A-Za-z0-9_]/.test(targetSheet);
-      const quoted = needsQuotes ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
-      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 25}`;
+      const quoted = quoteSheetName(targetSheet);
+      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 80}`;
       const valsRes = await fetch(
         `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
         {
@@ -101,26 +128,27 @@ Deno.serve(async (req) => {
       if (!valsRes.ok) {
         throw new Error(`Sheets API error [${valsRes.status}]: ${JSON.stringify(valsData)}`);
       }
-      const rows: string[][] = valsData.valueRanges?.[0]?.values ?? [];
-      // Pick the most likely header row. This skips blank rows and one-cell
-      // title rows such as "All Clients" that often appear above the real table.
+      const rawRows: string[][] = valsData.valueRanges?.[0]?.values ?? [];
       let headerIdx = 0;
       let bestScore = -Infinity;
-      rows.forEach((row, idx) => {
+      rawRows.forEach((row, idx) => {
         const score = scoreHeaderRow(row ?? []);
         if (score > bestScore) {
           bestScore = score;
           headerIdx = idx;
         }
       });
-      headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
-      // Trim trailing empty header cells
-      while (headers.length > 0 && headers[headers.length - 1] === "") headers.pop();
-      sample = rows.slice(headerIdx + 1, headerIdx + 6);
+      const bodyRows = rawRows.slice(headerIdx + 1);
+      const headerWidth = (rawRows[headerIdx] ?? []).length;
+      const dataWidth = Math.max(0, ...bodyRows.slice(0, 25).map((row) => row.length));
+      const width = Math.max(headerWidth, dataWidth);
+      headers = normalizeHeaders(normalizeRows([rawRows[headerIdx] ?? []], width)[0] ?? [], width);
+      sample = normalizeRows(bodyRows, width).filter((row) => row.some(Boolean)).slice(0, 10);
       effectiveHeaderRow = headerRow + headerIdx;
+      effectiveRangeA1 = `A${effectiveHeaderRow}:${columnName(Math.max(width, 1))}1000`;
       if (headers.length === 0) {
         console.log("google-sheet-metadata: no headers found", {
-          spreadsheetId, sheet: targetSheet, headerRow, rowCount: rows.length,
+          spreadsheetId, sheet: targetSheet, headerRow, rowCount: rawRows.length,
         });
       }
     }
@@ -131,9 +159,11 @@ Deno.serve(async (req) => {
         spreadsheet_id: spreadsheetId,
         title: meta.properties?.title,
         sheets,
+        sheet_name: targetSheet,
         headers,
         sample,
         effective_header_row: effectiveHeaderRow,
+        effective_range_a1: effectiveRangeA1,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

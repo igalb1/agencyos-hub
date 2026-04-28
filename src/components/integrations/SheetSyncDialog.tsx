@@ -32,6 +32,8 @@ const CLIENT_ONLY_FIELDS = [
   { value: 'industry', label: { he: 'תחום', en: 'Industry' } },
   { value: 'status', label: { he: 'סטטוס לקוח', en: 'Client status' } },
   { value: 'budget', label: { he: 'תקציב לקוח', en: 'Client budget' } },
+  { value: 'spend', label: { he: 'הוצאה לקוח', en: 'Client spend' } },
+  { value: 'leads', label: { he: 'לידים לקוח', en: 'Client leads' } },
   { value: 'color', label: { he: 'צבע', en: 'Color' } },
 ];
 
@@ -91,10 +93,12 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       const meta = await fetchMetadata(urlOrId.trim(), sheetName || undefined, headerRow);
       setResolvedId(meta.spreadsheet_id);
       setSheets(meta.sheets);
-      const chosen = sheetName || meta.sheets[0]?.title || 'Sheet1';
+      const chosen = meta.sheet_name || sheetName || meta.sheets[0]?.title || 'Sheet1';
       setSheetName(chosen);
       setHeaders(meta.headers);
       setSample(meta.sample);
+      if (meta.effective_header_row) setHeaderRow(meta.effective_header_row);
+      if (meta.effective_range_a1) setRangeA1(meta.effective_range_a1);
       setPreview(null);
       if (meta.headers.length === 0) {
         toast.error(isRtl
@@ -103,16 +107,14 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         return;
       }
       // Pre-fill mapping by header name match
-      const next: Record<string, string> = { ...mapping };
-      // Detect potential "name" columns to enable shared-column auto-mapping
-      const nameLikeIdx: number[] = [];
+      const next: Record<string, string> = {};
+      // Auto-map known column names from the loaded sheet.
       meta.headers.forEach((h) => {
-        if (next[h]) return;
         const lc = h.toLowerCase();
         if (/campaign|קמפיין/i.test(lc) && /name|שם/i.test(lc)) next[h] = 'campaign_name';
         else if (/platform|פלטפורמה|מקור/i.test(lc)) next[h] = 'platform';
         else if (/objective|מטרה|יעד/i.test(lc)) next[h] = 'objective';
-        else if (/spend|הוצאה|בוזבז/i.test(lc)) next[h] = 'spend';
+        else if (/spend|expense|cost|הוצאה|עלות|בוזבז/i.test(lc)) next[h] = 'spend';
         else if (/impression|חשיפ/i.test(lc)) next[h] = 'impressions';
         else if (/click|קליק/i.test(lc)) next[h] = 'clicks';
         else if (/lead|ליד/i.test(lc)) next[h] = 'leads';
@@ -125,9 +127,6 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         else if (/budget|תקציב/i.test(lc)) next[h] = 'budget';
         else if (/color|צבע/i.test(lc)) next[h] = 'color';
       });
-      meta.headers.forEach((h) => {
-        if (/client|לקוח|name|שם/i.test(h.toLowerCase())) nameLikeIdx.push(meta.headers.indexOf(h));
-      });
       // Smart auto: in hierarchical mode with exactly one name-like column AND no campaign_name,
       // promote it to the shared "client_or_campaign_name" target.
       if (syncMode === 'hierarchical') {
@@ -136,6 +135,9 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         const hasCampaignName = targets.includes('campaign_name');
         if (nameMappings.length === 1 && !hasCampaignName) {
           next[nameMappings[0][0]] = 'client_or_campaign_name';
+        } else if (nameMappings.length === 0 && hasCampaignName) {
+          const groupColumn = meta.headers.find((h) => /^Column [A-Z]+$/i.test(h));
+          if (groupColumn) next[groupColumn] = 'name';
         }
       }
       setMapping(next);
@@ -150,7 +152,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
 
   const buildPreview = useMemo(() => () => {
     if (headers.length === 0 || sample.length === 0) return null;
-    const CLIENT_FIELDS = new Set(['name', 'industry', 'status', 'color', 'budget']);
+    const CLIENT_FIELDS = new Set(['name', 'industry', 'status', 'color', 'budget', 'spend', 'leads']);
     const CAMPAIGN_FIELDS = new Set([
       'campaign_name', 'platform', 'objective', 'status', 'budget',
       'spend', 'impressions', 'clicks', 'leads', 'conversions',
@@ -503,7 +505,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
                     const Icon = row.kind === 'client' ? User : row.kind === 'campaign' ? Target : Minus;
                     const tone =
                       row.kind === 'client' ? 'text-primary' :
-                      row.kind === 'campaign' ? 'text-[#A78BFA]' :
+                      row.kind === 'campaign' ? 'text-secondary' :
                       'text-muted-foreground';
                     const bg =
                       row.kind === 'client' ? 'bg-primary/5' :

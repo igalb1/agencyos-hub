@@ -24,6 +24,42 @@ function nextRunFor(frequency: string): string | null {
   }
 }
 
+function quoteSheetName(name: string): string {
+  return /[^A-Za-z0-9_]/.test(name) ? `'${name.replace(/'/g, "''")}'` : name;
+}
+
+function columnName(index: number): string {
+  let n = Math.max(1, index);
+  let out = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    out = String.fromCharCode(65 + r) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function startRowFromRange(rangeA1: string): number {
+  const firstPart = rangeA1.split(":")[0]?.trim() ?? "A1";
+  const match = firstPart.match(/\d+/);
+  return match ? Math.max(1, Number(match[0])) : 1;
+}
+
+function normalizeRows(rows: unknown[][], width: number): string[][] {
+  return rows.map((row) => Array.from({ length: width }, (_, i) => String(row?.[i] ?? "").trim()));
+}
+
+function normalizeHeaders(row: string[], width: number): string[] {
+  const seen = new Map<string, number>();
+  return Array.from({ length: width }, (_, i) => {
+    const base = String(row[i] ?? "").trim() || `Column ${columnName(i + 1)}`;
+    const key = base.toLowerCase();
+    const count = seen.get(key) ?? 0;
+    seen.set(key, count + 1);
+    return count === 0 ? base : `${base} ${count + 1}`;
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -65,9 +101,9 @@ Deno.serve(async (req) => {
     orgId = config.organization_id;
     emit({ type: "stage", stage: "fetching_sheet", sheet: `${config.sheet_name}!${config.range_a1}` });
 
-    const range = `${config.sheet_name}!${config.range_a1}`;
+    const range = `${quoteSheetName(config.sheet_name)}!${config.range_a1}`;
     const sheetsRes = await fetch(
-      `${GATEWAY_URL}/spreadsheets/${config.spreadsheet_id}/values/${range}`,
+      `${GATEWAY_URL}/spreadsheets/${config.spreadsheet_id}/values:batchGet?ranges=${encodeURIComponent(range)}`,
       {
         headers: {
           Authorization: `Bearer ${lovableKey}`,
@@ -80,7 +116,9 @@ Deno.serve(async (req) => {
       throw new Error(`Sheets API error [${sheetsRes.status}]: ${JSON.stringify(sheetsData)}`);
     }
 
-    const rows: string[][] = sheetsData.values ?? [];
+    const rawRows: string[][] = sheetsData.valueRanges?.[0]?.values ?? sheetsData.values ?? [];
+    const width = Math.max(0, ...rawRows.map((row) => row.length));
+    const rows = normalizeRows(rawRows, width);
     if (rows.length === 0) {
       emit({ type: "stage", stage: "empty" });
       await admin.from("client_sheet_sync_logs").insert({
@@ -95,9 +133,10 @@ Deno.serve(async (req) => {
       return { rows_read: 0, created: 0, updated: 0 };
     }
 
-    const headerIdx = Math.max(0, (config.header_row ?? 1) - 1);
-    const headers = (rows[headerIdx] ?? []).map((h) => String(h ?? "").trim());
-    const dataRows = rows.slice(headerIdx + 1);
+    const rangeStartRow = startRowFromRange(config.range_a1 ?? "A1:Z1000");
+    const headerIdx = Math.max(0, Number(config.header_row ?? rangeStartRow) - rangeStartRow);
+    const headers = normalizeHeaders(rows[headerIdx] ?? [], width);
+    const dataRows = rows.slice(headerIdx + 1).filter((row) => row.some((cell) => String(cell ?? "").trim() !== ""));
     emit({ type: "rows_read", total: dataRows.length, headers });
 
     const mapping = (config.column_mapping ?? {}) as Record<string, string>;
@@ -121,7 +160,7 @@ Deno.serve(async (req) => {
     let failed = 0;
     let campaignsCreated = 0;
     let campaignsUpdated = 0;
-    const allowedClientFields = new Set(["name", "industry", "status", "color", "budget"]);
+    const allowedClientFields = new Set(["name", "industry", "status", "color", "budget", "spend", "leads"]);
     const allowedCampaignFields = new Set([
       "campaign_name", "platform", "objective", "status",
       "budget", "spend", "impressions", "clicks", "leads", "conversions",
@@ -152,10 +191,22 @@ Deno.serve(async (req) => {
       if (v === undefined || v === null || v === "") return null;
       const s = String(v).trim().toLowerCase();
       if (s === "paused" || s === "מושהה" || s === "מושהית") return "paused";
-      if (s === "planned" || s === "מתוכנן" || s === "מתוכננת") return "Planned";
-      if (s === "active" || s === "פעיל" || s === "פעילה" || s === "running") return "Active";
+      if (s === "planned" || s === "מתוכנן" || s === "מתוכננת" || s === "draft") return "Planned";
+      if (s === "active" || s === "פעיל" || s === "פעילה" || s === "running" || s === "live") return "Live";
       if (s === "completed" || s === "הסתיים" || s === "הסתיימה") return "Completed";
       return s;
+    };
+    const normalizeObjective = (v: unknown): string | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const s = String(v).trim().toLowerCase();
+      if (/lead|ליד/.test(s)) return "leads";
+      if (/sale|purchase|רכיש|מכיר/.test(s)) return "sales";
+      if (/video|וידאו/.test(s)) return "video";
+      if (/aware|reach|חשיפ|מודעות/.test(s)) return "awareness";
+      if (/traffic|תנועה/.test(s)) return "traffic";
+      if (/engagement|מעורבות/.test(s)) return "engagement";
+      if (/app|אפליק/.test(s)) return "app";
+      return "other";
     };
 
     // Build a per-row record from headers + row using the mapping, restricted to allowed targets.
@@ -179,10 +230,23 @@ Deno.serve(async (req) => {
         } else if (target === "status") {
           const s = normalizeStatus(value);
           if (s) rec.status = s;
+        } else if (target === "objective") {
+          const objective = normalizeObjective(value);
+          if (objective) rec.objective = objective;
         } else {
           rec[target] = String(value).trim();
         }
       });
+      return rec;
+    };
+    const sanitizeClientRecord = (rec: Record<string, any>) => {
+      if (rec.status) rec.status = rec.status === "paused" ? "paused" : "active";
+      return rec;
+    };
+    const sanitizeCampaignRecord = (rec: Record<string, any>) => {
+      if (rec.status) rec.status = rec.status === "paused" ? "Paused" : rec.status;
+      if (!rec.objective) rec.objective = "leads";
+      if (!rec.status) rec.status = "Planned";
       return rec;
     };
 
@@ -191,6 +255,7 @@ Deno.serve(async (req) => {
     const clientNameColIdx = targetsByIndex.findIndex((t) => t === "name");
     const campaignNameColIdx = targetsByIndex.findIndex((t) => t === "campaign_name");
     const sharedNameColIdx = targetsByIndex.findIndex((t) => t === "client_or_campaign_name");
+    const effectiveClientNameColIdx = clientNameColIdx >= 0 ? clientNameColIdx : (campaignNameColIdx >= 0 ? sharedNameColIdx : -1);
 
     // ----- Custom-column auto-creation for unmapped headers (hierarchical campaigns only) -----
     // A header is "unmapped" if it has no mapping at all OR its mapping target is not a
@@ -198,6 +263,7 @@ Deno.serve(async (req) => {
     const recognizedTargets = new Set<string>([
       ...allowedClientFields,
       ...allowedCampaignFields,
+        "client_or_campaign_name",
     ]);
     const unmappedHeaderIdx: number[] = [];
     headers.forEach((h, i) => {
@@ -311,6 +377,7 @@ Deno.serve(async (req) => {
 
     // Upsert a client and return its row (id + fields)
     const upsertClient = async (rec: Record<string, any>, rowIndex: number): Promise<{ id: string } | null> => {
+      sanitizeClientRecord(rec);
       const matchKey = String(rec[matchField] ?? "").trim().toLowerCase();
       const existing = matchKey ? matchMap.get(matchKey) : undefined;
       if (existing) {
@@ -399,13 +466,11 @@ Deno.serve(async (req) => {
           // Otherwise: campaign row under current client
           const campaignRec = buildRecord(row, allowedCampaignFields);
           delete campaignRec.campaign_name;
-          const finalRec: Record<string, any> = {
+          const finalRec: Record<string, any> = sanitizeCampaignRecord({
             ...campaignRec,
             name: sharedName,
             client_id: currentClientId,
-          };
-          if (!finalRec.objective) finalRec.objective = "leads";
-          if (!finalRec.status) finalRec.status = "Planned";
+          });
 
           const cache = await loadCampaignsFor(currentClientId);
           const key = sharedName.toLowerCase();
@@ -459,7 +524,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
         const rowIndex = i + 1;
-        const rawClientName = clientNameColIdx >= 0 ? String(row[clientNameColIdx] ?? "").trim() : "";
+        const rawClientName = effectiveClientNameColIdx >= 0 ? String(row[effectiveClientNameColIdx] ?? "").trim() : "";
         const rawCampaignName = campaignNameColIdx >= 0 ? String(row[campaignNameColIdx] ?? "").trim() : "";
 
         // Treat as client header row when: client name is present AND no campaign name on that row.
@@ -492,14 +557,11 @@ Deno.serve(async (req) => {
         // Map campaign_name -> name
         const campaignName = String(campaignRec.campaign_name ?? rawCampaignName).trim();
         delete campaignRec.campaign_name;
-        const finalRec: Record<string, any> = {
+        const finalRec: Record<string, any> = sanitizeCampaignRecord({
           ...campaignRec,
           name: campaignName,
           client_id: currentClientId,
-        };
-        // Ensure objective defaults to leads if not provided (table requires not-null)
-        if (!finalRec.objective) finalRec.objective = "leads";
-        if (!finalRec.status) finalRec.status = "Planned";
+        });
 
         const cache = await loadCampaignsFor(currentClientId);
         const key = campaignName.toLowerCase();
