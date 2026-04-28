@@ -35,6 +35,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
     headers: string[];
     sample: string[][];
     mapping: Record<string, string>;
+    syncMode: 'flat' | 'hierarchical';
   } | null>(null);
   const [stageLabel, setStageLabel] = useState<string>('');
   const [total, setTotal] = useState(0);
@@ -73,6 +74,7 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
           headers: meta.headers,
           sample: meta.sample.slice(0, 5),
           mapping: cfg.column_mapping,
+          syncMode: cfg.sync_mode,
         });
       })
       .catch((err) => {
@@ -246,11 +248,16 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
                               {previewData.headers.map((h, i) => {
                                 const target = previewData.mapping[h];
                                 const mapped = target && target !== '__skip__';
+                                const willBeCustom = !mapped && previewData.syncMode === 'hierarchical';
                                 return (
-                                  <th key={i} className={`text-start px-2 py-1.5 font-medium border-b border-border/60 whitespace-nowrap ${mapped ? '' : 'opacity-40'}`}>
+                                  <th key={i} className={`text-start px-2 py-1.5 font-medium border-b border-border/60 whitespace-nowrap ${mapped || willBeCustom ? '' : 'opacity-40'}`}>
                                     <div className="truncate max-w-[160px]">{h}</div>
-                                    <div className={`text-[10px] font-normal ${mapped ? 'text-primary' : 'text-muted-foreground'}`}>
-                                      {mapped ? `→ ${target}` : (isRtl ? '— דילוג —' : '— skip —')}
+                                    <div className={`text-[10px] font-normal ${mapped ? 'text-primary' : willBeCustom ? 'text-secondary' : 'text-muted-foreground'}`}>
+                                      {mapped
+                                        ? `→ ${target}`
+                                        : willBeCustom
+                                          ? (isRtl ? '→ עמודה מותאמת' : '→ custom column')
+                                          : (isRtl ? '— דילוג —' : '— skip —')}
                                     </div>
                                   </th>
                                 );
@@ -261,9 +268,11 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
                             {previewData.sample.map((row, ri) => (
                               <tr key={ri} className="border-b border-border/30 last:border-0">
                                 {previewData.headers.map((h, ci) => {
-                                  const mapped = previewData.mapping[h] && previewData.mapping[h] !== '__skip__';
+                                  const target = previewData.mapping[h];
+                                  const mapped = target && target !== '__skip__';
+                                  const willBeCustom = !mapped && previewData.syncMode === 'hierarchical';
                                   return (
-                                    <td key={ci} className={`px-2 py-1.5 align-top whitespace-nowrap ${mapped ? '' : 'opacity-40'}`}>
+                                    <td key={ci} className={`px-2 py-1.5 align-top whitespace-nowrap ${mapped || willBeCustom ? '' : 'opacity-40'}`}>
                                       <div className="truncate max-w-[160px]">{row[ci] ?? ''}</div>
                                     </td>
                                   );
@@ -277,8 +286,12 @@ export function SyncProgressDialog({ open, onOpenChange, configId, configName, i
                   )}
                   <p className="text-[11px] text-muted-foreground">
                     {isRtl
-                      ? 'בדוק שהגיליון, שורת הכותרות והשדות הממופים נכונים. עמודות לא ממופות יסומנו עמומות.'
-                      : 'Check the sheet, header row and mapped fields are correct. Unmapped columns are dimmed.'}
+                      ? (previewData.syncMode === 'hierarchical'
+                          ? 'עמודות לא ממופות יישמרו אוטומטית כעמודות מותאמות אישית בקמפיינים — הערך מהגיליון יעבור כמו שהוא.'
+                          : 'במצב "שורה לכל לקוח" עמודות לא ממופות לא יישמרו. עבור למצב היררכי כדי לשמור עמודות נוספות אוטומטית בקמפיינים.')
+                      : (previewData.syncMode === 'hierarchical'
+                          ? 'Unmapped columns are saved automatically as campaign custom columns — the raw sheet value flows through as-is.'
+                          : 'In flat mode unmapped columns are not stored. Switch to hierarchical mode to auto-save extra columns on campaigns.')}
                   </p>
                 </div>
               </>
