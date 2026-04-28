@@ -464,13 +464,11 @@ Deno.serve(async (req) => {
           // Otherwise: campaign row under current client
           const campaignRec = buildRecord(row, allowedCampaignFields);
           delete campaignRec.campaign_name;
-          const finalRec: Record<string, any> = {
+          const finalRec: Record<string, any> = sanitizeCampaignRecord({
             ...campaignRec,
             name: sharedName,
             client_id: currentClientId,
-          };
-          if (!finalRec.objective) finalRec.objective = "leads";
-          if (!finalRec.status) finalRec.status = "Planned";
+          });
 
           const cache = await loadCampaignsFor(currentClientId);
           const key = sharedName.toLowerCase();
@@ -557,14 +555,11 @@ Deno.serve(async (req) => {
         // Map campaign_name -> name
         const campaignName = String(campaignRec.campaign_name ?? rawCampaignName).trim();
         delete campaignRec.campaign_name;
-        const finalRec: Record<string, any> = {
+        const finalRec: Record<string, any> = sanitizeCampaignRecord({
           ...campaignRec,
           name: campaignName,
           client_id: currentClientId,
-        };
-        // Ensure objective defaults to leads if not provided (table requires not-null)
-        if (!finalRec.objective) finalRec.objective = "leads";
-        if (!finalRec.status) finalRec.status = "Planned";
+        });
 
         const cache = await loadCampaignsFor(currentClientId);
         const key = campaignName.toLowerCase();
