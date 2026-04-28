@@ -239,6 +239,16 @@ Deno.serve(async (req) => {
       });
       return rec;
     };
+    const sanitizeClientRecord = (rec: Record<string, any>) => {
+      if (rec.status) rec.status = rec.status === "paused" ? "paused" : "active";
+      return rec;
+    };
+    const sanitizeCampaignRecord = (rec: Record<string, any>) => {
+      if (rec.status) rec.status = rec.status === "paused" ? "Paused" : rec.status;
+      if (!rec.objective) rec.objective = "leads";
+      if (!rec.status) rec.status = "Planned";
+      return rec;
+    };
 
     // Identify which mapped target a column points to (for hierarchical detection)
     const targetsByIndex = headers.map((h) => mapping[h] ?? null);
@@ -365,6 +375,7 @@ Deno.serve(async (req) => {
 
     // Upsert a client and return its row (id + fields)
     const upsertClient = async (rec: Record<string, any>, rowIndex: number): Promise<{ id: string } | null> => {
+      sanitizeClientRecord(rec);
       const matchKey = String(rec[matchField] ?? "").trim().toLowerCase();
       const existing = matchKey ? matchMap.get(matchKey) : undefined;
       if (existing) {
