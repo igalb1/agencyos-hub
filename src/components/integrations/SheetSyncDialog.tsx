@@ -91,10 +91,12 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       const meta = await fetchMetadata(urlOrId.trim(), sheetName || undefined, headerRow);
       setResolvedId(meta.spreadsheet_id);
       setSheets(meta.sheets);
-      const chosen = sheetName || meta.sheets[0]?.title || 'Sheet1';
+      const chosen = meta.sheet_name || sheetName || meta.sheets[0]?.title || 'Sheet1';
       setSheetName(chosen);
       setHeaders(meta.headers);
       setSample(meta.sample);
+      if (meta.effective_header_row) setHeaderRow(meta.effective_header_row);
+      if (meta.effective_range_a1) setRangeA1(meta.effective_range_a1);
       setPreview(null);
       if (meta.headers.length === 0) {
         toast.error(isRtl
@@ -103,11 +105,10 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         return;
       }
       // Pre-fill mapping by header name match
-      const next: Record<string, string> = { ...mapping };
+      const next: Record<string, string> = {};
       // Detect potential "name" columns to enable shared-column auto-mapping
       const nameLikeIdx: number[] = [];
       meta.headers.forEach((h) => {
-        if (next[h]) return;
         const lc = h.toLowerCase();
         if (/campaign|קמפיין/i.test(lc) && /name|שם/i.test(lc)) next[h] = 'campaign_name';
         else if (/platform|פלטפורמה|מקור/i.test(lc)) next[h] = 'platform';
@@ -126,7 +127,7 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
         else if (/color|צבע/i.test(lc)) next[h] = 'color';
       });
       meta.headers.forEach((h) => {
-        if (/client|לקוח|name|שם/i.test(h.toLowerCase())) nameLikeIdx.push(meta.headers.indexOf(h));
+        if (/client|customer|לקוח|לקוחות|name|שם/i.test(h.toLowerCase())) nameLikeIdx.push(nameLikeIdx.length);
       });
       // Smart auto: in hierarchical mode with exactly one name-like column AND no campaign_name,
       // promote it to the shared "client_or_campaign_name" target.
