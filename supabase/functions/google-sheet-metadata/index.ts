@@ -70,10 +70,11 @@ Deno.serve(async (req) => {
       // Quote sheet name if needed, then URL-encode just that segment so spaces/specials
       // survive the gateway without being double-decoded. Keep the `!A1:ZZ26` part raw
       // because the colon must stay a literal colon for the Sheets API.
+      // Per gateway docs: do NOT URL-encode the range. Pass sheet name raw,
+      // quoting it only when it contains spaces/specials.
       const needsQuotes = /[^A-Za-z0-9_]/.test(targetSheet);
       const quoted = needsQuotes ? `'${targetSheet.replace(/'/g, "''")}'` : targetSheet;
-      const encodedSheet = encodeURIComponent(quoted);
-      const range = `${encodedSheet}!A${headerRow}:ZZ${headerRow + 25}`;
+      const range = `${quoted}!A${headerRow}:ZZ${headerRow + 25}`;
       const valsRes = await fetch(
         `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values/${range}`,
         {
