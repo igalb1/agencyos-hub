@@ -12,6 +12,8 @@ import QASuccessScreen from '@/components/qa/QASuccessScreen';
 import { computeProgress } from '@/data/qaChecklistData';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import CreateTaskFromQADialog from '@/components/qa/CreateTaskFromQADialog';
+import type { QAItemDef } from '@/types/qa';
 
 export default function QAChecklistViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +23,7 @@ export default function QAChecklistViewPage() {
   const [filter, setFilter] = useState<QAFilterValue>('all');
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [taskItem, setTaskItem] = useState<QAItemDef | null>(null);
 
   const stats = useMemo(
     () => (row ? computeProgress(row.template_snapshot, row.checked_items) : null),
@@ -132,6 +135,7 @@ export default function QAChecklistViewPage() {
             readOnly={readOnly}
             onToggle={(item) => toggleItem(item.id, item.priority === 'critical')}
             onNoteChange={(item, note) => setNote(item.id, note)}
+            onCreateTask={(item) => setTaskItem(item)}
           />
         ))}
       </div>
@@ -146,6 +150,22 @@ export default function QAChecklistViewPage() {
           rejecting={rejecting}
         />
       )}
+
+      <CreateTaskFromQADialog
+        open={!!taskItem}
+        onOpenChange={(v) => !v && setTaskItem(null)}
+        qaRow={row}
+        presetTitle={
+          taskItem
+            ? `QA: ${row.campaign_name}${row.ad_name ? ` — ${row.ad_name}` : ''} — ${taskItem.text}`
+            : undefined
+        }
+        presetDescription={
+          taskItem
+            ? `נוצר מפריט QA: "${taskItem.text}"${row.ad_name ? ` (מודעה: ${row.ad_name})` : ''}`
+            : undefined
+        }
+      />
     </div>
   );
 }

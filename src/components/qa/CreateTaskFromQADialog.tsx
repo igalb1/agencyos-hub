@@ -13,9 +13,11 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   qaRow: QAChecklistRow | null;
+  presetTitle?: string;
+  presetDescription?: string;
 }
 
-export default function CreateTaskFromQADialog({ open, onOpenChange, qaRow }: Props) {
+export default function CreateTaskFromQADialog({ open, onOpenChange, qaRow, presetTitle, presetDescription }: Props) {
   const { organization } = useAuth();
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -25,8 +27,12 @@ export default function CreateTaskFromQADialog({ open, onOpenChange, qaRow }: Pr
 
   // Initialize when dialog opens
   if (open && qaRow && title === '') {
-    const adPart = qaRow.ad_name ? ` — ${qaRow.ad_name}` : '';
-    setTitle(`QA: ${qaRow.campaign_name}${adPart}`);
+    if (presetTitle) {
+      setTitle(presetTitle);
+    } else {
+      const adPart = qaRow.ad_name ? ` — ${qaRow.ad_name}` : '';
+      setTitle(`QA: ${qaRow.campaign_name}${adPart}`);
+    }
   }
 
   const handleClose = (v: boolean) => {
@@ -55,7 +61,7 @@ export default function CreateTaskFromQADialog({ open, onOpenChange, qaRow }: Pr
       const { error } = await supabase.from('tasks').insert({
         organization_id: organization.id,
         title: title.trim(),
-        description: `נוצר מבדיקת QA${qaRow.ad_name ? ` (מודעה: ${qaRow.ad_name})` : ''}`,
+        description: presetDescription || `נוצר מבדיקת QA${qaRow.ad_name ? ` (מודעה: ${qaRow.ad_name})` : ''}`,
         client_id: qaRow.client_id,
         campaign_id: campaignId,
         assignee: assignee || null,

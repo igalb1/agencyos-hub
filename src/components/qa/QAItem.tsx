@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { StickyNote } from 'lucide-react';
+import { StickyNote, ListPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { QAItemDef } from '@/types/qa';
 
@@ -18,9 +18,10 @@ interface Props {
   readOnly?: boolean;
   onToggle: () => void;
   onNoteChange: (s: string) => void;
+  onCreateTask?: (item: QAItemDef) => void;
 }
 
-export default function QAItem({ item, checked, note, readOnly, onToggle, onNoteChange }: Props) {
+export default function QAItem({ item, checked, note, readOnly, onToggle, onNoteChange, onCreateTask }: Props) {
   const [showNote, setShowNote] = useState(!!note);
   const style = PRIORITY_STYLES[item.priority];
 
@@ -47,14 +48,27 @@ export default function QAItem({ item, checked, note, readOnly, onToggle, onNote
               {style.label}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowNote((v) => !v)}
-            className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-          >
-            <StickyNote className="h-3 w-3" />
-            {note ? 'ערוך הערה' : 'הוסף הערה'}
-          </button>
+          <div className="mt-1.5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowNote((v) => !v)}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              <StickyNote className="h-3 w-3" />
+              {note ? 'ערוך הערה' : 'הוסף הערה'}
+            </button>
+            {onCreateTask && (
+              <button
+                type="button"
+                onClick={() => onCreateTask(item)}
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                title="צור משימה מפריט זה"
+              >
+                <ListPlus className="h-3 w-3" />
+                צור משימה
+              </button>
+            )}
+          </div>
           {showNote && (
             <Textarea
               dir="rtl"
