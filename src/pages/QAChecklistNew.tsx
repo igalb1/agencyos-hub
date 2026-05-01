@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,7 @@ export default function QAChecklistNewPage() {
   const { clients } = useOrgData();
   const { create } = useQAChecklist();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [clientId, setClientId] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
@@ -34,7 +35,17 @@ export default function QAChecklistNewPage() {
         if (d.platform) setPlatform(d.platform);
       } catch {}
       sessionStorage.removeItem('qa_duplicate');
+      return;
     }
+    // Pre-fill from URL (e.g. linked from Campaigns table)
+    const qName = searchParams.get('name');
+    const qClient = searchParams.get('client');
+    const qClientName = searchParams.get('clientName');
+    const qPlatform = searchParams.get('platform') as QAPlatform | null;
+    if (qName) setCampaignName(qName);
+    if (qClient) setClientId(qClient);
+    if (qClientName) setClientName(qClientName);
+    if (qPlatform && ['meta', 'google', 'tiktok'].includes(qPlatform)) setPlatform(qPlatform);
   }, []);
 
   const reviewerName = profile?.full_name || user?.email || '';

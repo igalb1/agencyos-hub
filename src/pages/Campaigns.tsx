@@ -10,6 +10,8 @@ import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
 import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { evaluateFormula } from '@/lib/formula';
 import { detectAutoColumn, computeAutoColumn } from '@/lib/auto-columns';
+import { useCampaignQAStatus } from '@/hooks/useCampaignQAStatus';
+import QAStatusCell from '@/components/campaigns/QAStatusCell';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import {
@@ -86,6 +88,7 @@ export default function CampaignsPage() {
   const campaigns = dbCampaigns;
   void loaded;
   const { columns: customColumns, values: customValues, addColumn, renameColumn, updateFormula, deleteColumn, setValue: setCustomValue } = useCustomColumns();
+  const { get: getQAStatus } = useCampaignQAStatus();
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
@@ -348,7 +351,7 @@ export default function CampaignsPage() {
                 {/* Table header - visible on desktop only */}
                 <div
                   className="hidden lg:grid gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20"
-                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px ${customColumns.map(() => '110px ').join('')}40px` }}
+                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
                   <span>{lang === 'he' ? 'שם' : 'Name'}</span>
@@ -361,6 +364,7 @@ export default function CampaignsPage() {
                   <span className="text-end">CTR</span>
                   <span className="text-end">{lang === 'he' ? 'המרות' : 'Conv.'}</span>
                   <span className="text-end">{lang === 'he' ? 'מדד מטרה' : 'Goal KPI'}</span>
+                  <span className="text-center">QA</span>
                   {customColumns.map(col => (
                     <span key={col.id} className="text-end truncate" title={col.name}>{col.name}</span>
                   ))}
@@ -388,7 +392,7 @@ export default function CampaignsPage() {
                             "lg:[grid-template-columns:var(--cols)]",
                             selected.has(campaign.id) && "bg-primary/5"
                           )}
-                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px ${customColumns.map(() => '110px ').join('')}40px` }}
+                          style={{ ['--cols' as any]: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
                         >
                           {/* Checkbox */}
@@ -552,6 +556,18 @@ export default function CampaignsPage() {
                               </div>
                             );
                           })()}
+
+                          {/* QA status */}
+                          <div className="hidden lg:block" onClick={e => e.stopPropagation()}>
+                            <QAStatusCell
+                              qa={getQAStatus(campaign.name, campaign.clientId || null)}
+                              campaignName={campaign.name}
+                              clientId={campaign.clientId || null}
+                              clientName={campaign.clientName}
+                              platform={campaign.platform}
+                              lang={lang as 'he' | 'en'}
+                            />
+                          </div>
 
                           {/* Custom columns */}
                           {customColumns.map(col => {
