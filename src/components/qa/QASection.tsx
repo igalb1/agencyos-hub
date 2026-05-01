@@ -13,6 +13,7 @@ interface Props {
   readOnly?: boolean;
   onToggle: (item: QAItemDef) => void;
   onNoteChange: (item: QAItemDef, note: string) => void;
+  onCreateTask?: (item: QAItemDef) => void;
 }
 
 function applyFilter(items: QAItemDef[], filter: QAFilterValue, checked: Record<string, boolean>) {
@@ -28,7 +29,7 @@ function applyFilter(items: QAItemDef[], filter: QAFilterValue, checked: Record<
   }
 }
 
-export default function QASection({ section, checked, notes, filter, readOnly, onToggle, onNoteChange }: Props) {
+export default function QASection({ section, checked, notes, filter, readOnly, onToggle, onNoteChange, onCreateTask }: Props) {
   const [open, setOpen] = useState(true);
   const visible = applyFilter(section.items, filter, checked);
   const done = section.items.filter((i) => checked[i.id]).length;
@@ -71,6 +72,7 @@ export default function QASection({ section, checked, notes, filter, readOnly, o
               readOnly={readOnly}
               onToggle={() => onToggle(item)}
               onNoteChange={(s) => onNoteChange(item, s)}
+              onCreateTask={onCreateTask}
             />
           ))}
         </div>
