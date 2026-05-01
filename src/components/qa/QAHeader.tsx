@@ -12,6 +12,8 @@ interface Props {
   onClient: (id: string | null, name: string) => void;
   campaignName: string;
   onCampaignName: (s: string) => void;
+  adName?: string;
+  onAdName?: (s: string) => void;
   platform: QAPlatform;
   onPlatform: (p: QAPlatform) => void;
   reviewerName: string;
@@ -21,7 +23,7 @@ interface Props {
 const PLATFORMS: QAPlatform[] = ['meta', 'google', 'tiktok'];
 
 export default function QAHeader({
-  clients, clientId, onClient, campaignName, onCampaignName, platform, onPlatform, reviewerName, readOnly,
+  clients, clientId, onClient, campaignName, onCampaignName, adName, onAdName, platform, onPlatform, reviewerName, readOnly,
 }: Props) {
   return (
     <div className="grid gap-4 rounded-xl border border-border/40 bg-card/60 p-4 backdrop-blur md:grid-cols-2">
@@ -54,6 +56,18 @@ export default function QAHeader({
           placeholder="הזן שם קמפיין..."
         />
       </div>
+      {onAdName && (
+        <div className="space-y-1.5 md:col-span-2">
+          <Label>שם מודעה</Label>
+          <Input
+            dir="rtl"
+            disabled={readOnly}
+            value={adName ?? ''}
+            onChange={(e) => onAdName(e.target.value)}
+            placeholder="לדוגמה: וידאו 15 שניות — Reels"
+          />
+        </div>
+      )}
       <div className="space-y-1.5 md:col-span-2">
         <Label>פלטפורמה</Label>
         <div className="flex flex-wrap gap-2">
