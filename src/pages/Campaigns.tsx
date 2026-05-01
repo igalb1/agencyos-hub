@@ -10,6 +10,8 @@ import ManageColumnsDialog from '@/components/campaigns/ManageColumnsDialog';
 import { useCustomColumns } from '@/hooks/useCustomColumns';
 import { evaluateFormula } from '@/lib/formula';
 import { detectAutoColumn, computeAutoColumn } from '@/lib/auto-columns';
+import { useCampaignQAStatus } from '@/hooks/useCampaignQAStatus';
+import QAStatusCell from '@/components/campaigns/QAStatusCell';
 import { toast } from 'sonner';
 import { getPlatformColor, getStatusColor, getAdStatusColor, calcPacing, fmtCurrency, fmtNum, calcCtr, calcCpl } from '@/lib/campaign-utils';
 import {
@@ -86,6 +88,7 @@ export default function CampaignsPage() {
   const campaigns = dbCampaigns;
   void loaded;
   const { columns: customColumns, values: customValues, addColumn, renameColumn, updateFormula, deleteColumn, setValue: setCustomValue } = useCustomColumns();
+  const { get: getQAStatus } = useCampaignQAStatus();
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
