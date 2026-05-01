@@ -8,6 +8,51 @@ interface UseQAChecklistOpts {
   id?: string;
 }
 
+const PLATFORM_MAP: Record<string, string> = {
+  meta: 'Meta',
+  google: 'Google',
+  tiktok: 'TikTok',
+};
+
+async function syncToCampaign(row: QAChecklistRow): Promise<{ campaignId: string; created: boolean }> {
+  const platform = PLATFORM_MAP[row.platform] ?? 'Meta';
+  const name = row.campaign_name.trim();
+
+  // Try to find an existing campaign by name (+ client if available)
+  let query = supabase
+    .from('campaigns')
+    .select('id')
+    .eq('organization_id', row.organization_id)
+    .eq('name', name)
+    .limit(1);
+  if (row.client_id) query = query.eq('client_id', row.client_id);
+
+  const { data: existing } = await query;
+  if (existing && existing.length > 0) {
+    const campaignId = existing[0].id;
+    await supabase
+      .from('campaigns')
+      .update({ status: 'Live', platform, client_id: row.client_id ?? null })
+      .eq('id', campaignId);
+    return { campaignId, created: false };
+  }
+
+  const { data: created, error } = await supabase
+    .from('campaigns')
+    .insert({
+      organization_id: row.organization_id,
+      client_id: row.client_id ?? null,
+      name,
+      platform,
+      status: 'Live',
+      objective: 'leads',
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return { campaignId: created.id, created: true };
+}
+
 export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
   const { organization, user, profile } = useAuth();
   const [row, setRow] = useState<QAChecklistRow | null>(null);
@@ -128,6 +173,16 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
 
   const approve = useCallback(async () => {
     if (!row) return;
+    // 1) Sync to campaigns/ads (Ads page derives from campaigns)
+    let syncResult: { campaignId: string; created: boolean } | null = null;
+    try {
+      syncResult = await syncToCampaign(row);
+    } catch (e) {
+      console.error('[QA] sync to campaign failed', e);
+      throw e;
+    }
+
+    // 2) Mark checklist as approved
     const { error } = await (supabase as any)
       .from('qa_checklists')
       .update({
@@ -138,6 +193,7 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
       .eq('id', row.id);
     if (error) throw error;
     setRow({ ...row, status: 'approved', approved_at: new Date().toISOString(), approved_by: user?.id ?? null });
+    return syncResult;
   }, [row, user?.id]);
 
   // Realtime sync
