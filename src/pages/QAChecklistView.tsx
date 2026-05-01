@@ -80,6 +80,7 @@ export default function QAChecklistViewPage() {
                 campaignName: row.campaign_name + ' (עותק)',
                 clientId: row.client_id,
                 clientName: row.client_name,
+                adName: row.ad_name ?? '',
                 platform: row.platform,
               }),
             );
