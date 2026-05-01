@@ -20,6 +20,7 @@ export default function QAChecklistNewPage() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
   const [campaignName, setCampaignName] = useState('');
+  const [adName, setAdName] = useState('');
   const [platform, setPlatform] = useState<QAPlatform>('meta');
   const [creating, setCreating] = useState(false);
 
@@ -32,6 +33,7 @@ export default function QAChecklistNewPage() {
         if (d.clientId) setClientId(d.clientId);
         if (d.clientName) setClientName(d.clientName);
         if (d.campaignName) setCampaignName(d.campaignName);
+        if (d.adName) setAdName(d.adName + ' (עותק)');
         if (d.platform) setPlatform(d.platform);
       } catch {}
       sessionStorage.removeItem('qa_duplicate');
@@ -41,22 +43,27 @@ export default function QAChecklistNewPage() {
     const qName = searchParams.get('name');
     const qClient = searchParams.get('client');
     const qClientName = searchParams.get('clientName');
+    const qAd = searchParams.get('ad');
     const qPlatform = searchParams.get('platform') as QAPlatform | null;
     if (qName) setCampaignName(qName);
     if (qClient) setClientId(qClient);
     if (qClientName) setClientName(qClientName);
+    if (qAd) setAdName(qAd);
     if (qPlatform && ['meta', 'google', 'tiktok'].includes(qPlatform)) setPlatform(qPlatform);
   }, []);
 
   const reviewerName = profile?.full_name || user?.email || '';
   const clientOptions = useMemo(() => clients.map((c) => ({ id: c.id, name: c.name })), [clients]);
-  const canStart = clientName.trim().length > 0 && campaignName.trim().length > 0;
+  const canStart =
+    clientName.trim().length > 0 &&
+    campaignName.trim().length > 0 &&
+    adName.trim().length > 0;
 
   const handleStart = async () => {
     if (!canStart) return;
     setCreating(true);
     try {
-      const row = await create({ clientId, clientName, campaignName, platform, sections: QA_DEFAULT_SECTIONS });
+      const row = await create({ clientId, clientName, campaignName, adName, platform, sections: QA_DEFAULT_SECTIONS });
       navigate(`/qa/${row.id}`);
     } catch (e: any) {
       toast({ title: 'שגיאה ביצירת בדיקה', description: e.message, variant: 'destructive' });
@@ -69,7 +76,7 @@ export default function QAChecklistNewPage() {
     <div className="font-rubik mx-auto max-w-3xl space-y-6 p-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">בדיקת QA חדשה</h1>
-        <p className="text-sm text-muted-foreground">מלא פרטי קמפיין כדי להתחיל</p>
+        <p className="text-sm text-muted-foreground">בדיקה ברמת מודעה — מלא פרטי קמפיין ומודעה כדי להתחיל</p>
       </div>
       <QAHeader
         clients={clientOptions}
@@ -77,6 +84,8 @@ export default function QAChecklistNewPage() {
         onClient={(id, name) => { setClientId(id); setClientName(name); }}
         campaignName={campaignName}
         onCampaignName={setCampaignName}
+        adName={adName}
+        onAdName={setAdName}
         platform={platform}
         onPlatform={setPlatform}
         reviewerName={reviewerName}
