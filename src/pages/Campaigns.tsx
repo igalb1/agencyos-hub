@@ -351,7 +351,7 @@ export default function CampaignsPage() {
                 {/* Table header - visible on desktop only */}
                 <div
                   className="hidden lg:grid gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20"
-                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px ${customColumns.map(() => '110px ').join('')}40px` }}
+                  style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
                   <span>{lang === 'he' ? 'שם' : 'Name'}</span>
@@ -364,6 +364,7 @@ export default function CampaignsPage() {
                   <span className="text-end">CTR</span>
                   <span className="text-end">{lang === 'he' ? 'המרות' : 'Conv.'}</span>
                   <span className="text-end">{lang === 'he' ? 'מדד מטרה' : 'Goal KPI'}</span>
+                  <span className="text-center">QA</span>
                   {customColumns.map(col => (
                     <span key={col.id} className="text-end truncate" title={col.name}>{col.name}</span>
                   ))}
