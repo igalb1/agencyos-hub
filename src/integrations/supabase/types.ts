@@ -853,6 +853,108 @@ export type Database = {
           },
         ]
       }
+      qa_checklists: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          campaign_name: string
+          checked_items: Json
+          client_id: string | null
+          client_name: string
+          created_at: string
+          created_by: string
+          created_by_name: string | null
+          critical_complete: boolean
+          id: string
+          notes: Json
+          organization_id: string
+          platform: string
+          progress: number
+          status: string
+          template_id: string | null
+          template_snapshot: Json
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_name: string
+          checked_items?: Json
+          client_id?: string | null
+          client_name: string
+          created_at?: string
+          created_by: string
+          created_by_name?: string | null
+          critical_complete?: boolean
+          id?: string
+          notes?: Json
+          organization_id: string
+          platform?: string
+          progress?: number
+          status?: string
+          template_id?: string | null
+          template_snapshot?: Json
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_name?: string
+          checked_items?: Json
+          client_id?: string | null
+          client_name?: string
+          created_at?: string
+          created_by?: string
+          created_by_name?: string | null
+          critical_complete?: boolean
+          id?: string
+          notes?: Json
+          organization_id?: string
+          platform?: string
+          progress?: number
+          status?: string
+          template_id?: string | null
+          template_snapshot?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      qa_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          organization_id: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          organization_id: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          organization_id?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
