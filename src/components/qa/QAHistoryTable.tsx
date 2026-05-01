@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, ListPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QA_PLATFORM_LABEL } from '@/data/qaChecklistData';
 import type { QAChecklistRow } from '@/types/qa';
+import CreateTaskFromQADialog from './CreateTaskFromQADialog';
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   in_progress: { label: 'בתהליך', cls: 'bg-qa-budget/15 text-qa-budget' },
@@ -15,6 +17,7 @@ function formatDate(iso: string) {
 }
 
 export default function QAHistoryTable({ items }: { items: QAChecklistRow[] }) {
+  const [taskRow, setTaskRow] = useState<QAChecklistRow | null>(null);
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-border/40 bg-card/40 p-8 text-center text-sm text-muted-foreground">
@@ -57,15 +60,30 @@ export default function QAHistoryTable({ items }: { items: QAChecklistRow[] }) {
                 <td className="px-4 py-3 text-muted-foreground">{it.created_by_name ?? '—'}</td>
                 <td className="px-4 py-3 text-muted-foreground">{formatDate(it.created_at)}</td>
                 <td className="px-4 py-3 text-left">
-                  <Link to={`/qa/${it.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
-                    <Eye className="h-4 w-4" /> פתח
-                  </Link>
+                  <div className="inline-flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTaskRow(it)}
+                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                      title="צור משימה"
+                    >
+                      <ListPlus className="h-4 w-4" /> משימה
+                    </button>
+                    <Link to={`/qa/${it.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <Eye className="h-4 w-4" /> פתח
+                    </Link>
+                  </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      <CreateTaskFromQADialog
+        open={!!taskRow}
+        onOpenChange={(v) => !v && setTaskRow(null)}
+        qaRow={taskRow}
+      />
     </div>
   );
 }
