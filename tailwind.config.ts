@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["DM Sans", "sans-serif"],
+        rubik: ["Rubik", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -63,6 +64,17 @@ export default {
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         info: "hsl(var(--info))",
+        qa: {
+          creative: "hsl(var(--qa-creative))",
+          copy: "hsl(var(--qa-copy))",
+          targeting: "hsl(var(--qa-targeting))",
+          budget: "hsl(var(--qa-budget))",
+          tracking: "hsl(var(--qa-tracking))",
+          final: "hsl(var(--qa-final))",
+          critical: "hsl(var(--qa-critical))",
+          high: "hsl(var(--qa-high))",
+          medium: "hsl(var(--qa-medium))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

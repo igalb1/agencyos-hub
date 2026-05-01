@@ -18,6 +18,9 @@ import ClientsPage from "@/pages/ClientsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import AdsPage from "@/pages/AdsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import QAChecklistPage from "@/pages/QAChecklist";
+import QAChecklistNewPage from "@/pages/QAChecklistNew";
+import QAChecklistViewPage from "@/pages/QAChecklistView";
 import BillingPage from "@/pages/BillingPage";
 import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
@@ -82,6 +85,9 @@ function ProtectedRoutes() {
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/performance" element={<PerformancePage />} />
+        <Route path="/qa" element={<QAChecklistPage />} />
+        <Route path="/qa/new" element={<QAChecklistNewPage />} />
+        <Route path="/qa/:id" element={<QAChecklistViewPage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

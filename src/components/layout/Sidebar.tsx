@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, FolderKanban, Megaphone, Image, GanttChart,
   CheckSquare, BarChart3, Plug, FileText, CalendarDays,
-  Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield, Settings
+  Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield, Settings, ShieldCheck
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -19,6 +19,7 @@ const navItems = [
   { key: 'timeline' as const, icon: GanttChart, path: '/timeline' },
   { key: 'tasks' as const, icon: CheckSquare, path: '/tasks' },
   { key: 'performance' as const, icon: BarChart3, path: '/performance' },
+  { key: 'qa' as const, icon: ShieldCheck, path: '/qa' },
   { key: 'integrations' as const, icon: Plug, path: '/integrations' },
   { key: 'reports' as const, icon: FileText, path: '/reports' },
   { key: 'calendar' as const, icon: CalendarDays, path: '/calendar' },
@@ -87,7 +88,9 @@ export default function Sidebar() {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
           {navItems.map((item) => {
-            const active = location.pathname === item.path;
+            const active =
+              location.pathname === item.path ||
+              (item.path === '/qa' && location.pathname.startsWith('/qa'));
             return (
               <button
                 key={item.key}
