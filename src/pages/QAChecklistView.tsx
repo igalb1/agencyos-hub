@@ -100,6 +100,8 @@ export default function QAChecklistViewPage() {
         onClient={() => {}}
         campaignName={row.campaign_name}
         onCampaignName={() => {}}
+        adName={row.ad_name ?? ''}
+        onAdName={() => {}}
         platform={row.platform}
         onPlatform={() => {}}
         reviewerName={reviewerName}
