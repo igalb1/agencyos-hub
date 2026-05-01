@@ -36,8 +36,13 @@ export default function QAChecklistViewPage() {
   const handleApprove = async () => {
     setApproving(true);
     try {
-      await approve();
-      toast({ title: 'הבדיקה אושרה!', description: 'הקמפיין מוכן לאוויר.' });
+      const result = await approve();
+      toast({
+        title: 'הבדיקה אושרה!',
+        description: result?.created
+          ? 'נוצר קמפיין חדש בסטטוס Active והופיע גם במודעות.'
+          : 'הקמפיין הקיים עודכן לסטטוס Active.',
+      });
     } catch (e: any) {
       toast({ title: 'שגיאה באישור', description: e.message, variant: 'destructive' });
     } finally {
