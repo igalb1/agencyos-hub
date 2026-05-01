@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_ads: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string
+          format: string | null
+          id: string
+          name: string
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by: string
+          format?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          format?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaign_custom_columns: {
         Row: {
           created_at: string
@@ -855,6 +891,8 @@ export type Database = {
       }
       qa_checklists: {
         Row: {
+          ad_id: string | null
+          ad_name: string | null
           approved_at: string | null
           approved_by: string | null
           campaign_name: string
@@ -870,12 +908,15 @@ export type Database = {
           organization_id: string
           platform: string
           progress: number
+          scope: string
           status: string
           template_id: string | null
           template_snapshot: Json
           updated_at: string
         }
         Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
           approved_at?: string | null
           approved_by?: string | null
           campaign_name: string
@@ -891,12 +932,15 @@ export type Database = {
           organization_id: string
           platform?: string
           progress?: number
+          scope?: string
           status?: string
           template_id?: string | null
           template_snapshot?: Json
           updated_at?: string
         }
         Update: {
+          ad_id?: string | null
+          ad_name?: string | null
           approved_at?: string | null
           approved_by?: string | null
           campaign_name?: string
@@ -912,6 +956,7 @@ export type Database = {
           organization_id?: string
           platform?: string
           progress?: number
+          scope?: string
           status?: string
           template_id?: string | null
           template_snapshot?: Json
