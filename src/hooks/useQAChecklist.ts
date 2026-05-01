@@ -196,6 +196,20 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
     return syncResult;
   }, [row, user?.id]);
 
+  const reject = useCallback(async () => {
+    if (!row) return;
+    const { error } = await (supabase as any)
+      .from('qa_checklists')
+      .update({
+        status: 'rejected',
+        approved_by: user?.id ?? null,
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', row.id);
+    if (error) throw error;
+    setRow({ ...row, status: 'rejected', approved_at: new Date().toISOString(), approved_by: user?.id ?? null });
+  }, [row, user?.id]);
+
   // Realtime sync
   useEffect(() => {
     if (!id) return;
@@ -214,7 +228,7 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
     };
   }, [id]);
 
-  return { row, setRow, loading, create, toggleItem, setNote, approve, reload: load };
+  return { row, setRow, loading, create, toggleItem, setNote, approve, reject, reload: load };
 }
 
 export function useQAHistory() {
