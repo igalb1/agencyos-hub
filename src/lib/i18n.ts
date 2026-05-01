@@ -14,6 +14,7 @@ export const translations = {
   reports: { he: 'דוחות', en: 'Reports' },
   calendar: { he: 'לוח שנה', en: 'Calendar' },
   settings: { he: 'הגדרות', en: 'Settings' },
+  qa: { he: 'בקרת איכות', en: 'QA Checklist' },
   creative: { he: 'קריאייטיב', en: 'Creative' },
   // KPIs
   totalBudget: { he: 'תקציב כולל', en: 'Total Budget' },
