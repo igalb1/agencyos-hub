@@ -78,11 +78,60 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
       clientId: string | null;
       clientName: string;
       campaignName: string;
+      adName: string;
+      adId?: string | null;
       platform: QAPlatform;
       sections: QASectionDef[];
       templateId?: string | null;
     }) => {
       if (!organization?.id || !user?.id) throw new Error('No org/user');
+      // Ensure a campaign_ads row exists for this ad
+      let adId = input.adId ?? null;
+      if (!adId) {
+        // First, ensure the campaign exists (or create it)
+        const platformLabel = PLATFORM_MAP[input.platform] ?? 'Meta';
+        let campaignId: string | null = null;
+        let q = supabase
+          .from('campaigns')
+          .select('id')
+          .eq('organization_id', organization.id)
+          .eq('name', input.campaignName.trim())
+          .limit(1);
+        if (input.clientId) q = q.eq('client_id', input.clientId);
+        const { data: existingCamp } = await q;
+        if (existingCamp && existingCamp.length > 0) {
+          campaignId = existingCamp[0].id;
+        } else {
+          const { data: newCamp, error: cErr } = await supabase
+            .from('campaigns')
+            .insert({
+              organization_id: organization.id,
+              client_id: input.clientId,
+              name: input.campaignName.trim(),
+              platform: platformLabel,
+              status: 'Planned',
+              objective: 'leads',
+            })
+            .select('id')
+            .single();
+          if (cErr) throw cErr;
+          campaignId = newCamp.id;
+        }
+        const { data: newAd, error: adErr } = await (supabase as any)
+          .from('campaign_ads')
+          .insert({
+            organization_id: organization.id,
+            campaign_id: campaignId,
+            name: input.adName.trim() || 'מודעה ללא שם',
+            status: 'draft',
+            created_by: user.id,
+          })
+          .select('id')
+          .single();
+        if (adErr) throw adErr;
+        adId = newAd.id;
+      }
+
       const { data, error } = await (supabase as any)
         .from('qa_checklists')
         .insert({
@@ -90,6 +139,9 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
           client_id: input.clientId,
           client_name: input.clientName,
           campaign_name: input.campaignName,
+          ad_id: adId,
+          ad_name: input.adName,
+          scope: 'ad',
           platform: input.platform,
           template_id: input.templateId ?? null,
           template_snapshot: input.sections,
@@ -173,13 +225,21 @@ export function useQAChecklist({ id }: UseQAChecklistOpts = {}) {
 
   const approve = useCallback(async () => {
     if (!row) return;
-    // 1) Sync to campaigns/ads (Ads page derives from campaigns)
+    // 1) Sync to campaigns (ensure exists & set Live)
     let syncResult: { campaignId: string; created: boolean } | null = null;
     try {
       syncResult = await syncToCampaign(row);
     } catch (e) {
       console.error('[QA] sync to campaign failed', e);
       throw e;
+    }
+
+    // 1b) Mark the ad as live too
+    if (row.ad_id) {
+      await (supabase as any)
+        .from('campaign_ads')
+        .update({ status: 'live' })
+        .eq('id', row.ad_id);
     }
 
     // 2) Mark checklist as approved
