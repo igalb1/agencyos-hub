@@ -557,6 +557,18 @@ export default function CampaignsPage() {
                             );
                           })()}
 
+                          {/* QA status */}
+                          <div className="hidden lg:block" onClick={e => e.stopPropagation()}>
+                            <QAStatusCell
+                              qa={getQAStatus(campaign.name, campaign.clientId || null)}
+                              campaignName={campaign.name}
+                              clientId={campaign.clientId || null}
+                              clientName={campaign.clientName}
+                              platform={campaign.platform}
+                              lang={lang as 'he' | 'en'}
+                            />
+                          </div>
+
                           {/* Custom columns */}
                           {customColumns.map(col => {
                             // Auto-computed columns (days in month, optimal pace, projected spend, …)
