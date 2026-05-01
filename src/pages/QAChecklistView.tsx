@@ -16,10 +16,11 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function QAChecklistViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { row, loading, toggleItem, setNote, approve } = useQAChecklist({ id });
+  const { row, loading, toggleItem, setNote, approve, reject } = useQAChecklist({ id });
   const { profile, user } = useAuth();
   const [filter, setFilter] = useState<QAFilterValue>('all');
   const [approving, setApproving] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
   const stats = useMemo(
     () => (row ? computeProgress(row.template_snapshot, row.checked_items) : null),
@@ -30,7 +31,7 @@ export default function QAChecklistViewPage() {
     return <div className="p-8 text-center text-muted-foreground" dir="rtl">טוען בדיקה...</div>;
   }
 
-  const readOnly = row.status === 'approved';
+  const readOnly = row.status === 'approved' || row.status === 'rejected';
   const reviewerName = row.created_by_name || profile?.full_name || user?.email || '';
 
   const handleApprove = async () => {
@@ -47,6 +48,19 @@ export default function QAChecklistViewPage() {
       toast({ title: 'שגיאה באישור', description: e.message, variant: 'destructive' });
     } finally {
       setApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!confirm('לסמן את הבדיקה ככשל? לא ניתן יהיה להעלות לאוויר ממנה.')) return;
+    setRejecting(true);
+    try {
+      await reject();
+      toast({ title: 'הבדיקה סומנה ככשל', description: 'הסטטוס נשמר בהיסטוריה.' });
+    } catch (e: any) {
+      toast({ title: 'שגיאה', description: e.message, variant: 'destructive' });
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -119,12 +133,14 @@ export default function QAChecklistViewPage() {
         ))}
       </div>
 
-      {row.status !== 'approved' && stats && (
+      {row.status !== 'approved' && row.status !== 'rejected' && stats && (
         <QASubmitButton
           criticalDone={stats.criticalDone}
           criticalTotal={stats.criticalTotal}
           onApprove={handleApprove}
+          onReject={handleReject}
           approving={approving}
+          rejecting={rejecting}
         />
       )}
     </div>
