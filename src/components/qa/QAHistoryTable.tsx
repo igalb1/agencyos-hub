@@ -27,7 +27,7 @@ export default function QAHistoryTable({ items }: { items: QAChecklistRow[] }) {
       <table className="w-full text-sm">
         <thead className="border-b border-border/40 bg-muted/20 text-xs uppercase text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 text-right">קמפיין</th>
+            <th className="px-4 py-3 text-right">קמפיין / מודעה</th>
             <th className="px-4 py-3 text-right">לקוח</th>
             <th className="px-4 py-3 text-right">פלטפורמה</th>
             <th className="px-4 py-3 text-right">סטטוס</th>
@@ -42,7 +42,12 @@ export default function QAHistoryTable({ items }: { items: QAChecklistRow[] }) {
             const st = STATUS_LABEL[it.status] ?? STATUS_LABEL.in_progress;
             return (
               <tr key={it.id} className="border-b border-border/20 hover:bg-card/60">
-                <td className="px-4 py-3 font-medium text-foreground">{it.campaign_name}</td>
+                <td className="px-4 py-3">
+                  <div className="font-medium text-foreground">{it.campaign_name}</div>
+                  {it.ad_name && (
+                    <div className="text-xs text-muted-foreground">📌 {it.ad_name}</div>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-muted-foreground">{it.client_name}</td>
                 <td className="px-4 py-3 text-muted-foreground">{QA_PLATFORM_LABEL[it.platform]}</td>
                 <td className="px-4 py-3">

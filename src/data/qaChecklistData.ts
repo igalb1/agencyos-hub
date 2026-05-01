@@ -6,6 +6,7 @@ export const QA_DEFAULT_SECTIONS: QASectionDef[] = [
     title: 'קריאטיב ומדיה',
     icon: '🎨',
     colorVar: 'qa-creative',
+    scope: 'ad',
     items: [
       { id: 'c1', text: 'מידות תמונה/וידאו מתאימות לפלייסמנט (1080x1080, 1080x1920, 1200x628)', priority: 'critical' },
       { id: 'c2', text: 'Advantage+ Creative — Flexible Media מכובה (אם לא רלוונטי)', priority: 'critical' },
@@ -22,6 +23,7 @@ export const QA_DEFAULT_SECTIONS: QASectionDef[] = [
     title: 'קופי ותוכן',
     icon: '✍️',
     colorVar: 'qa-copy',
+    scope: 'ad',
     items: [
       { id: 'co1', text: 'Primary Text — ללא שגיאות כתיב', priority: 'critical' },
       { id: 'co2', text: 'Headline — תואם למסר ולדף הנחיתה', priority: 'critical' },
@@ -36,6 +38,7 @@ export const QA_DEFAULT_SECTIONS: QASectionDef[] = [
     title: 'קהלי יעד וטרגוט',
     icon: '🎯',
     colorVar: 'qa-targeting',
+    scope: 'campaign',
     items: [
       { id: 't1', text: 'קהל יעד מוגדר נכון (גיל, מגדר, מיקום)', priority: 'critical' },
       { id: 't2', text: 'Advantage+ Audience — מודעות למצב (פתוח/סגור)', priority: 'high' },
@@ -50,6 +53,7 @@ export const QA_DEFAULT_SECTIONS: QASectionDef[] = [
     title: 'תקציב ותזמון',
     icon: '💰',
     colorVar: 'qa-budget',
+    scope: 'campaign',
     items: [
       { id: 'b1', text: 'תקציב יומי / כולל — תואם לתוכנית', priority: 'critical' },
       { id: 'b2', text: 'תאריך התחלה — נכון', priority: 'critical' },
@@ -64,6 +68,7 @@ export const QA_DEFAULT_SECTIONS: QASectionDef[] = [
     title: 'מעקב וטראקינג',
     icon: '📊',
     colorVar: 'qa-tracking',
+    scope: 'campaign',
     items: [
       { id: 'tr1', text: 'Pixel — מחובר ופעיל', priority: 'critical' },
       { id: 'tr2', text: 'Conversion Event — נכון (Lead / Purchase / ViewContent)', priority: 'critical' },
@@ -78,6 +83,7 @@ export const QA_DEFAULT_SECTIONS: QASectionDef[] = [
     title: 'בדיקה סופית',
     icon: '✅',
     colorVar: 'qa-final',
+    scope: 'ad',
     items: [
       { id: 'f1', text: 'Campaign Name — תואם לקונבנציית השמות', priority: 'high' },
       { id: 'f2', text: 'Ad Set Name — תואם לקונבנציה', priority: 'high' },
