@@ -21,7 +21,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import QAChecklistPage from "@/pages/QAChecklist";
 import QAChecklistNewPage from "@/pages/QAChecklistNew";
 import QAChecklistViewPage from "@/pages/QAChecklistView";
-import CampaignAuditPage from "@/pages/CampaignAuditPage";
+import AuditPage from "@/pages/AuditPage";
 import BillingPage from "@/pages/BillingPage";
 import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
@@ -89,7 +89,7 @@ function ProtectedRoutes() {
         <Route path="/qa" element={<QAChecklistPage />} />
         <Route path="/qa/new" element={<QAChecklistNewPage />} />
         <Route path="/qa/:id" element={<QAChecklistViewPage />} />
-        <Route path="/campaign-qa" element={<CampaignAuditPage />} />
+        <Route path="/audit" element={<AuditPage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

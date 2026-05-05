@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import QAHistoryTable from '@/components/qa/QAHistoryTable';
+import QAChecklistRunner from '@/components/qa/QAChecklistRunner';
 import { useQAHistory } from '@/hooks/useQAChecklist';
 
 export default function QAChecklistPage() {
@@ -14,9 +16,9 @@ export default function QAChecklistPage() {
             🛡️
           </span>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">בקרת איכות קמפיינים</h1>
+            <h1 className="text-2xl font-bold text-foreground">בקרת איכות</h1>
             <p className="text-sm text-muted-foreground">
-              צ'קליסט QA אינטראקטיבי לפני העלאת קמפיינים לאוויר
+              בדיקות QA לקמפיינים ומודעות + צ'קליסט Pre-launch
             </p>
           </div>
         </div>
@@ -27,18 +29,28 @@ export default function QAChecklistPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <ShieldCheck className="h-4 w-4 text-primary" />
-        סך הכל {items.length} בדיקות
-      </div>
-
-      {loading ? (
-        <div className="rounded-xl border border-border/40 bg-card/40 p-8 text-center text-sm text-muted-foreground">
-          טוען היסטוריה...
-        </div>
-      ) : (
-        <QAHistoryTable items={items} />
-      )}
+      <Tabs defaultValue="campaigns" className="w-full">
+        <TabsList>
+          <TabsTrigger value="campaigns">בדיקות קמפיינים</TabsTrigger>
+          <TabsTrigger value="prelaunch">Pre-launch QA</TabsTrigger>
+        </TabsList>
+        <TabsContent value="campaigns" className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            סך הכל {items.length} בדיקות
+          </div>
+          {loading ? (
+            <div className="rounded-xl border border-border/40 bg-card/40 p-8 text-center text-sm text-muted-foreground">
+              טוען היסטוריה...
+            </div>
+          ) : (
+            <QAHistoryTable items={items} />
+          )}
+        </TabsContent>
+        <TabsContent value="prelaunch">
+          <QAChecklistRunner mode="prelaunch" storageKey="prelaunch_v1" />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

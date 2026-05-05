@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ClipboardCheck, Download, Printer, RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ChevronDown, Download, Printer, RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { CHECKS, MODE_LABEL, PLATFORM_LABEL, type Check, type Mode, type Platform } from "@/data/qaChecks";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,38 +12,40 @@ import { cn } from "@/lib/utils";
 
 type PlatformFilter = "all" | Platform;
 
-interface QAState {
-  mode: Mode;
+interface RunnerState {
   platform: PlatformFilter;
   checks: Record<string, boolean>;
   notes: Record<string, string>;
 }
 
-const STORAGE_KEY = "campaignQA_v1";
-
-function loadState(): QAState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { mode: "audit", platform: "all", checks: {}, notes: {}, ...JSON.parse(raw) };
-  } catch {}
-  return { mode: "audit", platform: "all", checks: {}, notes: {} };
+interface Props {
+  mode: Mode;
+  storageKey: string;
 }
 
-export default function CampaignAuditPage() {
-  const [state, setState] = useState<QAState>(() => loadState());
+function loadState(key: string): RunnerState {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return { platform: "all", checks: {}, notes: {}, ...JSON.parse(raw) };
+  } catch {}
+  return { platform: "all", checks: {}, notes: {} };
+}
+
+export default function QAChecklistRunner({ mode, storageKey }: Props) {
+  const [state, setState] = useState<RunnerState>(() => loadState(storageKey));
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
   const [openHow, setOpenHow] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const id = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+      try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch {}
     }, 300);
     return () => clearTimeout(id);
-  }, [state]);
+  }, [state, storageKey]);
 
   const filtered = useMemo<Check[]>(
-    () => CHECKS[state.mode].filter((c) => state.platform === "all" || c.platform === state.platform),
-    [state.mode, state.platform],
+    () => CHECKS[mode].filter((c) => state.platform === "all" || c.platform === state.platform),
+    [mode, state.platform],
   );
 
   const grouped = useMemo(() => {
@@ -76,7 +78,7 @@ export default function CampaignAuditPage() {
   const exportMd = () => {
     const today = new Date().toISOString().slice(0, 10);
     const platLabel = state.platform === "all" ? "כל הפלטפורמות" : PLATFORM_LABEL[state.platform];
-    let md = `# ${MODE_LABEL[state.mode]} — ${platLabel}\nתאריך: ${today}\n\n`;
+    let md = `# ${MODE_LABEL[mode]} — ${platLabel}\nתאריך: ${today}\n\n`;
     md += `**ציון: ${scorePct}% (${done}/${total})**\n\n`;
     if (criticalOpen.length) {
       md += `## ⚠️ בדיקות קריטיות פתוחות\n`;
@@ -97,7 +99,7 @@ export default function CampaignAuditPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${state.mode}_${state.platform}_${today}.md`;
+    a.download = `${mode}_${state.platform}_${today}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -110,44 +112,13 @@ export default function CampaignAuditPage() {
   ];
 
   return (
-    <div dir="rtl" className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <ClipboardCheck className="text-primary" />
-            Campaign QA Tool
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            בדיקת חשבון פרסום + QA לפני העלאת קמפיין/מודעה
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={exportMd}><Download className="ml-1" />ייצא דוח</Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="ml-1" />הדפס</Button>
-          <Button variant="outline" size="sm" onClick={reset}><RotateCcw className="ml-1" />אפס</Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={exportMd}><Download className="ml-1" />ייצא דוח</Button>
+        <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="ml-1" />הדפס</Button>
+        <Button variant="outline" size="sm" onClick={reset}><RotateCcw className="ml-1" />אפס</Button>
       </div>
 
-      {/* Mode tabs */}
-      <div className="grid grid-cols-2 gap-2">
-        {(["audit", "prelaunch"] as Mode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => setState((s) => ({ ...s, mode: m }))}
-            className={cn(
-              "rounded-xl py-4 px-4 border text-base md:text-lg font-semibold transition-all",
-              state.mode === m
-                ? "bg-primary/10 border-primary text-primary"
-                : "bg-card border-border text-foreground hover:bg-accent"
-            )}
-          >
-            {m === "audit" ? "🔍 Audit חשבון" : "🚀 Pre-launch QA"}
-          </button>
-        ))}
-      </div>
-
-      {/* Platform pills */}
       <div className="flex flex-wrap gap-2">
         {platformPills.map((p) => (
           <button
@@ -165,7 +136,6 @@ export default function CampaignAuditPage() {
         ))}
       </div>
 
-      {/* Score */}
       <Card className="p-5 space-y-3">
         <div className="flex items-end justify-between gap-4 flex-wrap">
           <div>
@@ -187,7 +157,6 @@ export default function CampaignAuditPage() {
         <Progress value={scorePct} className={cn("h-3", barColor)} />
       </Card>
 
-      {/* Checklist */}
       <div className="space-y-3">
         {grouped.map(([cat, items]) => {
           const catDone = items.filter((c) => state.checks[c.id]).length;
