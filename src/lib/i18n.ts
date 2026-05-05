@@ -15,7 +15,7 @@ export const translations = {
   calendar: { he: 'לוח שנה', en: 'Calendar' },
   settings: { he: 'הגדרות', en: 'Settings' },
   qa: { he: 'בקרת איכות', en: 'QA Checklist' },
-  campaignQA: { he: 'Campaign QA', en: 'Campaign QA' },
+  audit: { he: 'Audit', en: 'Audit' },
   creative: { he: 'קריאייטיב', en: 'Creative' },
   // KPIs
   totalBudget: { he: 'תקציב כולל', en: 'Total Budget' },
