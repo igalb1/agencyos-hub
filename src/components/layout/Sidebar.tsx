@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, FolderKanban, Megaphone, Image, GanttChart,
   CheckSquare, BarChart3, Plug, FileText, CalendarDays,
-  Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield, Settings, ShieldCheck
+  Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield, Settings, ShieldCheck, ClipboardCheck
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -20,6 +20,7 @@ const navItems = [
   { key: 'tasks' as const, icon: CheckSquare, path: '/tasks' },
   { key: 'performance' as const, icon: BarChart3, path: '/performance' },
   { key: 'qa' as const, icon: ShieldCheck, path: '/qa' },
+  { key: 'campaignQA' as const, icon: ClipboardCheck, path: '/campaign-qa' },
   { key: 'integrations' as const, icon: Plug, path: '/integrations' },
   { key: 'reports' as const, icon: FileText, path: '/reports' },
   { key: 'calendar' as const, icon: CalendarDays, path: '/calendar' },
