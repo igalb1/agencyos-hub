@@ -142,12 +142,12 @@ export default function QAChecklistRunner({ mode, storageKey }: Props) {
             <div className={cn("text-4xl md:text-5xl font-bold", scoreColor)}>{scorePct}%</div>
             <div className="text-sm text-muted-foreground mt-1">{done} מתוך {total} בדיקות הושלמו</div>
           </div>
-          {criticalOpen.length > 0 ? (
+          {mode !== "audit" && criticalOpen.length > 0 ? (
             <div className="flex items-center gap-2 text-red-500 bg-red-500/10 px-3 py-2 rounded-md text-sm">
               <AlertTriangle size={18} />
               ⚠️ {criticalOpen.length} בדיקות קריטיות פתוחות — אין להעלות קמפיין לפני סגירתן
             </div>
-          ) : total > 0 ? (
+          ) : mode !== "audit" && total > 0 ? (
             <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-3 py-2 rounded-md text-sm">
               <CheckCircle2 size={18} />
               ✅ כל הבדיקות הקריטיות נסגרו
