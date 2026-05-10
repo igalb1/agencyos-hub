@@ -109,6 +109,32 @@ Deno.serve(async (req) => {
     );
     const meta = await metaRes.json();
     if (!metaRes.ok) {
+      // Map common Google Sheets errors to friendly, actionable messages.
+      const status = metaRes.status;
+      const gErr = meta?.error?.status || meta?.error?.message || "";
+      if (status === 403 || /PERMISSION_DENIED/i.test(String(gErr))) {
+        return new Response(JSON.stringify({
+          success: false,
+          code: "permission_denied",
+          spreadsheet_id: spreadsheetId,
+          error: "אין הרשאה לגיליון. שתף את הגיליון עם חשבון Google המחובר באינטגרציות (הרשאת Viewer לפחות), או התחבר מחדש עם חשבון שיש לו גישה.",
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (status === 404) {
+        return new Response(JSON.stringify({
+          success: false,
+          code: "not_found",
+          spreadsheet_id: spreadsheetId,
+          error: "הגיליון לא נמצא. ודא שה-URL נכון ושהגיליון לא נמחק.",
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (status === 401) {
+        return new Response(JSON.stringify({
+          success: false,
+          code: "unauthorized",
+          error: "החיבור ל-Google Sheets פג תוקף. התחבר מחדש דרך Connectors.",
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       throw new Error(`Sheets API error [${metaRes.status}]: ${JSON.stringify(meta)}`);
     }
 
