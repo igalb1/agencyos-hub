@@ -144,7 +144,24 @@ export function SheetSyncDialog({ open, onOpenChange, config, isRtl }: Props) {
       toast.success(isRtl ? `נטענו ${meta.headers.length} עמודות` : `Loaded ${meta.headers.length} columns`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';
-      toast.error(msg);
+      const code = (err as { code?: string })?.code;
+      if (code === 'permission_denied') {
+        toast.error(msg, {
+          duration: 12000,
+          description: isRtl
+            ? 'פתח את הגיליון ב-Google → Share → הוסף את חשבון ה-Google המחובר באינטגרציות. או היכנס ל-Connectors → Google Sheets → Reconnect עם חשבון אחר.'
+            : 'Open the sheet in Google → Share → add the Google account linked in Connectors. Or go to Connectors → Google Sheets → Reconnect with a different account.',
+        });
+      } else if (code === 'unauthorized') {
+        toast.error(msg, {
+          duration: 10000,
+          description: isRtl
+            ? 'Connectors → Google Sheets → Reconnect.'
+            : 'Connectors → Google Sheets → Reconnect.',
+        });
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
