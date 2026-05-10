@@ -1279,6 +1279,45 @@ export type Database = {
           },
         ]
       }
+      user_google_connections: {
+        Row: {
+          access_token_encrypted: string | null
+          created_at: string
+          google_email: string
+          google_sub: string | null
+          id: string
+          refresh_token_encrypted: string | null
+          scope: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          google_email: string
+          google_sub?: string | null
+          id?: string
+          refresh_token_encrypted?: string | null
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          google_email?: string
+          google_sub?: string | null
+          id?: string
+          refresh_token_encrypted?: string | null
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_integrations: {
         Row: {
           access_token_encrypted: string | null
@@ -1465,6 +1504,16 @@ export type Database = {
           plan: string
         }[]
       }
+      get_google_user_tokens: {
+        Args: { _user_id: string }
+        Returns: {
+          access_token: string
+          google_email: string
+          refresh_token: string
+          scope: string
+          token_expires_at: string
+        }[]
+      }
       get_integration_tokens: {
         Args: { _provider: string; _user_id: string }
         Returns: {
@@ -1557,6 +1606,18 @@ export type Database = {
       }
       reject_member: { Args: { _member_id: string }; Returns: Json }
       seed_cron_service_role_key: { Args: { _key: string }; Returns: undefined }
+      set_google_user_tokens: {
+        Args: {
+          _access_token: string
+          _expires_at: string
+          _google_email: string
+          _google_sub: string
+          _refresh_token: string
+          _scope: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       set_integration_tokens: {
         Args: {
           _access_token: string
