@@ -6,6 +6,63 @@ const corsHeaders = {
 };
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
+const GOOGLE_SHEETS_DIRECT = "https://sheets.googleapis.com/v4";
+
+interface SheetsAuth {
+  baseUrl: string;
+  headers: Record<string, string>;
+  source: "user" | "connector";
+  email?: string;
+}
+
+async function getUserGoogleToken(
+  supabaseUrl: string, serviceKey: string, userId: string,
+): Promise<{ access_token: string; email: string } | null> {
+  const admin = createClient(supabaseUrl, serviceKey);
+  const { data, error } = await admin.rpc("get_google_user_tokens", { _user_id: userId });
+  if (error || !data || data.length === 0) return null;
+  const row = data[0] as {
+    access_token: string; refresh_token: string | null;
+    token_expires_at: string | null; google_email: string;
+  };
+  const expiresAt = row.token_expires_at ? new Date(row.token_expires_at).getTime() : 0;
+  // Refresh if expired or expiring within 60s
+  if (Date.now() < expiresAt - 60_000) {
+    return { access_token: row.access_token, email: row.google_email };
+  }
+  if (!row.refresh_token) return null;
+
+  const clientId = Deno.env.get("GOOGLE_USER_OAUTH_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_USER_OAUTH_CLIENT_SECRET");
+  if (!clientId || !clientSecret) return null;
+
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId, client_secret: clientSecret,
+      refresh_token: row.refresh_token, grant_type: "refresh_token",
+    }),
+  });
+  const j = await r.json();
+  if (!r.ok || !j.access_token) {
+    console.error("Token refresh failed:", j);
+    return null;
+  }
+  const newExpiresAt = j.expires_in
+    ? new Date(Date.now() + j.expires_in * 1000).toISOString()
+    : null;
+  await admin.rpc("set_google_user_tokens", {
+    _user_id: userId,
+    _google_email: row.google_email,
+    _google_sub: null,
+    _access_token: j.access_token,
+    _refresh_token: null, // keep existing
+    _expires_at: newExpiresAt,
+    _scope: j.scope ?? null,
+  });
+  return { access_token: j.access_token, email: row.google_email };
+}
 
 function parseSpreadsheetInput(input: string): { spreadsheetId: string; gid?: string } {
   const trimmed = input.trim();
