@@ -289,6 +289,8 @@ Deno.serve(async (req) => {
         sample,
         effective_header_row: effectiveHeaderRow,
         effective_range_a1: effectiveRangeA1,
+        connection_source: auth.source,
+        connected_email: auth.email ?? null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
