@@ -17,3 +17,7 @@ project_id = "llioeafzlhrjqwkjaepe"
     verify_jwt = true
   [functions.qa-test-admin]
     verify_jwt = false
+  [functions.google-user-oauth-callback]
+    verify_jwt = false
+  [functions.google-user-oauth-start]
+    verify_jwt = true
