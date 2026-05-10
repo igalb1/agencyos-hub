@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, Plus, RefreshCw, Loader2, Trash2, Pencil, Clock } from 'lucide-react';
+import { FileText, Plus, RefreshCw, Loader2, Trash2, Pencil, Clock, UserCircle2, Unplug, LogIn } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClientSheetSync, type SheetSyncConfig } from '@/hooks/useClientSheetSync';
 import { SheetSyncDialog } from './SheetSyncDialog';
 import { SyncProgressDialog } from './SyncProgressDialog';
+import { useGoogleUserConnection } from '@/hooks/useGoogleUserConnection';
 
 const FREQ_LABEL: Record<string, { he: string; en: string }> = {
   manual: { he: 'ידני בלבד', en: 'Manual only' },
@@ -18,6 +19,7 @@ const FREQ_LABEL: Record<string, { he: string; en: string }> = {
 
 export function GoogleSheetsCard({ isRtl }: { isRtl: boolean }) {
   const { configs, logs, loading, syncing, deleteConfig } = useClientSheetSync();
+  const { connection, loading: connLoading, connecting, connect, disconnect } = useGoogleUserConnection();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SheetSyncConfig | null>(null);
   const [progressFor, setProgressFor] = useState<SheetSyncConfig | null>(null);
@@ -47,6 +49,61 @@ export function GoogleSheetsCard({ isRtl }: { isRtl: boolean }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Personal Google account panel */}
+          <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <UserCircle2 size={20} className="text-primary shrink-0" />
+              <div className="min-w-0">
+                {connLoading ? (
+                  <span className="text-sm text-muted-foreground">
+                    {isRtl ? 'טוען חיבור...' : 'Loading connection...'}
+                  </span>
+                ) : connection ? (
+                  <>
+                    <div className="text-sm font-medium truncate">
+                      {isRtl ? 'מחובר ל-' : 'Connected as '}
+                      <span className="text-primary">{connection.google_email}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {isRtl
+                        ? 'הסנכרון יקרא את הגיליונות שלך עם החשבון הזה.'
+                        : 'Syncs use this account to read your sheets.'}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-medium">
+                      {isRtl ? 'התחבר עם חשבון Google שלך' : 'Connect your Google account'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {isRtl
+                        ? 'כל משתמש מתחבר עם חשבון משלו — אין צורך לשתף גיליונות.'
+                        : 'Each user connects their own account — no sharing required.'}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" variant={connection ? 'outline' : 'default'} className="gap-2"
+                disabled={connecting} onClick={connect}>
+                {connecting ? <Loader2 size={14} className="animate-spin" /> : <LogIn size={14} />}
+                {connection
+                  ? (isRtl ? 'התחבר עם חשבון אחר' : 'Switch account')
+                  : (isRtl ? 'התחבר לחשבון Google' : 'Connect Google account')}
+              </Button>
+              {connection && (
+                <Button size="sm" variant="ghost" className="gap-2 text-destructive"
+                  onClick={() => {
+                    if (confirm(isRtl ? 'לנתק את חיבור Google?' : 'Disconnect Google account?')) disconnect();
+                  }}>
+                  <Unplug size={14} />
+                  {isRtl ? 'נתק' : 'Disconnect'}
+                </Button>
+              )}
+            </div>
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-6"><Loader2 className="animate-spin text-muted-foreground" /></div>
           ) : configs.length === 0 ? (

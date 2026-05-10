@@ -6,6 +6,63 @@ const corsHeaders = {
 };
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
+const GOOGLE_SHEETS_DIRECT = "https://sheets.googleapis.com/v4";
+
+interface SheetsAuth {
+  baseUrl: string;
+  headers: Record<string, string>;
+  source: "user" | "connector";
+  email?: string;
+}
+
+async function getUserGoogleToken(
+  supabaseUrl: string, serviceKey: string, userId: string,
+): Promise<{ access_token: string; email: string } | null> {
+  const admin = createClient(supabaseUrl, serviceKey);
+  const { data, error } = await admin.rpc("get_google_user_tokens", { _user_id: userId });
+  if (error || !data || data.length === 0) return null;
+  const row = data[0] as {
+    access_token: string; refresh_token: string | null;
+    token_expires_at: string | null; google_email: string;
+  };
+  const expiresAt = row.token_expires_at ? new Date(row.token_expires_at).getTime() : 0;
+  // Refresh if expired or expiring within 60s
+  if (Date.now() < expiresAt - 60_000) {
+    return { access_token: row.access_token, email: row.google_email };
+  }
+  if (!row.refresh_token) return null;
+
+  const clientId = Deno.env.get("GOOGLE_USER_OAUTH_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_USER_OAUTH_CLIENT_SECRET");
+  if (!clientId || !clientSecret) return null;
+
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId, client_secret: clientSecret,
+      refresh_token: row.refresh_token, grant_type: "refresh_token",
+    }),
+  });
+  const j = await r.json();
+  if (!r.ok || !j.access_token) {
+    console.error("Token refresh failed:", j);
+    return null;
+  }
+  const newExpiresAt = j.expires_in
+    ? new Date(Date.now() + j.expires_in * 1000).toISOString()
+    : null;
+  await admin.rpc("set_google_user_tokens", {
+    _user_id: userId,
+    _google_email: row.google_email,
+    _google_sub: null,
+    _access_token: j.access_token,
+    _refresh_token: null, // keep existing
+    _expires_at: newExpiresAt,
+    _scope: j.scope ?? null,
+  });
+  return { access_token: j.access_token, email: row.google_email };
+}
 
 function parseSpreadsheetInput(input: string): { spreadsheetId: string; gid?: string } {
   const trimmed = input.trim();
@@ -78,8 +135,7 @@ Deno.serve(async (req) => {
     const sheetsKey = Deno.env.get("GOOGLE_SHEETS_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    if (!lovableKey) throw new Error("LOVABLE_API_KEY is not configured");
-    if (!sheetsKey) throw new Error("Google Sheets connector not linked");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
@@ -89,6 +145,7 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
     if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
+    const userId = claims.claims.sub;
 
     const body = await req.json().catch(() => ({}));
     const rawId = String(body?.spreadsheet_id ?? "").trim();
@@ -97,15 +154,37 @@ Deno.serve(async (req) => {
     const sheetName: string | undefined = body?.sheet_name;
     const headerRow: number = Number(body?.header_row ?? 1);
 
-    // Get spreadsheet metadata (sheet names + title)
-    const metaRes = await fetch(
-      `${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(title,sheetId,gridProperties)`,
-      {
+    // Prefer the user's personal Google connection. Fall back to the workspace connector.
+    const userTok = await getUserGoogleToken(supabaseUrl, serviceKey, userId);
+    let auth: SheetsAuth;
+    if (userTok) {
+      auth = {
+        baseUrl: GOOGLE_SHEETS_DIRECT,
+        headers: { Authorization: `Bearer ${userTok.access_token}` },
+        source: "user",
+        email: userTok.email,
+      };
+    } else if (lovableKey && sheetsKey) {
+      auth = {
+        baseUrl: GATEWAY_URL,
         headers: {
           Authorization: `Bearer ${lovableKey}`,
           "X-Connection-Api-Key": sheetsKey,
         },
-      },
+        source: "connector",
+      };
+    } else {
+      return new Response(JSON.stringify({
+        success: false,
+        code: "no_google_connection",
+        error: "אין חיבור פעיל ל-Google. התחבר עם חשבון Google משלך מהאינטגרציות.",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Get spreadsheet metadata (sheet names + title)
+    const metaRes = await fetch(
+      `${auth.baseUrl}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(title,sheetId,gridProperties)`,
+      { headers: auth.headers },
     );
     const meta = await metaRes.json();
     if (!metaRes.ok) {
@@ -113,11 +192,14 @@ Deno.serve(async (req) => {
       const status = metaRes.status;
       const gErr = meta?.error?.status || meta?.error?.message || "";
       if (status === 403 || /PERMISSION_DENIED/i.test(String(gErr))) {
+        const who = auth.source === "user" ? (auth.email || "החשבון המחובר") : "חשבון Google המחובר באינטגרציות";
         return new Response(JSON.stringify({
           success: false,
           code: "permission_denied",
+          connection_source: auth.source,
+          connected_email: auth.email ?? null,
           spreadsheet_id: spreadsheetId,
-          error: "אין הרשאה לגיליון. שתף את הגיליון עם חשבון Google המחובר באינטגרציות (הרשאת Viewer לפחות), או התחבר מחדש עם חשבון שיש לו גישה.",
+          error: `אין הרשאה לגיליון עבור ${who}. שתף את הגיליון איתו (Viewer לפחות), או התחבר עם חשבון Google אחר.`,
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (status === 404) {
@@ -132,7 +214,10 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           success: false,
           code: "unauthorized",
-          error: "החיבור ל-Google Sheets פג תוקף. התחבר מחדש דרך Connectors.",
+          connection_source: auth.source,
+          error: auth.source === "user"
+            ? "החיבור האישי ל-Google פג תוקף. התחבר מחדש."
+            : "החיבור ל-Google Sheets פג תוקף. התחבר מחדש דרך Connectors.",
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       throw new Error(`Sheets API error [${metaRes.status}]: ${JSON.stringify(meta)}`);
@@ -155,13 +240,8 @@ Deno.serve(async (req) => {
       const quoted = quoteSheetName(targetSheet);
       const range = `${quoted}!A${headerRow}:ZZ${headerRow + 80}`;
       const valsRes = await fetch(
-        `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${lovableKey}`,
-            "X-Connection-Api-Key": sheetsKey,
-          },
-        },
+        `${auth.baseUrl}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
+        { headers: auth.headers },
       );
       const valsData = await valsRes.json();
       if (!valsRes.ok) {
@@ -209,6 +289,8 @@ Deno.serve(async (req) => {
         sample,
         effective_header_row: effectiveHeaderRow,
         effective_range_a1: effectiveRangeA1,
+        connection_source: auth.source,
+        connected_email: auth.email ?? null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
