@@ -90,7 +90,11 @@ export function useClientSheetSync() {
       body: { spreadsheet_id: spreadsheetId, sheet_name: sheetName, header_row: headerRow },
     });
     if (error) throw error;
-    if (!data?.success) throw new Error(data?.error || 'Failed to load sheet');
+    if (!data?.success) {
+      const err = new Error(data?.error || 'Failed to load sheet') as Error & { code?: string };
+      if (data?.code) err.code = data.code;
+      throw err;
+    }
     return data as {
       success: true; spreadsheet_id: string; title: string;
       sheet_name?: string;
