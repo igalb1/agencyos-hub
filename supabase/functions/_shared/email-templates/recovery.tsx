@@ -22,28 +22,22 @@ export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
 }: RecoveryEmailProps) => (
-  <Html lang="he" dir="rtl">
+  <Html lang="en" dir="ltr">
     <Head />
-    <Preview>איפוס סיסמה ל-{siteName}</Preview>
+    <Preview>Reset your password for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>איפוס סיסמה</Heading>
+        <Heading style={h1}>Reset your password</Heading>
         <Text style={text}>
-          קיבלנו בקשה לאיפוס הסיסמה שלך ב-{siteName}. לחץ על הכפתור למטה כדי לבחור סיסמה חדשה.
-        </Text>
-        <Text style={text}>
-          <strong>שים לב:</strong> הקישור תקף ל-60 דקות וניתן לשימוש חד-פעמי בלבד. אם הקישור לא עובד, בקש קישור חדש.
+          We received a request to reset your password for {siteName}. Click
+          the button below to choose a new password.
         </Text>
         <Button style={button} href={confirmationUrl}>
-          איפוס סיסמה
+          Reset Password
         </Button>
-        <Text style={linkText}>
-          או העתק והדבק את הקישור הבא בדפדפן:
-          <br />
-          <span style={urlStyle}>{confirmationUrl}</span>
-        </Text>
         <Text style={footer}>
-          אם לא ביקשת איפוס סיסמה, אפשר להתעלם מהמייל הזה. הסיסמה שלך לא תשתנה.
+          If you didn't request a password reset, you can safely ignore this
+          email. Your password will not be changed.
         </Text>
       </Container>
     </Body>
@@ -52,12 +46,12 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: '"DM Sans", Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '560px' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#0a0a0a',
+  color: '#000000',
   margin: '0 0 20px',
 }
 const text = {
@@ -65,17 +59,6 @@ const text = {
   color: '#55575d',
   lineHeight: '1.5',
   margin: '0 0 25px',
-}
-const linkText = {
-  fontSize: '12px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '20px 0 0',
-  wordBreak: 'break-all' as const,
-}
-const urlStyle = {
-  color: '#3B82F6',
-  fontSize: '11px',
 }
 const button = {
   backgroundColor: '#000000',
