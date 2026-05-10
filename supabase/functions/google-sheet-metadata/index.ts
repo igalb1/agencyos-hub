@@ -135,8 +135,7 @@ Deno.serve(async (req) => {
     const sheetsKey = Deno.env.get("GOOGLE_SHEETS_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    if (!lovableKey) throw new Error("LOVABLE_API_KEY is not configured");
-    if (!sheetsKey) throw new Error("Google Sheets connector not linked");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) throw new Error("Missing Authorization");
@@ -146,6 +145,7 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
     if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
+    const userId = claims.claims.sub;
 
     const body = await req.json().catch(() => ({}));
     const rawId = String(body?.spreadsheet_id ?? "").trim();
@@ -154,15 +154,37 @@ Deno.serve(async (req) => {
     const sheetName: string | undefined = body?.sheet_name;
     const headerRow: number = Number(body?.header_row ?? 1);
 
-    // Get spreadsheet metadata (sheet names + title)
-    const metaRes = await fetch(
-      `${GATEWAY_URL}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(title,sheetId,gridProperties)`,
-      {
+    // Prefer the user's personal Google connection. Fall back to the workspace connector.
+    const userTok = await getUserGoogleToken(supabaseUrl, serviceKey, userId);
+    let auth: SheetsAuth;
+    if (userTok) {
+      auth = {
+        baseUrl: GOOGLE_SHEETS_DIRECT,
+        headers: { Authorization: `Bearer ${userTok.access_token}` },
+        source: "user",
+        email: userTok.email,
+      };
+    } else if (lovableKey && sheetsKey) {
+      auth = {
+        baseUrl: GATEWAY_URL,
         headers: {
           Authorization: `Bearer ${lovableKey}`,
           "X-Connection-Api-Key": sheetsKey,
         },
-      },
+        source: "connector",
+      };
+    } else {
+      return new Response(JSON.stringify({
+        success: false,
+        code: "no_google_connection",
+        error: "אין חיבור פעיל ל-Google. התחבר עם חשבון Google משלך מהאינטגרציות.",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Get spreadsheet metadata (sheet names + title)
+    const metaRes = await fetch(
+      `${auth.baseUrl}/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties(title,sheetId,gridProperties)`,
+      { headers: auth.headers },
     );
     const meta = await metaRes.json();
     if (!metaRes.ok) {
@@ -170,11 +192,14 @@ Deno.serve(async (req) => {
       const status = metaRes.status;
       const gErr = meta?.error?.status || meta?.error?.message || "";
       if (status === 403 || /PERMISSION_DENIED/i.test(String(gErr))) {
+        const who = auth.source === "user" ? (auth.email || "החשבון המחובר") : "חשבון Google המחובר באינטגרציות";
         return new Response(JSON.stringify({
           success: false,
           code: "permission_denied",
+          connection_source: auth.source,
+          connected_email: auth.email ?? null,
           spreadsheet_id: spreadsheetId,
-          error: "אין הרשאה לגיליון. שתף את הגיליון עם חשבון Google המחובר באינטגרציות (הרשאת Viewer לפחות), או התחבר מחדש עם חשבון שיש לו גישה.",
+          error: `אין הרשאה לגיליון עבור ${who}. שתף את הגיליון איתו (Viewer לפחות), או התחבר עם חשבון Google אחר.`,
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (status === 404) {
@@ -189,7 +214,10 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           success: false,
           code: "unauthorized",
-          error: "החיבור ל-Google Sheets פג תוקף. התחבר מחדש דרך Connectors.",
+          connection_source: auth.source,
+          error: auth.source === "user"
+            ? "החיבור האישי ל-Google פג תוקף. התחבר מחדש."
+            : "החיבור ל-Google Sheets פג תוקף. התחבר מחדש דרך Connectors.",
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       throw new Error(`Sheets API error [${metaRes.status}]: ${JSON.stringify(meta)}`);
@@ -212,13 +240,8 @@ Deno.serve(async (req) => {
       const quoted = quoteSheetName(targetSheet);
       const range = `${quoted}!A${headerRow}:ZZ${headerRow + 80}`;
       const valsRes = await fetch(
-        `${GATEWAY_URL}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${lovableKey}`,
-            "X-Connection-Api-Key": sheetsKey,
-          },
-        },
+        `${auth.baseUrl}/spreadsheets/${spreadsheetId}/values:batchGet?ranges=${encodeURIComponent(range)}`,
+        { headers: auth.headers },
       );
       const valsData = await valsRes.json();
       if (!valsRes.ok) {
