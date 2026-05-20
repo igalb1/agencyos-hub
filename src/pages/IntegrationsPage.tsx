@@ -72,6 +72,7 @@ export default function IntegrationsPage() {
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
+  const [gadsCollapsed, setGadsCollapsed] = useState<boolean>(false);
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
