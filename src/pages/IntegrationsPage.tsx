@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { GoogleSheetsCard } from '@/components/integrations/GoogleSheetsCard';
 import { useClientSheetSync } from '@/hooks/useClientSheetSync';
+import { GoogleAdsAccountPicker } from '@/components/integrations/GoogleAdsAccountPicker';
 
 interface Integration {
   id: string;
@@ -149,6 +150,11 @@ export default function IntegrationsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <GoogleAdsAccountPicker
+              currentAccountId={googleAds.connection?.account_id}
+              isRtl={isRtl}
+              onChanged={() => { googleAds.connect; }}
+            />
             <div className="flex flex-wrap items-end gap-3">
               {/* Date from */}
               <div className="space-y-1">
