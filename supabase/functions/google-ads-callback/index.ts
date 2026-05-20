@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
 
     try {
       const customerResponse = await fetch(
-        "https://googleads.googleapis.com/v18/customers:listAccessibleCustomers",
+        "https://googleads.googleapis.com/v21/customers:listAccessibleCustomers",
         {
           headers: {
             Authorization: `Bearer ${tokens.access_token}`,

@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     let accountId: string = tokens.account_id || "";
     if (!accountId) {
       const listRes = await fetch(
-        "https://googleads.googleapis.com/v18/customers:listAccessibleCustomers",
+        "https://googleads.googleapis.com/v21/customers:listAccessibleCustomers",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -104,8 +104,13 @@ Deno.serve(async (req) => {
           },
         }
       );
-      const listData = await listRes.json();
-      if (!listRes.ok) throw new Error(`List customers failed: ${JSON.stringify(listData)}`);
+      const listText = await listRes.text();
+      if (!listRes.ok) {
+        throw new Error(`List customers failed [${listRes.status}]: ${listText.slice(0, 500)}`);
+      }
+      let listData: any;
+      try { listData = JSON.parse(listText); }
+      catch { throw new Error(`Google Ads returned non-JSON (likely invalid developer token or API not enabled): ${listText.slice(0, 300)}`); }
       const first = listData.resourceNames?.[0];
       if (!first) throw new Error("No accessible Google Ads accounts");
       accountId = first.replace("customers/", "");
@@ -131,7 +136,7 @@ Deno.serve(async (req) => {
     `;
 
     const reportRes = await fetch(
-      `https://googleads.googleapis.com/v18/customers/${accountId}/googleAds:searchStream`,
+      `https://googleads.googleapis.com/v21/customers/${accountId}/googleAds:searchStream`,
       {
         method: "POST",
         headers: {
@@ -142,10 +147,13 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ query: gaql }),
       }
     );
-    const reportData = await reportRes.json();
+    const reportText = await reportRes.text();
     if (!reportRes.ok) {
-      throw new Error(`Google Ads API error [${reportRes.status}]: ${JSON.stringify(reportData)}`);
+      throw new Error(`Google Ads API error [${reportRes.status}]: ${reportText.slice(0, 500)}`);
     }
+    let reportData: any;
+    try { reportData = JSON.parse(reportText); }
+    catch { throw new Error(`Google Ads returned non-JSON (likely invalid developer token or API not enabled): ${reportText.slice(0, 300)}`); }
 
     // searchStream returns array of result chunks
     const chunks = Array.isArray(reportData) ? reportData : [reportData];
