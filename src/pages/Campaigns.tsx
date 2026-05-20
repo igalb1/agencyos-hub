@@ -154,6 +154,20 @@ export default function CampaignsPage() {
     }
   };
 
+  const handleSort = useCallback((key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return <ArrowUpDown size={12} className="opacity-40" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  };
+
   const filtered = useMemo(() => {
     return campaigns.filter(c => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -170,7 +184,34 @@ export default function CampaignsPage() {
     });
   }, [campaigns, search, platformFilter, statusFilter, clientFilter]);
 
-  const grouped = useMemo(() => groupCampaigns(filtered), [filtered]);
+  const sorted = useMemo(() => {
+    if (!sortConfig) return filtered;
+    const { key, direction } = sortConfig;
+    const dir = direction === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      let valA: number | string = 0;
+      let valB: number | string = 0;
+      switch (key) {
+        case 'name': valA = a.name; valB = b.name; break;
+        case 'objective': valA = a.objective; valB = b.objective; break;
+        case 'budget': valA = a.budget; valB = b.budget; break;
+        case 'spend': valA = a.spend; valB = b.spend; break;
+        case 'progress': valA = a.budget > 0 ? a.spend / a.budget : 0; valB = b.budget > 0 ? b.spend / b.budget : 0; break;
+        case 'pacing': valA = calcPacing(a.spend, a.budget, a.startDate, a.endDate).pct; valB = calcPacing(b.spend, b.budget, b.startDate, b.endDate).pct; break;
+        case 'leads': valA = a.leads; valB = b.leads; break;
+        case 'ctr': valA = a.impressions > 0 ? a.clicks / a.impressions : 0; valB = b.impressions > 0 ? b.clicks / b.impressions : 0; break;
+        case 'conversions': valA = a.conversions; valB = b.conversions; break;
+        case 'goalKpi': valA = a.objective === 'sales' ? a.conversions : a.leads; valB = b.objective === 'sales' ? b.conversions : b.leads; break;
+        default: return 0;
+      }
+      if (typeof valA === 'string') {
+        return valA.localeCompare(valB as string) * dir;
+      }
+      return (valA - valB) * dir;
+    });
+  }, [filtered, sortConfig]);
+
+  const grouped = useMemo(() => groupCampaigns(sorted), [sorted]);
 
   const toggleExpand = (campaignId: string) => {
     setExpandedCampaigns(prev => {
