@@ -271,6 +271,7 @@ export default function IntegrationsPage() {
               </p>
             )}
           </CardContent>
+          )}
         </Card>
       )}
 
