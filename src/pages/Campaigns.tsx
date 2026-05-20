@@ -207,7 +207,7 @@ export default function CampaignsPage() {
       if (typeof valA === 'string') {
         return valA.localeCompare(valB as string) * dir;
       }
-      return (valA - valB) * dir;
+      return ((valA as number) - (valB as number)) * dir;
     });
   }, [filtered, sortConfig]);
 
