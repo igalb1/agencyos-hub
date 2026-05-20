@@ -72,6 +72,7 @@ export default function IntegrationsPage() {
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
+  const [gadsCollapsed, setGadsCollapsed] = useState<boolean>(false);
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
@@ -129,6 +130,11 @@ export default function IntegrationsPage() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <Search size={18} style={{ color: '#4285F4' }} />
                   {isRtl ? 'סנכרון Google Ads' : 'Google Ads Sync'}
+                  {gadsCollapsed && gadsSync.campaigns.length > 0 && (
+                    <Badge variant="outline" className="text-xs ml-1">
+                      {gadsSync.campaigns.length} {isRtl ? 'קמפיינים' : 'campaigns'}
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription className="mt-1">
                   {gadsSync.lastSync ? (
@@ -147,8 +153,19 @@ export default function IntegrationsPage() {
                   )}
                 </CardDescription>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setGadsCollapsed(v => !v)}
+                className="gap-1"
+                aria-label={gadsCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}
+              >
+                {gadsCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                <span className="text-xs">{gadsCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}</span>
+              </Button>
             </div>
           </CardHeader>
+          {!gadsCollapsed && (
           <CardContent className="space-y-4">
             <GoogleAdsAccountPicker
               currentAccountId={googleAds.connection?.account_id}
@@ -254,6 +271,7 @@ export default function IntegrationsPage() {
               </p>
             )}
           </CardContent>
+          )}
         </Card>
       )}
 
