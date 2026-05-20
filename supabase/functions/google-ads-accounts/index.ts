@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     // SET account
     if (body.account_id) {
       const accountId = String(body.account_id).replace(/[^0-9]/g, "");
+      const loginCustomerId = body.login_customer_id ? String(body.login_customer_id).replace(/[^0-9]/g, "") : "";
       // fetch name
       let accountName = `Google Ads (${accountId})`;
       try {
@@ -66,6 +67,7 @@ Deno.serve(async (req) => {
             headers: {
               Authorization: `Bearer ${accessToken}`,
               "developer-token": developerToken,
+              ...(loginCustomerId ? { "login-customer-id": loginCustomerId } : {}),
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ query: "SELECT customer.descriptive_name FROM customer LIMIT 1" }),
@@ -79,12 +81,16 @@ Deno.serve(async (req) => {
         }
       } catch (_) { /* ignore name lookup */ }
 
+      // Encode optional login-customer-id (parent MCC) into account_id so the
+      // sync function knows which manager to authenticate through.
+      const storedAccountId = loginCustomerId ? `${accountId}:${loginCustomerId}` : accountId;
+
       const { error: upErr } = await admin.rpc("set_integration_tokens", {
         _user_id: userId,
         _provider: "google_ads",
         _access_token: tokens.access_token,
         _refresh_token: tokens.refresh_token,
-        _account_id: accountId,
+        _account_id: storedAccountId,
         _account_name: accountName,
         _token_expires_at: tokens.token_expires_at ?? null,
       });
