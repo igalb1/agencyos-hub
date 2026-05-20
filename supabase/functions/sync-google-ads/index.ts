@@ -231,6 +231,65 @@ Deno.serve(async (req) => {
       if (upErr) throw new Error(`Upsert failed: ${upErr.message}`);
     }
 
+    // ---- Auto-import into the org-wide `campaigns` table ----
+    // Find the user's organization (first active membership).
+    let importedCount = 0;
+    try {
+      const { data: memberRows } = await admin
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .limit(1);
+      const orgId = memberRows?.[0]?.organization_id;
+
+      if (orgId && rowsToUpsert.length > 0) {
+        const platformMap: Record<string, string> = {
+          SEARCH: "Google Search",
+          DISPLAY: "Google Display",
+          VIDEO: "YouTube",
+          SHOPPING: "Google Shopping",
+          PERFORMANCE_MAX: "Performance Max",
+          DEMAND_GEN: "Demand Gen",
+        };
+        const statusMap = (s: string | null) => {
+          if (!s) return "Active";
+          if (s === "ENABLED") return "Active";
+          if (s === "PAUSED") return "Paused";
+          if (s === "REMOVED") return "Ended";
+          return "Active";
+        };
+        const campaignsImport = rowsToUpsert.map((r: any) => ({
+          organization_id: orgId,
+          external_source: "google_ads",
+          external_id: `${r.google_account_id}:${r.campaign_id}`,
+          name: r.campaign_name,
+          platform: platformMap[r.advertising_channel_type ?? ""] ?? "Google Ads",
+          status: statusMap(r.status),
+          objective: "leads",
+          budget: r.daily_budget_micros ? Number(r.daily_budget_micros) / 1_000_000 : 0,
+          spend: r.cost_micros ? Number(r.cost_micros) / 1_000_000 : 0,
+          clicks: Number(r.clicks) || 0,
+          impressions: Number(r.impressions) || 0,
+          conversions: Math.round(Number(r.conversions) || 0),
+          leads: Math.round(Number(r.conversions) || 0),
+          start_date: r.date_range_start,
+          end_date: r.date_range_end,
+        }));
+
+        const { error: importErr } = await admin
+          .from("campaigns")
+          .upsert(campaignsImport, { onConflict: "organization_id,external_source,external_id" });
+        if (importErr) {
+          console.error("Campaigns import failed:", importErr.message);
+        } else {
+          importedCount = campaignsImport.length;
+        }
+      }
+    } catch (e) {
+      console.error("Campaigns import error:", e);
+    }
+
     await admin.from("google_ads_sync_log").insert({
       user_id: userId,
       google_account_id: accountId,
@@ -245,6 +304,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         campaigns_synced: rowsToUpsert.length,
+        campaigns_imported: importedCount,
         account_id: accountId,
         date_range: { start, end },
       }),
