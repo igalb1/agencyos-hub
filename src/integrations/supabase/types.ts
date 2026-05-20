@@ -130,6 +130,8 @@ export type Database = {
           conversions: number | null
           created_at: string
           end_date: string | null
+          external_id: string | null
+          external_source: string | null
           id: string
           impressions: number | null
           leads: number | null
@@ -151,6 +153,8 @@ export type Database = {
           conversions?: number | null
           created_at?: string
           end_date?: string | null
+          external_id?: string | null
+          external_source?: string | null
           id?: string
           impressions?: number | null
           leads?: number | null
@@ -172,6 +176,8 @@ export type Database = {
           conversions?: number | null
           created_at?: string
           end_date?: string | null
+          external_id?: string | null
+          external_source?: string | null
           id?: string
           impressions?: number | null
           leads?: number | null
