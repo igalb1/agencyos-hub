@@ -66,32 +66,23 @@ export function useGoogleAdsConnect() {
     if (!user) return;
     setConnecting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      const { data, error } = await supabase.functions.invoke('google-ads-auth', {
+        body: { redirect_url: `${window.location.origin}/integrations` },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error('Missing Google authorization URL');
 
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/google-ads-auth`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            redirect_url: window.location.origin + '/integrations',
-          }),
-        }
-      );
-
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
-
-      // Redirect in same window (not popup) to avoid CSP issues
-      window.location.href = result.url;
+      // Open in the top-level window to avoid Google blocking OAuth inside preview iframes.
+      const target = window.top ?? window;
+      try {
+        target.location.href = data.url;
+      } catch {
+        window.open(data.url, '_blank', 'noopener,noreferrer');
+      }
     } catch (err) {
       console.error('Connect error:', err);
-      toast.error('Failed to initiate connection');
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to initiate connection: ${message}`);
       setConnecting(false);
     }
   };
