@@ -99,6 +99,7 @@ export default function CampaignsPage() {
   const [showColumnsDialog, setShowColumnsDialog] = useState(false);
   const [assignTarget, setAssignTarget] = useState<Campaign | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
