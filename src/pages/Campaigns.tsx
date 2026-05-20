@@ -396,16 +396,36 @@ export default function CampaignsPage() {
                   style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
-                  <span>{lang === 'he' ? 'שם' : 'Name'}</span>
-                  <span>{lang === 'he' ? 'סוג קמפיין' : 'Objective'}</span>
-                  <span className="text-end">{t('budget', lang)}</span>
-                  <span className="text-end">{t('spend', lang)}</span>
-                  <span className="text-center">{lang === 'he' ? 'התקדמות' : 'Progress'}</span>
-                  <span className="text-center">{lang === 'he' ? 'קצב' : 'Pacing'}</span>
-                  <span className="text-end">{t('leads', lang)}</span>
-                  <span className="text-end">CTR</span>
-                  <span className="text-end">{lang === 'he' ? 'המרות' : 'Conv.'}</span>
-                  <span className="text-end">{lang === 'he' ? 'מדד מטרה' : 'Goal KPI'}</span>
+                  <button onClick={() => handleSort('name')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors text-start">
+                    {lang === 'he' ? 'שם' : 'Name'} {getSortIcon('name')}
+                  </button>
+                  <button onClick={() => handleSort('objective')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors text-start">
+                    {lang === 'he' ? 'סוג קמפיין' : 'Objective'} {getSortIcon('objective')}
+                  </button>
+                  <button onClick={() => handleSort('budget')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {t('budget', lang)} {getSortIcon('budget')}
+                  </button>
+                  <button onClick={() => handleSort('spend')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {t('spend', lang)} {getSortIcon('spend')}
+                  </button>
+                  <button onClick={() => handleSort('progress')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-center">
+                    {lang === 'he' ? 'התקדמות' : 'Progress'} {getSortIcon('progress')}
+                  </button>
+                  <button onClick={() => handleSort('pacing')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-center">
+                    {lang === 'he' ? 'קצב' : 'Pacing'} {getSortIcon('pacing')}
+                  </button>
+                  <button onClick={() => handleSort('leads')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {t('leads', lang)} {getSortIcon('leads')}
+                  </button>
+                  <button onClick={() => handleSort('ctr')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    CTR {getSortIcon('ctr')}
+                  </button>
+                  <button onClick={() => handleSort('conversions')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {lang === 'he' ? 'המרות' : 'Conv.'} {getSortIcon('conversions')}
+                  </button>
+                  <button onClick={() => handleSort('goalKpi')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {lang === 'he' ? 'מדד מטרה' : 'Goal KPI'} {getSortIcon('goalKpi')}
+                  </button>
                   <span className="text-center">QA</span>
                   {customColumns.map(col => (
                     <span key={col.id} className="text-end truncate" title={col.name}>{col.name}</span>
