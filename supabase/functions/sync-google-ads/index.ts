@@ -244,6 +244,54 @@ Deno.serve(async (req) => {
       const orgId = memberRows?.[0]?.organization_id;
 
       if (orgId && rowsToUpsert.length > 0) {
+        // Resolve a client to attach the campaigns to, based on the Google Ads account name.
+        // 1) Use account_name from stored integration tokens (descriptive name picked by user).
+        // 2) Try to find an existing client in the org with the same name (case-insensitive).
+        // 3) If none, create one.
+        // We only set client_id when creating new campaign rows — manual reassignments are preserved.
+        const accountName: string = (tokens.account_name ?? "").toString().trim()
+          || `Google Ads ${accountId}`;
+
+        let clientId: string | null = null;
+        const { data: existingClient } = await admin
+          .from("clients")
+          .select("id")
+          .eq("organization_id", orgId)
+          .ilike("name", accountName)
+          .limit(1)
+          .maybeSingle();
+        if (existingClient?.id) {
+          clientId = existingClient.id as string;
+        } else {
+          const { data: newClient, error: newClientErr } = await admin
+            .from("clients")
+            .insert({
+              organization_id: orgId,
+              name: accountName,
+              industry: "Google Ads",
+              status: "active",
+            })
+            .select("id")
+            .single();
+          if (newClientErr) {
+            console.error("Client create failed:", newClientErr.message);
+          } else {
+            clientId = newClient?.id ?? null;
+          }
+        }
+
+        // Preserve any manual client_id assignments already on existing campaign rows.
+        const externalIds = rowsToUpsert.map((r: any) => `${r.google_account_id}:${r.campaign_id}`);
+        const { data: existingCampaigns } = await admin
+          .from("campaigns")
+          .select("external_id, client_id")
+          .eq("organization_id", orgId)
+          .eq("external_source", "google_ads")
+          .in("external_id", externalIds);
+        const existingClientByExt = new Map<string, string | null>(
+          (existingCampaigns ?? []).map((c: any) => [c.external_id, c.client_id])
+        );
+
         const platformMap: Record<string, string> = {
           SEARCH: "Google Search",
           DISPLAY: "Google Display",
@@ -259,23 +307,30 @@ Deno.serve(async (req) => {
           if (s === "REMOVED") return "Ended";
           return "Active";
         };
-        const campaignsImport = rowsToUpsert.map((r: any) => ({
-          organization_id: orgId,
-          external_source: "google_ads",
-          external_id: `${r.google_account_id}:${r.campaign_id}`,
-          name: r.campaign_name,
-          platform: platformMap[r.advertising_channel_type ?? ""] ?? "Google Ads",
-          status: statusMap(r.status),
-          objective: "leads",
-          budget: r.daily_budget_micros ? Number(r.daily_budget_micros) / 1_000_000 : 0,
-          spend: r.cost_micros ? Number(r.cost_micros) / 1_000_000 : 0,
-          clicks: Number(r.clicks) || 0,
-          impressions: Number(r.impressions) || 0,
-          conversions: Math.round(Number(r.conversions) || 0),
-          leads: Math.round(Number(r.conversions) || 0),
-          start_date: r.date_range_start,
-          end_date: r.date_range_end,
-        }));
+        const campaignsImport = rowsToUpsert.map((r: any) => {
+          const extId = `${r.google_account_id}:${r.campaign_id}`;
+          const preservedClientId = existingClientByExt.has(extId)
+            ? existingClientByExt.get(extId) ?? clientId
+            : clientId;
+          return {
+            organization_id: orgId,
+            external_source: "google_ads",
+            external_id: extId,
+            client_id: preservedClientId,
+            name: r.campaign_name,
+            platform: platformMap[r.advertising_channel_type ?? ""] ?? "Google Ads",
+            status: statusMap(r.status),
+            objective: "leads",
+            budget: r.daily_budget_micros ? Number(r.daily_budget_micros) / 1_000_000 : 0,
+            spend: r.cost_micros ? Number(r.cost_micros) / 1_000_000 : 0,
+            clicks: Number(r.clicks) || 0,
+            impressions: Number(r.impressions) || 0,
+            conversions: Math.round(Number(r.conversions) || 0),
+            leads: Math.round(Number(r.conversions) || 0),
+            start_date: r.date_range_start,
+            end_date: r.date_range_end,
+          };
+        });
 
         const { error: importErr } = await admin
           .from("campaigns")
