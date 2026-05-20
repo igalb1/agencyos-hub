@@ -27,7 +27,7 @@ export function GoogleAdsAccountPicker({ currentAccountId, isRtl, onChanged }: P
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setAccounts(data.accounts ?? []);
-      if (data.current) setSelected(data.current);
+      if (data.current) setSelected(String(data.current).split(':')[0]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load accounts';
       toast.error(msg);
