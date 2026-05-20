@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     let accountId: string = tokens.account_id || "";
     if (!accountId) {
       const listRes = await fetch(
-        "https://googleads.googleapis.com/v18/customers:listAccessibleCustomers",
+        "https://googleads.googleapis.com/v21/customers:listAccessibleCustomers",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
     `;
 
     const reportRes = await fetch(
-      `https://googleads.googleapis.com/v18/customers/${accountId}/googleAds:searchStream`,
+      `https://googleads.googleapis.com/v21/customers/${accountId}/googleAds:searchStream`,
       {
         method: "POST",
         headers: {
