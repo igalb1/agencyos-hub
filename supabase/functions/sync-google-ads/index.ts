@@ -93,7 +93,16 @@ Deno.serve(async (req) => {
     const accessToken = refreshed.access_token;
 
     // Get accessible customer
-    let accountId: string = tokens.account_id || "";
+    let storedAccountId: string = tokens.account_id || "";
+    let accountId = "";
+    let loginCustomerId = "";
+    if (storedAccountId.includes(":")) {
+      const [cid, parent] = storedAccountId.split(":");
+      accountId = cid;
+      loginCustomerId = parent;
+    } else {
+      accountId = storedAccountId;
+    }
     if (!accountId) {
       const listRes = await fetch(
         "https://googleads.googleapis.com/v21/customers:listAccessibleCustomers",
@@ -142,6 +151,7 @@ Deno.serve(async (req) => {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "developer-token": developerToken,
+          ...(loginCustomerId ? { "login-customer-id": loginCustomerId } : {}),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query: gaql }),

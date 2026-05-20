@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     // SET account
     if (body.account_id) {
       const accountId = String(body.account_id).replace(/[^0-9]/g, "");
+      const loginCustomerId = body.login_customer_id ? String(body.login_customer_id).replace(/[^0-9]/g, "") : "";
       // fetch name
       let accountName = `Google Ads (${accountId})`;
       try {
@@ -66,6 +67,7 @@ Deno.serve(async (req) => {
             headers: {
               Authorization: `Bearer ${accessToken}`,
               "developer-token": developerToken,
+              ...(loginCustomerId ? { "login-customer-id": loginCustomerId } : {}),
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ query: "SELECT customer.descriptive_name FROM customer LIMIT 1" }),
@@ -79,12 +81,16 @@ Deno.serve(async (req) => {
         }
       } catch (_) { /* ignore name lookup */ }
 
+      // Encode optional login-customer-id (parent MCC) into account_id so the
+      // sync function knows which manager to authenticate through.
+      const storedAccountId = loginCustomerId ? `${accountId}:${loginCustomerId}` : accountId;
+
       const { error: upErr } = await admin.rpc("set_integration_tokens", {
         _user_id: userId,
         _provider: "google_ads",
         _access_token: tokens.access_token,
         _refresh_token: tokens.refresh_token,
-        _account_id: accountId,
+        _account_id: storedAccountId,
         _account_name: accountName,
         _token_expires_at: tokens.token_expires_at ?? null,
       });
@@ -105,30 +111,97 @@ Deno.serve(async (req) => {
     const listData = JSON.parse(listText);
     const ids: string[] = (listData.resourceNames ?? []).map((r: string) => r.replace("customers/", ""));
 
-    // Fetch descriptive name for each (best-effort, parallel)
-    const accounts = await Promise.all(ids.map(async (id) => {
+    // For each directly-accessible customer, query customer_client to expand MCC children.
+    // This returns BOTH the account itself and any sub-accounts under it (for MCCs).
+    const accountMap = new Map<string, { id: string; name: string; manager: boolean; parent?: string }>();
+
+    await Promise.all(ids.map(async (loginCid) => {
+      // First, get this account's own name/manager status as a fallback
       try {
-        const r = await fetch(
-          `https://googleads.googleapis.com/v21/customers/${id}/googleAds:search`,
+        const selfRes = await fetch(
+          `https://googleads.googleapis.com/v21/customers/${loginCid}/googleAds:search`,
           {
             method: "POST",
             headers: {
               Authorization: `Bearer ${accessToken}`,
               "developer-token": developerToken,
+              "login-customer-id": loginCid,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ query: "SELECT customer.descriptive_name, customer.manager FROM customer LIMIT 1" }),
           }
         );
-        const t = await r.text();
-        if (!r.ok) return { id, name: id, manager: false };
-        const j = JSON.parse(t);
-        const c = j.results?.[0]?.customer ?? {};
-        return { id, name: c.descriptiveName ?? id, manager: !!c.manager };
+        const t = await selfRes.text();
+        if (selfRes.ok) {
+          const j = JSON.parse(t);
+          const c = j.results?.[0]?.customer ?? {};
+          if (!accountMap.has(loginCid)) {
+            accountMap.set(loginCid, { id: loginCid, name: c.descriptiveName ?? loginCid, manager: !!c.manager });
+          }
+        } else if (!accountMap.has(loginCid)) {
+          accountMap.set(loginCid, { id: loginCid, name: loginCid, manager: false });
+        }
       } catch {
-        return { id, name: id, manager: false };
+        if (!accountMap.has(loginCid)) accountMap.set(loginCid, { id: loginCid, name: loginCid, manager: false });
       }
+
+      // Expand children via customer_client (works for both MCC and regular accounts;
+      // for regular accounts it just returns the single self row).
+      try {
+        const childRes = await fetch(
+          `https://googleads.googleapis.com/v21/customers/${loginCid}/googleAds:searchStream`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "developer-token": developerToken,
+              "login-customer-id": loginCid,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              query: `
+                SELECT
+                  customer_client.client_customer,
+                  customer_client.id,
+                  customer_client.descriptive_name,
+                  customer_client.manager,
+                  customer_client.hidden,
+                  customer_client.status
+                FROM customer_client
+                WHERE customer_client.status = 'ENABLED'
+              `,
+            }),
+          }
+        );
+        const t = await childRes.text();
+        if (!childRes.ok) return;
+        const chunks = JSON.parse(t);
+        const arr = Array.isArray(chunks) ? chunks : [chunks];
+        for (const ch of arr) {
+          for (const row of (ch.results ?? [])) {
+            const cc = row.customerClient ?? {};
+            if (cc.hidden) continue;
+            const cid = String(cc.id ?? "");
+            if (!cid) continue;
+            // Only overwrite if we don't already have a better entry
+            const existing = accountMap.get(cid);
+            const entry = {
+              id: cid,
+              name: cc.descriptiveName || existing?.name || cid,
+              manager: !!cc.manager,
+              parent: cid !== loginCid ? loginCid : undefined,
+            };
+            accountMap.set(cid, entry);
+          }
+        }
+      } catch { /* ignore */ }
     }));
+
+    // Sort: client accounts first, then managers, alphabetical
+    const accounts = Array.from(accountMap.values()).sort((a, b) => {
+      if (a.manager !== b.manager) return a.manager ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    });
 
     return new Response(JSON.stringify({ accounts, current: tokens.account_id || null }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

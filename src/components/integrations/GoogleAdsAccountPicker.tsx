@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, RefreshCw, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Account { id: string; name: string; manager?: boolean }
+interface Account { id: string; name: string; manager?: boolean; parent?: string }
 
 interface Props {
   currentAccountId: string | null | undefined;
@@ -27,7 +27,7 @@ export function GoogleAdsAccountPicker({ currentAccountId, isRtl, onChanged }: P
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setAccounts(data.accounts ?? []);
-      if (data.current) setSelected(data.current);
+      if (data.current) setSelected(String(data.current).split(':')[0]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load accounts';
       toast.error(msg);
@@ -42,8 +42,9 @@ export function GoogleAdsAccountPicker({ currentAccountId, isRtl, onChanged }: P
     if (!selected) return;
     setSaving(true);
     try {
+      const acc = accounts.find(a => a.id === selected);
       const { data, error } = await supabase.functions.invoke('google-ads-accounts', {
-        body: { account_id: selected },
+        body: { account_id: selected, login_customer_id: acc?.parent ?? null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
