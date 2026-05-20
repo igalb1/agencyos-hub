@@ -42,7 +42,6 @@ Deno.serve(async (req) => {
   const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID")!;
   const clientSecret = Deno.env.get("GOOGLE_ADS_CLIENT_SECRET")!;
   const developerToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN")!;
-  const encryptionKey = Deno.env.get("INTEGRATIONS_ENCRYPTION_KEY")!;
 
   let userId: string | null = null;
   let triggeredBy: "manual" | "cron" = "manual";
@@ -67,7 +66,8 @@ Deno.serve(async (req) => {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: claims, error: claimsErr } = await userClient.auth.getClaims();
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
       if (claimsErr || !claims?.claims?.sub) throw new Error("Unauthorized");
       userId = claims.claims.sub;
     }
@@ -83,7 +83,6 @@ Deno.serve(async (req) => {
     const { data: tokensRows, error: tokenErr } = await admin.rpc("get_integration_tokens", {
       _user_id: userId,
       _provider: "google_ads",
-      _encryption_key: encryptionKey,
     });
     if (tokenErr) throw new Error(`Token fetch failed: ${tokenErr.message}`);
     const tokens = (tokensRows as any[])?.[0];
