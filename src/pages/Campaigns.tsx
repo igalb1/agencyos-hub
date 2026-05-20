@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
