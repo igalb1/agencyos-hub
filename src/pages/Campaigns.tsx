@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { t } from '@/lib/i18n';
 import { useOrgData } from '@/hooks/useOrgData';
@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, Plus, Search, Image, Video, Trash2, Link2, Settings2, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -99,6 +99,7 @@ export default function CampaignsPage() {
   const [showColumnsDialog, setShowColumnsDialog] = useState(false);
   const [assignTarget, setAssignTarget] = useState<Campaign | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -153,6 +154,20 @@ export default function CampaignsPage() {
     }
   };
 
+  const handleSort = useCallback((key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return <ArrowUpDown size={12} className="opacity-40" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  };
+
   const filtered = useMemo(() => {
     return campaigns.filter(c => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.clientName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -169,7 +184,34 @@ export default function CampaignsPage() {
     });
   }, [campaigns, search, platformFilter, statusFilter, clientFilter]);
 
-  const grouped = useMemo(() => groupCampaigns(filtered), [filtered]);
+  const sorted = useMemo(() => {
+    if (!sortConfig) return filtered;
+    const { key, direction } = sortConfig;
+    const dir = direction === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      let valA: number | string = 0;
+      let valB: number | string = 0;
+      switch (key) {
+        case 'name': valA = a.name; valB = b.name; break;
+        case 'objective': valA = a.objective; valB = b.objective; break;
+        case 'budget': valA = a.budget; valB = b.budget; break;
+        case 'spend': valA = a.spend; valB = b.spend; break;
+        case 'progress': valA = a.budget > 0 ? a.spend / a.budget : 0; valB = b.budget > 0 ? b.spend / b.budget : 0; break;
+        case 'pacing': valA = calcPacing(a.spend, a.budget, a.startDate, a.endDate).pct; valB = calcPacing(b.spend, b.budget, b.startDate, b.endDate).pct; break;
+        case 'leads': valA = a.leads; valB = b.leads; break;
+        case 'ctr': valA = a.impressions > 0 ? a.clicks / a.impressions : 0; valB = b.impressions > 0 ? b.clicks / b.impressions : 0; break;
+        case 'conversions': valA = a.conversions; valB = b.conversions; break;
+        case 'goalKpi': valA = a.objective === 'sales' ? a.conversions : a.leads; valB = b.objective === 'sales' ? b.conversions : b.leads; break;
+        default: return 0;
+      }
+      if (typeof valA === 'string') {
+        return valA.localeCompare(valB as string) * dir;
+      }
+      return ((valA as number) - (valB as number)) * dir;
+    });
+  }, [filtered, sortConfig]);
+
+  const grouped = useMemo(() => groupCampaigns(sorted), [sorted]);
 
   const toggleExpand = (campaignId: string) => {
     setExpandedCampaigns(prev => {
@@ -354,16 +396,36 @@ export default function CampaignsPage() {
                   style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
-                  <span>{lang === 'he' ? 'שם' : 'Name'}</span>
-                  <span>{lang === 'he' ? 'סוג קמפיין' : 'Objective'}</span>
-                  <span className="text-end">{t('budget', lang)}</span>
-                  <span className="text-end">{t('spend', lang)}</span>
-                  <span className="text-center">{lang === 'he' ? 'התקדמות' : 'Progress'}</span>
-                  <span className="text-center">{lang === 'he' ? 'קצב' : 'Pacing'}</span>
-                  <span className="text-end">{t('leads', lang)}</span>
-                  <span className="text-end">CTR</span>
-                  <span className="text-end">{lang === 'he' ? 'המרות' : 'Conv.'}</span>
-                  <span className="text-end">{lang === 'he' ? 'מדד מטרה' : 'Goal KPI'}</span>
+                  <button onClick={() => handleSort('name')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors text-start">
+                    {lang === 'he' ? 'שם' : 'Name'} {getSortIcon('name')}
+                  </button>
+                  <button onClick={() => handleSort('objective')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors text-start">
+                    {lang === 'he' ? 'סוג קמפיין' : 'Objective'} {getSortIcon('objective')}
+                  </button>
+                  <button onClick={() => handleSort('budget')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {t('budget', lang)} {getSortIcon('budget')}
+                  </button>
+                  <button onClick={() => handleSort('spend')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {t('spend', lang)} {getSortIcon('spend')}
+                  </button>
+                  <button onClick={() => handleSort('progress')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-center">
+                    {lang === 'he' ? 'התקדמות' : 'Progress'} {getSortIcon('progress')}
+                  </button>
+                  <button onClick={() => handleSort('pacing')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-center">
+                    {lang === 'he' ? 'קצב' : 'Pacing'} {getSortIcon('pacing')}
+                  </button>
+                  <button onClick={() => handleSort('leads')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {t('leads', lang)} {getSortIcon('leads')}
+                  </button>
+                  <button onClick={() => handleSort('ctr')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    CTR {getSortIcon('ctr')}
+                  </button>
+                  <button onClick={() => handleSort('conversions')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {lang === 'he' ? 'המרות' : 'Conv.'} {getSortIcon('conversions')}
+                  </button>
+                  <button onClick={() => handleSort('goalKpi')} className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors justify-end">
+                    {lang === 'he' ? 'מדד מטרה' : 'Goal KPI'} {getSortIcon('goalKpi')}
+                  </button>
                   <span className="text-center">QA</span>
                   {customColumns.map(col => (
                     <span key={col.id} className="text-end truncate" title={col.name}>{col.name}</span>
