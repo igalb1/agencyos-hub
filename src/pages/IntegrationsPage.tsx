@@ -153,7 +153,7 @@ export default function IntegrationsPage() {
             <GoogleAdsAccountPicker
               currentAccountId={googleAds.connection?.account_id}
               isRtl={isRtl}
-              onChanged={() => { googleAds.connect; }}
+              onChanged={() => { googleAds.refresh(); }}
             />
             <div className="flex flex-wrap items-end gap-3">
               {/* Date from */}
