@@ -465,6 +465,120 @@ export type Database = {
         }
         Relationships: []
       }
+      facebook_ads_campaigns: {
+        Row: {
+          account_name: string | null
+          campaign_id: string
+          campaign_name: string
+          clicks: number | null
+          conversion_value: number | null
+          conversions: number | null
+          created_at: string
+          ctr: number | null
+          currency_code: string | null
+          daily_budget: number | null
+          date_range_end: string
+          date_range_start: string
+          facebook_account_id: string
+          id: string
+          impressions: number | null
+          last_synced_at: string
+          lifetime_budget: number | null
+          objective: string | null
+          spend: number | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          campaign_id: string
+          campaign_name: string
+          clicks?: number | null
+          conversion_value?: number | null
+          conversions?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency_code?: string | null
+          daily_budget?: number | null
+          date_range_end: string
+          date_range_start: string
+          facebook_account_id: string
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string
+          lifetime_budget?: number | null
+          objective?: string | null
+          spend?: number | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          campaign_id?: string
+          campaign_name?: string
+          clicks?: number | null
+          conversion_value?: number | null
+          conversions?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency_code?: string | null
+          daily_budget?: number | null
+          date_range_end?: string
+          date_range_start?: string
+          facebook_account_id?: string
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string
+          lifetime_budget?: number | null
+          objective?: string | null
+          spend?: number | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      facebook_ads_sync_log: {
+        Row: {
+          campaigns_synced: number | null
+          created_at: string
+          date_range_end: string | null
+          date_range_start: string | null
+          error_message: string | null
+          facebook_account_id: string | null
+          id: string
+          status: string
+          triggered_by: string
+          user_id: string
+        }
+        Insert: {
+          campaigns_synced?: number | null
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          facebook_account_id?: string | null
+          id?: string
+          status: string
+          triggered_by?: string
+          user_id: string
+        }
+        Update: {
+          campaigns_synced?: number | null
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          facebook_account_id?: string | null
+          id?: string
+          status?: string
+          triggered_by?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       google_ads_campaigns: {
         Row: {
           advertising_channel_type: string | null
@@ -1641,6 +1755,7 @@ export type Database = {
         Returns: Json
       }
       trigger_client_sheet_auto_sync: { Args: never; Returns: undefined }
+      trigger_facebook_ads_auto_sync: { Args: never; Returns: undefined }
       trigger_google_ads_auto_sync: { Args: never; Returns: undefined }
       trigger_linkedin_ads_auto_sync: { Args: never; Returns: undefined }
     }
