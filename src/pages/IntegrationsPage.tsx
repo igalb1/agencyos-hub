@@ -12,6 +12,8 @@ import { useGoogleAdsConnect } from '@/hooks/useGoogleAdsConnect';
 import { useGoogleAdsSync } from '@/hooks/useGoogleAdsSync';
 import { useLinkedInAdsConnect } from '@/hooks/useLinkedInAdsConnect';
 import { useLinkedInAdsSync } from '@/hooks/useLinkedInAdsSync';
+import { useFacebookAdsConnect } from '@/hooks/useFacebookAdsConnect';
+import { useFacebookAdsSync } from '@/hooks/useFacebookAdsSync';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -34,7 +36,7 @@ interface Integration {
 }
 
 const integrations: Integration[] = [
-  { id: 'meta', name: 'Meta Ads', description: { he: 'חיבור לקמפיינים ב-Facebook ו-Instagram', en: 'Connect to Facebook & Instagram campaigns' }, icon: Globe, color: '#1877F2', category: 'ads' },
+  { id: 'facebook', name: 'Facebook Ads', description: { he: 'חיבור לקמפיינים ב-Facebook ו-Instagram', en: 'Connect to Facebook & Instagram campaigns' }, icon: Globe, color: '#1877F2', category: 'ads', hasRealConnect: true },
   { id: 'google', name: 'Google Ads', description: { he: 'ניהול קמפיינים ב-Google Search ו-Display', en: 'Manage Google Search & Display campaigns' }, icon: Search, color: '#4285F4', category: 'ads', hasRealConnect: true },
   { id: 'tiktok', name: 'TikTok Ads', description: { he: 'ניהול מודעות ב-TikTok', en: 'Manage TikTok ad campaigns' }, icon: Music2, color: '#000000', category: 'ads' },
   { id: 'linkedin', name: 'LinkedIn Ads', description: { he: 'קמפיינים ממוקדים ב-LinkedIn', en: 'Targeted LinkedIn ad campaigns' }, icon: BriefcaseBusiness, color: '#0A66C2', category: 'ads', hasRealConnect: true },
@@ -62,6 +64,8 @@ export default function IntegrationsPage() {
   const gadsSync = useGoogleAdsSync();
   const linkedInAds = useLinkedInAdsConnect();
   const liSync = useLinkedInAdsSync();
+  const facebookAds = useFacebookAdsConnect();
+  const fbSync = useFacebookAdsSync();
   const sheetSync = useClientSheetSync();
 
   // Default: last 30 days
@@ -73,12 +77,16 @@ export default function IntegrationsPage() {
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
   const [gadsCollapsed, setGadsCollapsed] = useState<boolean>(false);
+  const [fbDateFrom, setFbDateFrom] = useState<Date>(thirtyAgo);
+  const [fbDateTo, setFbDateTo] = useState<Date>(today);
+  const [fbCollapsed, setFbCollapsed] = useState<boolean>(false);
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
   const getConnectedState = (item: Integration) => {
     if (item.id === 'google') return googleAds.connection?.is_connected ?? false;
     if (item.id === 'linkedin') return linkedInAds.connection?.is_connected ?? false;
+    if (item.id === 'facebook') return facebookAds.connection?.is_connected ?? false;
     if (item.id === 'sheets') return sheetSync.configs.length > 0;
     return false;
   };
@@ -91,6 +99,10 @@ export default function IntegrationsPage() {
 
   const handleLiSync = () => {
     liSync.sync(format(liDateFrom, 'yyyy-MM-dd'), format(liDateTo, 'yyyy-MM-dd'));
+  };
+
+  const handleFbSync = () => {
+    fbSync.sync(format(fbDateFrom, 'yyyy-MM-dd'), format(fbDateTo, 'yyyy-MM-dd'));
   };
 
   const formatCurrency = (amount: number, currency: string | null) =>
