@@ -446,6 +446,156 @@ export default function IntegrationsPage() {
         </Card>
       )}
 
+      {/* Facebook Ads sync panel */}
+      {facebookAds.connection?.is_connected && (
+        <Card className="bg-card/50 backdrop-blur border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Globe size={18} style={{ color: '#1877F2' }} />
+                  {isRtl ? 'סנכרון Facebook Ads' : 'Facebook Ads Sync'}
+                  {fbCollapsed && fbSync.campaigns.length > 0 && (
+                    <Badge variant="outline" className="text-xs ml-1">
+                      {fbSync.campaigns.length} {isRtl ? 'קמפיינים' : 'campaigns'}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {fbSync.lastSync ? (
+                    <>
+                      {isRtl ? 'סנכרון אחרון:' : 'Last sync:'}{' '}
+                      {format(new Date(fbSync.lastSync.created_at), 'dd/MM/yyyy HH:mm')}
+                      {' • '}
+                      <span className={fbSync.lastSync.status === 'success' ? 'text-primary' : 'text-destructive'}>
+                        {fbSync.lastSync.status === 'success'
+                          ? `${fbSync.lastSync.campaigns_synced} ${isRtl ? 'קמפיינים' : 'campaigns'}`
+                          : (isRtl ? 'שגיאה' : 'Error')}
+                      </span>
+                      {' • '}
+                      <span className="text-muted-foreground text-xs">
+                        {isRtl ? 'סנכרון אוטומטי יומי 03:30 UTC' : 'Auto-sync daily 03:30 UTC'}
+                      </span>
+                    </>
+                  ) : (
+                    isRtl ? 'עדיין לא סונכרן • סנכרון אוטומטי יומי 03:30 UTC' : 'Not synced yet • Auto-sync daily 03:30 UTC'
+                  )}
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFbCollapsed(v => !v)}
+                className="gap-1"
+                aria-label={fbCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}
+              >
+                {fbCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                <span className="text-xs">{fbCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}</span>
+              </Button>
+            </div>
+          </CardHeader>
+          {!fbCollapsed && (
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'מתאריך' : 'From'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(fbDateFrom, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={fbDateFrom}
+                      onSelect={(d) => d && setFbDateFrom(d)}
+                      disabled={(d) => d > new Date() || d > fbDateTo}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'עד תאריך' : 'To'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(fbDateTo, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={fbDateTo}
+                      onSelect={(d) => d && setFbDateTo(d)}
+                      disabled={(d) => d > new Date() || d < fbDateFrom}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <Button onClick={handleFbSync} disabled={fbSync.syncing} size="sm" className="gap-2">
+                {fbSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
+              </Button>
+            </div>
+
+            {fbSync.lastSync?.status === 'error' && fbSync.lastSync.error_message && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                {fbSync.lastSync.error_message}
+              </div>
+            )}
+
+            {fbSync.campaigns.length > 0 ? (
+              <div className="rounded-md border border-border/50 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRtl ? 'קמפיין' : 'Campaign'}</TableHead>
+                      <TableHead>{isRtl ? 'סטטוס' : 'Status'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'חשיפות' : 'Impressions'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'קליקים' : 'Clicks'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'הוצאה' : 'Spend'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'המרות' : 'Conv.'}</TableHead>
+                      <TableHead className="text-right">CTR</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fbSync.campaigns.map(c => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
+                            {c.status ?? '—'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(c.spend, c.currency_code)}</TableCell>
+                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : !fbSync.loading && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {isRtl ? 'אין נתונים מסונכרנים. לחץ "סנכרן עכשיו" כדי להתחיל.' : 'No synced data. Click "Sync now" to start.'}
+              </p>
+            )}
+          </CardContent>
+          )}
+        </Card>
+      )}
+
       {categories.map(cat => {
         const items = integrations.filter(i => i.category === cat);
         return (
@@ -458,6 +608,7 @@ export default function IntegrationsPage() {
               {items.map(item => {
                 const isGoogleAds = item.id === 'google';
                 const isLinkedIn = item.id === 'linkedin';
+                const isFacebook = item.id === 'facebook';
                 const connected = getConnectedState(item);
                 return (
                   <Card key={item.id} className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-colors">
@@ -485,7 +636,9 @@ export default function IntegrationsPage() {
                               ? googleAds.connection.account_name
                               : isLinkedIn && linkedInAds.connection?.account_name
                                 ? linkedInAds.connection.account_name
-                                : (isRtl ? 'מחובר' : 'Connected'))
+                                : isFacebook && facebookAds.connection?.account_name
+                                  ? facebookAds.connection.account_name
+                                  : (isRtl ? 'מחובר' : 'Connected'))
                             : (isRtl ? 'לא מחובר' : 'Not connected')}
                         </Badge>
                         {isGoogleAds ? (
@@ -519,6 +672,23 @@ export default function IntegrationsPage() {
                               disabled={linkedInAds.connecting}
                             >
                               {linkedInAds.connecting && <Loader2 size={12} className="animate-spin" />}
+                              {isRtl ? 'התחבר' : 'Connect'}
+                            </Button>
+                          )
+                        ) : isFacebook ? (
+                          connected ? (
+                            <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={facebookAds.disconnect}>
+                              {isRtl ? 'נתק' : 'Disconnect'}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-xs gap-1"
+                              onClick={facebookAds.connect}
+                              disabled={facebookAds.connecting}
+                            >
+                              {facebookAds.connecting && <Loader2 size={12} className="animate-spin" />}
                               {isRtl ? 'התחבר' : 'Connect'}
                             </Button>
                           )
