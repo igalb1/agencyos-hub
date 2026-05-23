@@ -133,6 +133,15 @@ export default function IntegrationsPage() {
         </div>
       )}
 
+      {facebookAds.isReturningFromOAuth && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">
+            {isRtl ? 'מחבר את חשבון Facebook Ads שלך...' : 'Connecting your Facebook Ads account...'}
+          </p>
+        </div>
+      )}
+
       {/* Google Ads sync panel */}
       {googleAds.connection?.is_connected && (
         <Card className="bg-card/50 backdrop-blur border-primary/20">
