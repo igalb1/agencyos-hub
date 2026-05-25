@@ -130,6 +130,15 @@ export default function IntegrationsPage() {
         </div>
       )}
 
+      {googleAds.isReturningFromOAuth && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">
+            {isRtl ? 'מחבר את חשבון Google Ads שלך...' : 'Connecting your Google Ads account...'}
+          </p>
+        </div>
+      )}
+
 
       {/* LinkedIn Ads sync panel */}
       {linkedInAds.connection?.is_connected && (
