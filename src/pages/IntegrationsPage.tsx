@@ -452,6 +452,7 @@ export default function IntegrationsPage() {
               {items.map(item => {
                 const isLinkedIn = item.id === 'linkedin';
                 const isFacebook = item.id === 'facebook';
+                const isGoogleAds = item.id === 'google_ads';
                 const connected = getConnectedState(item);
                 return (
                   <Card key={item.id} className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/30 transition-colors">
@@ -479,7 +480,9 @@ export default function IntegrationsPage() {
                                 ? linkedInAds.connection.account_name
                                 : isFacebook && facebookAds.connection?.account_name
                                   ? facebookAds.connection.account_name
-                                  : (isRtl ? 'מחובר' : 'Connected'))
+                                  : isGoogleAds && googleAds.connection?.account_name
+                                    ? googleAds.connection.account_name
+                                    : (isRtl ? 'מחובר' : 'Connected'))
                             : (isRtl ? 'לא מחובר' : 'Not connected')}
                         </Badge>
                         {isLinkedIn ? (
@@ -513,6 +516,23 @@ export default function IntegrationsPage() {
                               disabled={facebookAds.connecting}
                             >
                               {facebookAds.connecting && <Loader2 size={12} className="animate-spin" />}
+                              {isRtl ? 'התחבר' : 'Connect'}
+                            </Button>
+                          )
+                        ) : isGoogleAds ? (
+                          connected ? (
+                            <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={googleAds.disconnect}>
+                              {isRtl ? 'נתק' : 'Disconnect'}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="text-xs gap-1"
+                              onClick={googleAds.connect}
+                              disabled={googleAds.connecting}
+                            >
+                              {googleAds.connecting && <Loader2 size={12} className="animate-spin" />}
                               {isRtl ? 'התחבר' : 'Connect'}
                             </Button>
                           )
