@@ -12,9 +12,18 @@ interface SyncRequest {
   user_id?: string;
 }
 
-const GADS_VERSION = "v18";
+const GADS_VERSION = "v21";
 
 function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
+
+async function parseJsonSafe(res: Response, label: string): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`${label} returned non-JSON [${res.status}]: ${text.slice(0, 300)}`);
+  }
+}
 
 async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -27,7 +36,7 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
       grant_type: "refresh_token",
     }),
   });
-  const json = await res.json();
+  const json = await parseJsonSafe(res, "Token refresh");
   if (!res.ok || !json.access_token) {
     throw new Error(`Token refresh failed: ${JSON.stringify(json)}`);
   }
@@ -43,7 +52,7 @@ async function listAccessibleCustomers(accessToken: string, devToken: string): P
       "developer-token": devToken,
     },
   });
-  const data = await res.json();
+  const data = await parseJsonSafe(res, "listAccessibleCustomers");
   if (!res.ok) throw new Error(`listAccessibleCustomers failed [${res.status}]: ${JSON.stringify(data)}`);
   const names: string[] = data.resourceNames ?? [];
   return names.map((n) => n.replace("customers/", ""));
@@ -63,7 +72,7 @@ async function searchStream<T = Record<string, unknown>>(
     `https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/googleAds:searchStream`,
     { method: "POST", headers, body: JSON.stringify({ query }) },
   );
-  const data = await res.json();
+  const data = await parseJsonSafe(res, "searchStream");
   if (!res.ok) throw new Error(`searchStream failed [${res.status}]: ${JSON.stringify(data)}`);
   const out: T[] = [];
   const chunks = Array.isArray(data) ? data : [data];
