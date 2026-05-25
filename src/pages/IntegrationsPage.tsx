@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import {
-  Globe, Search, Music2, BriefcaseBusiness, BarChart3,
+  Globe, Music2, BriefcaseBusiness, BarChart3,
   Mail, MessageSquare, FileText, Zap, Loader2, RefreshCw, Calendar as CalendarIcon,
   ChevronDown, ChevronUp
 } from 'lucide-react';
