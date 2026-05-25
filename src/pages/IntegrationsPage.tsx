@@ -428,7 +428,6 @@ export default function IntegrationsPage() {
             {cat === 'analytics' && <GoogleSheetsCard isRtl={isRtl} />}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {items.map(item => {
-                const isGoogleAds = item.id === 'google';
                 const isLinkedIn = item.id === 'linkedin';
                 const isFacebook = item.id === 'facebook';
                 const connected = getConnectedState(item);
@@ -454,33 +453,14 @@ export default function IntegrationsPage() {
                       <div className="flex items-center justify-between">
                         <Badge variant={connected ? 'default' : 'outline'} className="text-xs">
                           {connected
-                            ? (isGoogleAds && googleAds.connection?.account_name
-                              ? googleAds.connection.account_name
-                              : isLinkedIn && linkedInAds.connection?.account_name
+                            ? (isLinkedIn && linkedInAds.connection?.account_name
                                 ? linkedInAds.connection.account_name
                                 : isFacebook && facebookAds.connection?.account_name
                                   ? facebookAds.connection.account_name
                                   : (isRtl ? 'מחובר' : 'Connected'))
                             : (isRtl ? 'לא מחובר' : 'Not connected')}
                         </Badge>
-                        {isGoogleAds ? (
-                          connected ? (
-                            <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={googleAds.disconnect}>
-                              {isRtl ? 'נתק' : 'Disconnect'}
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="text-xs gap-1"
-                              onClick={googleAds.connect}
-                              disabled={googleAds.connecting}
-                            >
-                              {googleAds.connecting && <Loader2 size={12} className="animate-spin" />}
-                              {isRtl ? 'התחבר' : 'Connect'}
-                            </Button>
-                          )
-                        ) : isLinkedIn ? (
+                        {isLinkedIn ? (
                           connected ? (
                             <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={linkedInAds.disconnect}>
                               {isRtl ? 'נתק' : 'Disconnect'}
