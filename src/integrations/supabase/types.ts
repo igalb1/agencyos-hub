@@ -579,6 +579,117 @@ export type Database = {
         }
         Relationships: []
       }
+      google_ads_campaigns: {
+        Row: {
+          account_name: string | null
+          advertising_channel_type: string | null
+          budget_amount: number | null
+          campaign_id: string
+          campaign_name: string
+          clicks: number
+          conversion_value: number
+          conversions: number
+          cost: number
+          created_at: string
+          ctr: number
+          currency_code: string | null
+          date_range_end: string
+          date_range_start: string
+          google_customer_id: string
+          id: string
+          impressions: number
+          last_synced_at: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          advertising_channel_type?: string | null
+          budget_amount?: number | null
+          campaign_id: string
+          campaign_name: string
+          clicks?: number
+          conversion_value?: number
+          conversions?: number
+          cost?: number
+          created_at?: string
+          ctr?: number
+          currency_code?: string | null
+          date_range_end: string
+          date_range_start: string
+          google_customer_id: string
+          id?: string
+          impressions?: number
+          last_synced_at?: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          advertising_channel_type?: string | null
+          budget_amount?: number | null
+          campaign_id?: string
+          campaign_name?: string
+          clicks?: number
+          conversion_value?: number
+          conversions?: number
+          cost?: number
+          created_at?: string
+          ctr?: number
+          currency_code?: string | null
+          date_range_end?: string
+          date_range_start?: string
+          google_customer_id?: string
+          id?: string
+          impressions?: number
+          last_synced_at?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_ads_sync_log: {
+        Row: {
+          campaigns_synced: number | null
+          created_at: string
+          date_range_end: string | null
+          date_range_start: string | null
+          error_message: string | null
+          google_customer_id: string | null
+          id: string
+          status: string
+          triggered_by: string
+          user_id: string
+        }
+        Insert: {
+          campaigns_synced?: number | null
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          google_customer_id?: string | null
+          id?: string
+          status: string
+          triggered_by?: string
+          user_id: string
+        }
+        Update: {
+          campaigns_synced?: number | null
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          google_customer_id?: string | null
+          id?: string
+          status?: string
+          triggered_by?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       linkedin_ads_campaigns: {
         Row: {
           campaign_id: string
