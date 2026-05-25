@@ -440,6 +440,140 @@ export default function IntegrationsPage() {
         </Card>
       )}
 
+      {/* Google Ads sync panel */}
+      {googleAds.connection?.is_connected && (
+        <Card className="bg-card/50 backdrop-blur border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Search size={18} style={{ color: '#4285F4' }} />
+                  {isRtl ? 'סנכרון Google Ads' : 'Google Ads Sync'}
+                  {gaCollapsed && gaSync.campaigns.length > 0 && (
+                    <Badge variant="outline" className="text-xs ml-1">
+                      {gaSync.campaigns.length} {isRtl ? 'קמפיינים' : 'campaigns'}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {gaSync.lastSync ? (
+                    <>
+                      {isRtl ? 'סנכרון אחרון:' : 'Last sync:'}{' '}
+                      {format(new Date(gaSync.lastSync.created_at), 'dd/MM/yyyy HH:mm')}
+                      {' • '}
+                      <span className={gaSync.lastSync.status === 'success' ? 'text-primary' : 'text-destructive'}>
+                        {gaSync.lastSync.status === 'success'
+                          ? `${gaSync.lastSync.campaigns_synced} ${isRtl ? 'קמפיינים' : 'campaigns'}`
+                          : (isRtl ? 'שגיאה' : 'Error')}
+                      </span>
+                      {' • '}
+                      <span className="text-muted-foreground text-xs">
+                        {isRtl ? 'סנכרון אוטומטי יומי 04:00 UTC' : 'Auto-sync daily 04:00 UTC'}
+                      </span>
+                    </>
+                  ) : (
+                    isRtl ? 'עדיין לא סונכרן • סנכרון אוטומטי יומי 04:00 UTC' : 'Not synced yet • Auto-sync daily 04:00 UTC'
+                  )}
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setGaCollapsed(v => !v)} className="gap-1">
+                {gaCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                <span className="text-xs">{gaCollapsed ? (isRtl ? 'הרחב' : 'Expand') : (isRtl ? 'מזער' : 'Minimize')}</span>
+              </Button>
+            </div>
+          </CardHeader>
+          {!gaCollapsed && (
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'מתאריך' : 'From'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(gaDateFrom, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={gaDateFrom}
+                      onSelect={(d) => d && setGaDateFrom(d)}
+                      disabled={(d) => d > new Date() || d > gaDateTo}
+                      initialFocus className={cn('p-3 pointer-events-auto')} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'עד תאריך' : 'To'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('w-[160px] justify-start text-left font-normal gap-2')}>
+                      <CalendarIcon size={14} />
+                      {format(gaDateTo, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={gaDateTo}
+                      onSelect={(d) => d && setGaDateTo(d)}
+                      disabled={(d) => d > new Date() || d < gaDateFrom}
+                      initialFocus className={cn('p-3 pointer-events-auto')} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button onClick={handleGaSync} disabled={gaSync.syncing} size="sm" className="gap-2">
+                {gaSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
+              </Button>
+            </div>
+
+            {gaSync.lastSync?.status === 'error' && gaSync.lastSync.error_message && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                {gaSync.lastSync.error_message}
+              </div>
+            )}
+
+            {gaSync.campaigns.length > 0 ? (
+              <div className="rounded-md border border-border/50 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRtl ? 'קמפיין' : 'Campaign'}</TableHead>
+                      <TableHead>{isRtl ? 'סטטוס' : 'Status'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'חשיפות' : 'Impressions'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'קליקים' : 'Clicks'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'הוצאה' : 'Cost'}</TableHead>
+                      <TableHead className="text-right">{isRtl ? 'המרות' : 'Conv.'}</TableHead>
+                      <TableHead className="text-right">CTR</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {gaSync.campaigns.map(c => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.status === 'ENABLED' ? 'default' : 'outline'} className="text-xs">
+                            {c.status ?? '—'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(c.cost, c.currency_code)}</TableCell>
+                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : !gaSync.loading && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {isRtl ? 'אין נתונים מסונכרנים. לחץ "סנכרן עכשיו" כדי להתחיל.' : 'No synced data. Click "Sync now" to start.'}
+              </p>
+            )}
+          </CardContent>
+          )}
+        </Card>
+      )}
+
       {categories.map(cat => {
         const items = integrations.filter(i => i.category === cat);
         return (
