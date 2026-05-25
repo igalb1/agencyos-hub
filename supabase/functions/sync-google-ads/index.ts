@@ -12,7 +12,7 @@ interface SyncRequest {
   user_id?: string;
 }
 
-const GADS_VERSION = "v18";
+const GADS_VERSION = "v21";
 
 function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
 
