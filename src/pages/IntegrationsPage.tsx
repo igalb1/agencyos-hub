@@ -63,8 +63,6 @@ export default function IntegrationsPage() {
   // Default: last 30 days
   const today = new Date();
   const thirtyAgo = new Date(today.getTime() - 30 * 86400000);
-  const [dateFrom, setDateFrom] = useState<Date>(thirtyAgo);
-  const [dateTo, setDateTo] = useState<Date>(today);
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
