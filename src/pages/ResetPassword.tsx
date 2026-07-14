@@ -12,6 +12,7 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -75,25 +76,31 @@ export default function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+    setFormError(null);
     if (password.length < 6) {
-      toast({ title: 'הסיסמה חייבת להכיל לפחות 6 תווים', variant: 'destructive' });
+      setFormError('הסיסמה חייבת להכיל לפחות 6 תווים');
       return;
     }
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
+        console.error('[ResetPassword] updateUser error:', error);
         const m = error.message.toLowerCase();
         let desc = error.message;
         if (m.includes('same') && m.includes('password')) desc = 'הסיסמה החדשה זהה לסיסמה הנוכחית. בחר סיסמה אחרת.';
-        else if (m.includes('weak') || m.includes('pwned')) desc = 'הסיסמה חלשה או הודלפה במאגרים ידועים. בחר סיסמה חזקה יותר.';
+        else if (m.includes('weak') || m.includes('pwned')) desc = 'הסיסמה חלשה או הודלפה במאגרים ידועים. בחר סיסמה חזקה יותר (לפחות 10 תווים, עם אותיות גדולות/קטנות, מספרים וסימן מיוחד).';
         else if (m.includes('network') || m.includes('failed to fetch')) desc = 'בעיית רשת. בדוק את החיבור ונסה שוב.';
+        else if (m.includes('session') || m.includes('jwt') || m.includes('auth')) desc = 'תוקף הקישור פג. חזור למסך התחברות ובקש קישור איפוס חדש.';
+        setFormError(desc);
         toast({ title: 'שגיאה', description: desc, variant: 'destructive' });
       } else {
         toast({ title: 'הסיסמה עודכנה בהצלחה!' });
         navigate('/dashboard');
       }
     } catch (err: any) {
+      console.error('[ResetPassword] exception:', err);
+      setFormError('בעיית רשת. נסה שוב.');
       toast({ title: 'שגיאה', description: 'בעיית רשת. נסה שוב.', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -144,6 +151,11 @@ export default function ResetPassword() {
               <Label htmlFor="password">סיסמה חדשה</Label>
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required dir="ltr" />
             </div>
+            {formError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                {formError}
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               עדכן סיסמה
