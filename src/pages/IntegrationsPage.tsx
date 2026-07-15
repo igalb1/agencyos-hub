@@ -1,8 +1,10 @@
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { useState, useEffect } from 'react';
 import {
   Globe, Music2, BriefcaseBusiness, BarChart3,
   Mail, MessageSquare, FileText, Zap, Loader2, RefreshCw, Calendar as CalendarIcon, Search,
@@ -59,6 +61,25 @@ const categoryLabels = {
 export default function IntegrationsPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
+  const { user } = useAuth();
+  const storageScope = user?.id ?? 'anon';
+  const collapseKey = (platform: 'li' | 'fb' | 'ga') =>
+    `integrations.collapsedAccounts.${platform}.${storageScope}`;
+
+  const readCollapsed = (platform: 'li' | 'fb' | 'ga'): Set<string> => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const raw = window.localStorage.getItem(collapseKey(platform));
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? new Set(arr as string[]) : new Set();
+    } catch { return new Set(); }
+  };
+  const persistCollapsed = (platform: 'li' | 'fb' | 'ga', set: Set<string>) => {
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(collapseKey(platform), JSON.stringify(Array.from(set))); } catch {}
+  };
+
   const linkedInAds = useLinkedInAdsConnect();
   const liSync = useLinkedInAdsSync();
   const facebookAds = useFacebookAdsConnect();
@@ -101,15 +122,36 @@ export default function IntegrationsPage() {
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
-  const [liCollapsedAccounts, setLiCollapsedAccounts] = useState<Set<string>>(new Set());
+  const [liCollapsedAccounts, setLiCollapsedAccounts] = useState<Set<string>>(() => readCollapsed('li'));
+  const [liSearch, setLiSearch] = useState('');
   const [fbDateFrom, setFbDateFrom] = useState<Date>(thirtyAgo);
   const [fbDateTo, setFbDateTo] = useState<Date>(today);
   const [fbCollapsed, setFbCollapsed] = useState<boolean>(false);
-  const [fbCollapsedAccounts, setFbCollapsedAccounts] = useState<Set<string>>(new Set());
+  const [fbCollapsedAccounts, setFbCollapsedAccounts] = useState<Set<string>>(() => readCollapsed('fb'));
+  const [fbSearch, setFbSearch] = useState('');
   const [gaDateFrom, setGaDateFrom] = useState<Date>(thirtyAgo);
   const [gaDateTo, setGaDateTo] = useState<Date>(today);
   const [gaCollapsed, setGaCollapsed] = useState<boolean>(false);
-  const [gaCollapsedAccounts, setGaCollapsedAccounts] = useState<Set<string>>(new Set());
+  const [gaCollapsedAccounts, setGaCollapsedAccounts] = useState<Set<string>>(() => readCollapsed('ga'));
+  const [gaSearch, setGaSearch] = useState('');
+
+  // Reload persisted collapse state when the signed-in user changes.
+  useEffect(() => {
+    setLiCollapsedAccounts(readCollapsed('li'));
+    setFbCollapsedAccounts(readCollapsed('fb'));
+    setGaCollapsedAccounts(readCollapsed('ga'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageScope]);
+
+  useEffect(() => { persistCollapsed('li', liCollapsedAccounts); }, [liCollapsedAccounts, storageScope]);
+  useEffect(() => { persistCollapsed('fb', fbCollapsedAccounts); }, [fbCollapsedAccounts, storageScope]);
+  useEffect(() => { persistCollapsed('ga', gaCollapsedAccounts); }, [gaCollapsedAccounts, storageScope]);
+
+  const filterBySearch = <T extends { campaign_name: string }>(rows: T[], q: string): T[] => {
+    const term = q.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter(r => (r.campaign_name ?? '').toLowerCase().includes(term));
+  };
 
   const toggleAccountCollapse = (set: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
     set(prev => {
@@ -281,6 +323,18 @@ export default function IntegrationsPage() {
                 {liSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
               </Button>
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'חיפוש קמפיין' : 'Search campaign'}</label>
+                <div className="relative">
+                  <Search size={14} className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground', isRtl ? 'right-2' : 'left-2')} />
+                  <Input
+                    value={liSearch}
+                    onChange={(e) => setLiSearch(e.target.value)}
+                    placeholder={isRtl ? 'סנן לפי שם קמפיין…' : 'Filter by campaign name…'}
+                    className={cn('h-8 text-sm', isRtl ? 'pr-7' : 'pl-7')}
+                  />
+                </div>
+              </div>
             </div>
 
             {liSync.lastSync?.status === 'error' && liSync.lastSync.error_message && (
@@ -304,9 +358,9 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(liSync.campaigns, c => c.linkedin_account_id ?? '').map(group => {
+                    {groupByAccount(filterBySearch(liSync.campaigns, liSearch), c => c.linkedin_account_id ?? '').map(group => {
                       const liKey = `li-${group.account}`;
-                      const isCollapsed = liCollapsedAccounts.has(liKey);
+                      const isCollapsed = liSearch.trim() ? false : liCollapsedAccounts.has(liKey);
                       return (
                       <React.Fragment key={liKey}>
                         <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setLiCollapsedAccounts, liKey)}>
@@ -465,6 +519,18 @@ export default function IntegrationsPage() {
                 {fbSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
               </Button>
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'חיפוש קמפיין' : 'Search campaign'}</label>
+                <div className="relative">
+                  <Search size={14} className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground', isRtl ? 'right-2' : 'left-2')} />
+                  <Input
+                    value={fbSearch}
+                    onChange={(e) => setFbSearch(e.target.value)}
+                    placeholder={isRtl ? 'סנן לפי שם קמפיין…' : 'Filter by campaign name…'}
+                    className={cn('h-8 text-sm', isRtl ? 'pr-7' : 'pl-7')}
+                  />
+                </div>
+              </div>
             </div>
 
             {fbSync.lastSync?.status === 'error' && fbSync.lastSync.error_message && (
@@ -488,9 +554,9 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(fbSync.campaigns, c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
+                    {groupByAccount(filterBySearch(fbSync.campaigns, fbSearch), c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
                       const fbKey = `fb-${group.account}`;
-                      const isCollapsed = fbCollapsedAccounts.has(fbKey);
+                      const isCollapsed = fbSearch.trim() ? false : fbCollapsedAccounts.has(fbKey);
                       return (
                       <React.Fragment key={fbKey}>
                         <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setFbCollapsedAccounts, fbKey)}>
@@ -628,6 +694,18 @@ export default function IntegrationsPage() {
                 {gaSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
               </Button>
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'חיפוש קמפיין' : 'Search campaign'}</label>
+                <div className="relative">
+                  <Search size={14} className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground', isRtl ? 'right-2' : 'left-2')} />
+                  <Input
+                    value={gaSearch}
+                    onChange={(e) => setGaSearch(e.target.value)}
+                    placeholder={isRtl ? 'סנן לפי שם קמפיין…' : 'Filter by campaign name…'}
+                    className={cn('h-8 text-sm', isRtl ? 'pr-7' : 'pl-7')}
+                  />
+                </div>
+              </div>
             </div>
 
             {gaSync.lastSync?.status === 'error' && gaSync.lastSync.error_message && (
@@ -651,9 +729,9 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(gaSync.campaigns, c => c.account_name ?? c.google_customer_id ?? '').map(group => {
+                    {groupByAccount(filterBySearch(gaSync.campaigns, gaSearch), c => c.account_name ?? c.google_customer_id ?? '').map(group => {
                       const gaKey = `ga-${group.account}`;
-                      const isCollapsed = gaCollapsedAccounts.has(gaKey);
+                      const isCollapsed = gaSearch.trim() ? false : gaCollapsedAccounts.has(gaKey);
                       return (
                       <React.Fragment key={gaKey}>
                         <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setGaCollapsedAccounts, gaKey)}>
