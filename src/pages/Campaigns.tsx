@@ -181,9 +181,10 @@ export default function CampaignsPage() {
           return false;
         }
       }
+      if (hideZeroSpend && c.spend === 0) return false;
       return true;
     });
-  }, [campaigns, search, platformFilter, statusFilter, clientFilter]);
+  }, [campaigns, search, platformFilter, statusFilter, clientFilter, hideZeroSpend]);
 
   const sorted = useMemo(() => {
     if (!sortConfig) return filtered;
