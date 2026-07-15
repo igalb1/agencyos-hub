@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 export interface LinkedInAdsCampaign {
   id: string;
+  linkedin_account_id: string | null;
   campaign_id: string;
   campaign_name: string;
   status: string | null;
