@@ -227,7 +227,7 @@ export default function CampaignsPage() {
   const totalLeads = filtered.reduce((s, c) => s + c.leads, 0);
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col h-full gap-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -344,7 +344,7 @@ export default function CampaignsPage() {
       </AnimatePresence>
 
       {/* Grouped Table */}
-      <div className="space-y-4">
+      <div className="flex-1 overflow-auto min-h-0 space-y-4">
         {grouped.map(group => (
           <div key={group.clientId} className="glass-card rounded-xl">
             {/* Client Header */}
