@@ -153,6 +153,11 @@ export default function IntegrationsPage() {
     return rows.filter(r => (r.campaign_name ?? '').toLowerCase().includes(term));
   };
 
+  const liGroups = groupByAccount(filterBySearch(liSync.campaigns, liSearch), c => c.linkedin_account_id ?? '');
+  const fbGroups = groupByAccount(filterBySearch(fbSync.campaigns, fbSearch), c => c.account_name ?? c.facebook_account_id ?? '');
+  const gaGroups = groupByAccount(filterBySearch(gaSync.campaigns, gaSearch), c => c.account_name ?? c.google_customer_id ?? '');
+
+
   const toggleAccountCollapse = (set: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
     set(prev => {
       const next = new Set(prev);
