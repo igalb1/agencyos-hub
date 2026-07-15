@@ -346,7 +346,7 @@ export default function CampaignsPage() {
       {/* Grouped Table */}
       <div className="flex-1 overflow-auto min-h-0 space-y-4">
         {grouped.map(group => (
-          <div key={group.clientId} className="glass-card rounded-xl">
+          <div key={group.clientId} className="glass-card rounded-xl" style={{ minWidth: `${1256 + customColumns.length * 110}px` }}>
             {/* Client Header */}
             {(() => {
               const isUnassigned = group.clientId === '__unassigned__';
