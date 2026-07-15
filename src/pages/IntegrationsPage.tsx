@@ -519,6 +519,18 @@ export default function IntegrationsPage() {
                 {fbSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
               </Button>
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'חיפוש קמפיין' : 'Search campaign'}</label>
+                <div className="relative">
+                  <Search size={14} className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground', isRtl ? 'right-2' : 'left-2')} />
+                  <Input
+                    value={fbSearch}
+                    onChange={(e) => setFbSearch(e.target.value)}
+                    placeholder={isRtl ? 'סנן לפי שם קמפיין…' : 'Filter by campaign name…'}
+                    className={cn('h-8 text-sm', isRtl ? 'pr-7' : 'pl-7')}
+                  />
+                </div>
+              </div>
             </div>
 
             {fbSync.lastSync?.status === 'error' && fbSync.lastSync.error_message && (
@@ -542,9 +554,9 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(fbSync.campaigns, c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
+                    {groupByAccount(filterBySearch(fbSync.campaigns, fbSearch), c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
                       const fbKey = `fb-${group.account}`;
-                      const isCollapsed = fbCollapsedAccounts.has(fbKey);
+                      const isCollapsed = fbSearch.trim() ? false : fbCollapsedAccounts.has(fbKey);
                       return (
                       <React.Fragment key={fbKey}>
                         <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setFbCollapsedAccounts, fbKey)}>
@@ -682,6 +694,18 @@ export default function IntegrationsPage() {
                 {gaSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
               </Button>
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'חיפוש קמפיין' : 'Search campaign'}</label>
+                <div className="relative">
+                  <Search size={14} className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground', isRtl ? 'right-2' : 'left-2')} />
+                  <Input
+                    value={gaSearch}
+                    onChange={(e) => setGaSearch(e.target.value)}
+                    placeholder={isRtl ? 'סנן לפי שם קמפיין…' : 'Filter by campaign name…'}
+                    className={cn('h-8 text-sm', isRtl ? 'pr-7' : 'pl-7')}
+                  />
+                </div>
+              </div>
             </div>
 
             {gaSync.lastSync?.status === 'error' && gaSync.lastSync.error_message && (
@@ -705,9 +729,9 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(gaSync.campaigns, c => c.account_name ?? c.google_customer_id ?? '').map(group => {
+                    {groupByAccount(filterBySearch(gaSync.campaigns, gaSearch), c => c.account_name ?? c.google_customer_id ?? '').map(group => {
                       const gaKey = `ga-${group.account}`;
-                      const isCollapsed = gaCollapsedAccounts.has(gaKey);
+                      const isCollapsed = gaSearch.trim() ? false : gaCollapsedAccounts.has(gaKey);
                       return (
                       <React.Fragment key={gaKey}>
                         <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setGaCollapsedAccounts, gaKey)}>
