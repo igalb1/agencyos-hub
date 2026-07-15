@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 
 export interface GoogleAdsCampaign {
   id: string;
+  account_name: string | null;
+  google_customer_id: string | null;
   campaign_id: string;
   campaign_name: string;
   status: string | null;
