@@ -157,7 +157,8 @@ Deno.serve(async (req) => {
       .eq("user_id", userId).eq("status", "active").limit(1).maybeSingle();
     const orgId = memberRow?.organization_id as string | undefined;
 
-    for (const topId of topLevel) {
+    // Discover all leaves across top-level accounts in parallel.
+    const discoverAll = await Promise.all(topLevel.map(async (topId) => {
       let leaves: { id: string; login: string }[] = [];
       try {
         const custRows = await gaqlSearch<{ customer: { manager?: boolean } }>(
@@ -184,137 +185,159 @@ Deno.serve(async (req) => {
         }
       } catch (e) {
         console.warn(`Discover ${topId} failed:`, e instanceof Error ? e.message : e);
-        continue;
       }
+      return leaves;
+    }));
+    const allLeaves = discoverAll.flat();
 
-      for (const leaf of leaves) {
-        try {
-          const query = `
-            SELECT
-              customer.id, customer.descriptive_name, customer.currency_code,
-              campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,
-              campaign_budget.amount_micros,
-              metrics.impressions, metrics.clicks, metrics.cost_micros,
-              metrics.conversions, metrics.conversions_value, metrics.ctr
-            FROM campaign
-            WHERE segments.date BETWEEN '${start}' AND '${end}'
-              AND campaign.status != 'REMOVED'
-          `;
-          const rows = await gaqlSearch<CampaignRow>(
-            accessToken, devToken, leaf.id, query, leaf.login,
-          );
-          if (rows.length === 0) continue;
+    // Bounded concurrency for leaf syncs.
+    const CONCURRENCY = 6;
+    const runLeaf = async (leaf: { id: string; login: string }) => {
+      try {
+        const query = `
+          SELECT
+            customer.id, customer.descriptive_name, customer.currency_code,
+            campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,
+            campaign_budget.amount_micros,
+            metrics.impressions, metrics.clicks, metrics.cost_micros,
+            metrics.conversions, metrics.conversions_value, metrics.ctr
+          FROM campaign
+          WHERE segments.date BETWEEN '${start}' AND '${end}'
+            AND campaign.status != 'REMOVED'
+        `;
+        const rows = await gaqlSearch<CampaignRow>(
+          accessToken, devToken, leaf.id, query, leaf.login,
+        );
+        if (rows.length === 0) return;
 
-          syncedAccountIds.add(leaf.id);
-          const acctName = rows[0]?.customer?.descriptiveName ?? `Account ${leaf.id}`;
-          const currency = rows[0]?.customer?.currencyCode ?? null;
+        syncedAccountIds.add(leaf.id);
+        const acctName = rows[0]?.customer?.descriptiveName ?? `Account ${leaf.id}`;
+        const currency = rows[0]?.customer?.currencyCode ?? null;
 
-          // Aggregate per campaign_id across days (segments.date creates one row per day).
-          const agg = new Map<string, {
-            campaign_id: string; campaign_name: string; status: string | null;
-            channel: string | null; budget_micros: number;
-            impressions: number; clicks: number; costMicros: number;
-            conversions: number; conversionValue: number;
-          }>();
-          for (const r of rows) {
-            const cid = String(r.campaign.id);
-            const cur = agg.get(cid) ?? {
-              campaign_id: cid,
-              campaign_name: r.campaign.name,
-              status: r.campaign.status ?? null,
-              channel: r.campaign.advertisingChannelType ?? null,
-              budget_micros: Number(r.campaignBudget?.amountMicros ?? 0),
-              impressions: 0, clicks: 0, costMicros: 0,
-              conversions: 0, conversionValue: 0,
-            };
-            cur.impressions += Number(r.metrics?.impressions ?? 0);
-            cur.clicks += Number(r.metrics?.clicks ?? 0);
-            cur.costMicros += Number(r.metrics?.costMicros ?? 0);
-            cur.conversions += Number(r.metrics?.conversions ?? 0);
-            cur.conversionValue += Number(r.metrics?.conversionsValue ?? 0);
-            agg.set(cid, cur);
-          }
-
-          const upserts = Array.from(agg.values()).map((c) => ({
-            user_id: userId,
-            login_customer_id: leaf.login,
-            google_customer_id: leaf.id,
-            account_name: acctName,
-            campaign_id: c.campaign_id,
-            campaign_name: c.campaign_name,
-            status: c.status,
-            advertising_channel_type: c.channel,
-            currency_code: currency,
-            budget_amount: c.budget_micros / 1_000_000,
-            impressions: c.impressions,
-            clicks: c.clicks,
-            cost: c.costMicros / 1_000_000,
-            conversions: c.conversions,
-            conversion_value: c.conversionValue,
-            ctr: c.impressions > 0 ? c.clicks / c.impressions : 0,
-            date_range_start: start,
-            date_range_end: end,
-            last_synced_at: new Date().toISOString(),
-          }));
-
-          const { error: upErr } = await admin.from("google_ads_campaigns").upsert(upserts, {
-            onConflict: "user_id,google_customer_id,campaign_id,date_range_start,date_range_end",
-          });
-          if (upErr) throw new Error(`Upsert failed: ${upErr.message}`);
-          totalSynced += upserts.length;
-
-          // Mirror to org-wide clients + campaigns.
-          if (orgId) {
-            try {
-              let clientId: string | null = null;
-              const { data: match } = await admin.from("clients").select("id")
-                .eq("organization_id", orgId).ilike("name", acctName).maybeSingle();
-              if (match?.id) clientId = match.id as string;
-              if (!clientId) {
-                const { data: created } = await admin.from("clients").insert({
-                  organization_id: orgId,
-                  name: acctName,
-                  industry: "Google Ads",
-                  color: "#4285F4",
-                  status: "active",
-                }).select("id").single();
-                clientId = created?.id ?? null;
-              }
-              for (const c of upserts) {
-                const payload = {
-                  organization_id: orgId,
-                  client_id: clientId,
-                  name: c.campaign_name,
-                  platform: "Google",
-                  status: c.status === "ENABLED" ? "Live"
-                    : c.status === "PAUSED" ? "Paused" : "Planned",
-                  budget: Number(c.budget_amount ?? 0),
-                  spend: Number(c.cost ?? 0),
-                  impressions: Number(c.impressions ?? 0),
-                  clicks: Number(c.clicks ?? 0),
-                  conversions: Math.round(Number(c.conversions ?? 0)),
-                  leads: Math.round(Number(c.conversions ?? 0)),
-                  start_date: c.date_range_start,
-                  end_date: c.date_range_end,
-                };
-                const { data: existing } = await admin.from("campaigns").select("id")
-                  .eq("organization_id", orgId).eq("platform", "Google")
-                  .eq("name", c.campaign_name).maybeSingle();
-                if (existing?.id) {
-                  await admin.from("campaigns").update(payload).eq("id", existing.id);
-                } else {
-                  await admin.from("campaigns").insert(payload);
-                }
-              }
-            } catch (mirrorErr) {
-              console.warn("Mirror failed:", mirrorErr instanceof Error ? mirrorErr.message : mirrorErr);
-            }
-          }
-        } catch (e) {
-          console.warn(`Sync leaf ${leaf.id} failed:`, e instanceof Error ? e.message : e);
+        const agg = new Map<string, {
+          campaign_id: string; campaign_name: string; status: string | null;
+          channel: string | null; budget_micros: number;
+          impressions: number; clicks: number; costMicros: number;
+          conversions: number; conversionValue: number;
+        }>();
+        for (const r of rows) {
+          const cid = String(r.campaign.id);
+          const cur = agg.get(cid) ?? {
+            campaign_id: cid,
+            campaign_name: r.campaign.name,
+            status: r.campaign.status ?? null,
+            channel: r.campaign.advertisingChannelType ?? null,
+            budget_micros: Number(r.campaignBudget?.amountMicros ?? 0),
+            impressions: 0, clicks: 0, costMicros: 0,
+            conversions: 0, conversionValue: 0,
+          };
+          cur.impressions += Number(r.metrics?.impressions ?? 0);
+          cur.clicks += Number(r.metrics?.clicks ?? 0);
+          cur.costMicros += Number(r.metrics?.costMicros ?? 0);
+          cur.conversions += Number(r.metrics?.conversions ?? 0);
+          cur.conversionValue += Number(r.metrics?.conversionsValue ?? 0);
+          agg.set(cid, cur);
         }
+
+        const upserts = Array.from(agg.values()).map((c) => ({
+          user_id: userId,
+          login_customer_id: leaf.login,
+          google_customer_id: leaf.id,
+          account_name: acctName,
+          campaign_id: c.campaign_id,
+          campaign_name: c.campaign_name,
+          status: c.status,
+          advertising_channel_type: c.channel,
+          currency_code: currency,
+          budget_amount: c.budget_micros / 1_000_000,
+          impressions: c.impressions,
+          clicks: c.clicks,
+          cost: c.costMicros / 1_000_000,
+          conversions: c.conversions,
+          conversion_value: c.conversionValue,
+          ctr: c.impressions > 0 ? c.clicks / c.impressions : 0,
+          date_range_start: start,
+          date_range_end: end,
+          last_synced_at: new Date().toISOString(),
+        }));
+
+        const { error: upErr } = await admin.from("google_ads_campaigns").upsert(upserts, {
+          onConflict: "user_id,google_customer_id,campaign_id,date_range_start,date_range_end",
+        });
+        if (upErr) throw new Error(`Upsert failed: ${upErr.message}`);
+        totalSynced += upserts.length;
+
+        // Mirror to org-wide clients + campaigns (bulk).
+        if (orgId) {
+          try {
+            let clientId: string | null = null;
+            const { data: match } = await admin.from("clients").select("id")
+              .eq("organization_id", orgId).ilike("name", acctName).maybeSingle();
+            if (match?.id) clientId = match.id as string;
+            if (!clientId) {
+              const { data: created } = await admin.from("clients").insert({
+                organization_id: orgId,
+                name: acctName,
+                industry: "Google Ads",
+                color: "#4285F4",
+                status: "active",
+              }).select("id").single();
+              clientId = created?.id ?? null;
+            }
+
+            const names = upserts.map((c) => c.campaign_name);
+            const { data: existingRows } = await admin.from("campaigns")
+              .select("id,name")
+              .eq("organization_id", orgId).eq("platform", "Google")
+              .in("name", names);
+            const existingByName = new Map<string, string>();
+            for (const r of existingRows ?? []) existingByName.set(r.name as string, r.id as string);
+
+            const toInsert: any[] = [];
+            const updates: Promise<any>[] = [];
+            for (const c of upserts) {
+              const payload = {
+                organization_id: orgId,
+                client_id: clientId,
+                name: c.campaign_name,
+                platform: "Google",
+                status: c.status === "ENABLED" ? "Live"
+                  : c.status === "PAUSED" ? "Paused" : "Planned",
+                budget: Number(c.budget_amount ?? 0),
+                spend: Number(c.cost ?? 0),
+                impressions: Number(c.impressions ?? 0),
+                clicks: Number(c.clicks ?? 0),
+                conversions: Math.round(Number(c.conversions ?? 0)),
+                leads: Math.round(Number(c.conversions ?? 0)),
+                start_date: c.date_range_start,
+                end_date: c.date_range_end,
+              };
+              const existingId = existingByName.get(c.campaign_name);
+              if (existingId) {
+                updates.push(admin.from("campaigns").update(payload).eq("id", existingId));
+              } else {
+                toInsert.push(payload);
+              }
+            }
+            if (toInsert.length) await admin.from("campaigns").insert(toInsert);
+            if (updates.length) await Promise.all(updates);
+          } catch (mirrorErr) {
+            console.warn("Mirror failed:", mirrorErr instanceof Error ? mirrorErr.message : mirrorErr);
+          }
+        }
+      } catch (e) {
+        console.warn(`Sync leaf ${leaf.id} failed:`, e instanceof Error ? e.message : e);
       }
-    }
+    };
+
+    // Simple concurrency pool over allLeaves.
+    let cursor = 0;
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, allLeaves.length) }, async () => {
+      while (cursor < allLeaves.length) {
+        const idx = cursor++;
+        await runLeaf(allLeaves[idx]);
+      }
+    }));
 
     await admin.from("google_ads_sync_log").insert({
       user_id: userId,
