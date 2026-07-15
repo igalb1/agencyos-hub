@@ -101,6 +101,7 @@ function ProtectedRoutes() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <AssistantFAB />
     </AppLayout>
   );
 }
