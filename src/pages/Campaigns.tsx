@@ -93,6 +93,7 @@ export default function CampaignsPage() {
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
+  const [hideZeroSpend, setHideZeroSpend] = useState(false);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -180,9 +181,10 @@ export default function CampaignsPage() {
           return false;
         }
       }
+      if (hideZeroSpend && c.spend === 0) return false;
       return true;
     });
-  }, [campaigns, search, platformFilter, statusFilter, clientFilter]);
+  }, [campaigns, search, platformFilter, statusFilter, clientFilter, hideZeroSpend]);
 
   const sorted = useMemo(() => {
     if (!sortConfig) return filtered;
@@ -336,6 +338,15 @@ export default function CampaignsPage() {
                       {lang === 'he' ? 'לא משויך' : 'Unassigned'}
                     </FilterChip>
                   )}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">{lang === 'he' ? 'הוצאה' : 'Spend'}</label>
+                <div className="flex gap-2 flex-wrap">
+                  <FilterChip active={!hideZeroSpend} onClick={() => setHideZeroSpend(false)}>{lang === 'he' ? 'הכל' : 'All'}</FilterChip>
+                  <FilterChip active={hideZeroSpend} onClick={() => setHideZeroSpend(true)}>
+                    {lang === 'he' ? 'הסתר הוצאה 0' : 'Hide $0 spend'}
+                  </FilterChip>
                 </div>
               </div>
             </div>
