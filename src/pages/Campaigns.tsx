@@ -346,8 +346,7 @@ export default function CampaignsPage() {
       {/* Grouped Table */}
       <div className="space-y-4">
         {grouped.map(group => (
-          <div key={group.clientId} className="glass-card rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
+          <div key={group.clientId} className="glass-card rounded-xl">
             {/* Client Header */}
             {(() => {
               const isUnassigned = group.clientId === '__unassigned__';
@@ -800,7 +799,6 @@ export default function CampaignsPage() {
                 </div>
               </div>
             ))}
-            </div>
           </div>
         ))}
 
