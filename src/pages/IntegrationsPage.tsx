@@ -601,7 +601,7 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(filterBySearch(fbSync.campaigns, fbSearch), c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
+                    {fbGroups.map(group => {
                       const fbKey = `fb-${group.account}`;
                       const isCollapsed = fbSearch.trim() ? false : fbCollapsedAccounts.has(fbKey);
                       return (
