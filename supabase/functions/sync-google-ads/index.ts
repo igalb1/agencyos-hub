@@ -169,17 +169,20 @@ Deno.serve(async (req) => {
         if (isManager) {
           const children = await gaqlSearch<{ customerClient: { id: string; manager?: boolean; status?: string } }>(
             accessToken, devToken, topId,
-            `SELECT customer_client.id, customer_client.manager, customer_client.status, customer_client.level
-             FROM customer_client WHERE customer_client.level <= 2`,
+            `SELECT customer_client.id, customer_client.manager, customer_client.status,
+                    customer_client.level, customer_client.hidden
+             FROM customer_client
+             WHERE customer_client.status = 'ENABLED'
+               AND customer_client.hidden = FALSE`,
             topId,
           );
           leaves = children
             .filter((c) =>
               c.customerClient?.manager !== true &&
-              c.customerClient?.status !== "CANCELED" &&
               c.customerClient?.id && String(c.customerClient.id) !== topId,
             )
             .map((c) => ({ id: String(c.customerClient.id), login: topId }));
+          console.log(`MCC ${topId}: discovered ${leaves.length} leaf accounts`);
         } else {
           leaves = [{ id: topId, login: topId }];
         }
@@ -188,7 +191,11 @@ Deno.serve(async (req) => {
       }
       return leaves;
     }));
-    const allLeaves = discoverAll.flat();
+    // De-dupe leaves that appear under multiple MCCs (keep first login).
+    const dedup = new Map<string, { id: string; login: string }>();
+    for (const l of discoverAll.flat()) if (!dedup.has(l.id)) dedup.set(l.id, l);
+    const allLeaves = Array.from(dedup.values());
+    console.log(`Total unique leaf accounts to sync: ${allLeaves.length}`);
 
     // Bounded concurrency for leaf syncs.
     const CONCURRENCY = 6;
