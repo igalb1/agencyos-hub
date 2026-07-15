@@ -340,6 +340,15 @@ export default function CampaignsPage() {
                   )}
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">{lang === 'he' ? 'הוצאה' : 'Spend'}</label>
+                <div className="flex gap-2 flex-wrap">
+                  <FilterChip active={!hideZeroSpend} onClick={() => setHideZeroSpend(false)}>{lang === 'he' ? 'הכל' : 'All'}</FilterChip>
+                  <FilterChip active={hideZeroSpend} onClick={() => setHideZeroSpend(true)}>
+                    {lang === 'he' ? 'הסתר הוצאה 0' : 'Hide $0 spend'}
+                  </FilterChip>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
