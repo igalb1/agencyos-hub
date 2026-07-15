@@ -557,7 +557,28 @@ export default function IntegrationsPage() {
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setFbCollapsedAccounts(new Set(fbGroups.map(g => `fb-${g.account}`)))}
+                  disabled={fbGroups.length === 0}
+                >
+                  {isRtl ? 'מזער הכל' : 'Collapse all'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setFbCollapsedAccounts(new Set())}
+                  disabled={fbGroups.length === 0}
+                >
+                  {isRtl ? 'הרחב הכל' : 'Expand all'}
+                </Button>
+              </div>
             </div>
+
 
             {fbSync.lastSync?.status === 'error' && fbSync.lastSync.error_message && (
               <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
