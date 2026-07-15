@@ -1,8 +1,10 @@
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { useState, useEffect } from 'react';
 import {
   Globe, Music2, BriefcaseBusiness, BarChart3,
   Mail, MessageSquare, FileText, Zap, Loader2, RefreshCw, Calendar as CalendarIcon, Search,
@@ -59,6 +61,25 @@ const categoryLabels = {
 export default function IntegrationsPage() {
   const { lang } = useApp();
   const isRtl = lang === 'he';
+  const { user } = useAuth();
+  const storageScope = user?.id ?? 'anon';
+  const collapseKey = (platform: 'li' | 'fb' | 'ga') =>
+    `integrations.collapsedAccounts.${platform}.${storageScope}`;
+
+  const readCollapsed = (platform: 'li' | 'fb' | 'ga'): Set<string> => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const raw = window.localStorage.getItem(collapseKey(platform));
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? new Set(arr as string[]) : new Set();
+    } catch { return new Set(); }
+  };
+  const persistCollapsed = (platform: 'li' | 'fb' | 'ga', set: Set<string>) => {
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(collapseKey(platform), JSON.stringify(Array.from(set))); } catch {}
+  };
+
   const linkedInAds = useLinkedInAdsConnect();
   const liSync = useLinkedInAdsSync();
   const facebookAds = useFacebookAdsConnect();
@@ -101,15 +122,36 @@ export default function IntegrationsPage() {
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
-  const [liCollapsedAccounts, setLiCollapsedAccounts] = useState<Set<string>>(new Set());
+  const [liCollapsedAccounts, setLiCollapsedAccounts] = useState<Set<string>>(() => readCollapsed('li'));
+  const [liSearch, setLiSearch] = useState('');
   const [fbDateFrom, setFbDateFrom] = useState<Date>(thirtyAgo);
   const [fbDateTo, setFbDateTo] = useState<Date>(today);
   const [fbCollapsed, setFbCollapsed] = useState<boolean>(false);
-  const [fbCollapsedAccounts, setFbCollapsedAccounts] = useState<Set<string>>(new Set());
+  const [fbCollapsedAccounts, setFbCollapsedAccounts] = useState<Set<string>>(() => readCollapsed('fb'));
+  const [fbSearch, setFbSearch] = useState('');
   const [gaDateFrom, setGaDateFrom] = useState<Date>(thirtyAgo);
   const [gaDateTo, setGaDateTo] = useState<Date>(today);
   const [gaCollapsed, setGaCollapsed] = useState<boolean>(false);
-  const [gaCollapsedAccounts, setGaCollapsedAccounts] = useState<Set<string>>(new Set());
+  const [gaCollapsedAccounts, setGaCollapsedAccounts] = useState<Set<string>>(() => readCollapsed('ga'));
+  const [gaSearch, setGaSearch] = useState('');
+
+  // Reload persisted collapse state when the signed-in user changes.
+  useEffect(() => {
+    setLiCollapsedAccounts(readCollapsed('li'));
+    setFbCollapsedAccounts(readCollapsed('fb'));
+    setGaCollapsedAccounts(readCollapsed('ga'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageScope]);
+
+  useEffect(() => { persistCollapsed('li', liCollapsedAccounts); }, [liCollapsedAccounts, storageScope]);
+  useEffect(() => { persistCollapsed('fb', fbCollapsedAccounts); }, [fbCollapsedAccounts, storageScope]);
+  useEffect(() => { persistCollapsed('ga', gaCollapsedAccounts); }, [gaCollapsedAccounts, storageScope]);
+
+  const filterBySearch = <T extends { campaign_name: string }>(rows: T[], q: string): T[] => {
+    const term = q.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter(r => (r.campaign_name ?? '').toLowerCase().includes(term));
+  };
 
   const toggleAccountCollapse = (set: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
     set(prev => {
