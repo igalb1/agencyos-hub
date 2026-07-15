@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/table';
 import { GoogleSheetsCard } from '@/components/integrations/GoogleSheetsCard';
 import { useClientSheetSync } from '@/hooks/useClientSheetSync';
+import { useOrgData } from '@/hooks/useOrgData';
+import React from 'react';
 
 interface Integration {
   id: string;
@@ -64,6 +66,34 @@ export default function IntegrationsPage() {
   const googleAds = useGoogleAdsConnect();
   const gaSync = useGoogleAdsSync();
   const sheetSync = useClientSheetSync();
+  const { clients } = useOrgData();
+
+  // Match Google/Facebook account_name → the client we mirrored it into.
+  const clientNameByAccount = React.useMemo(() => {
+    const m = new Map<string, string>();
+    clients.forEach(c => m.set(c.name.trim().toLowerCase(), c.name));
+    return m;
+  }, [clients]);
+
+  const groupByAccount = <T extends { campaign_name: string }>(
+    rows: T[],
+    accountKey: (r: T) => string,
+  ): Array<{ account: string; clientName: string | null; rows: T[] }> => {
+    const groups = new Map<string, T[]>();
+    rows.forEach(r => {
+      const k = accountKey(r) || (isRtl ? 'ללא חשבון' : 'Unknown account');
+      const list = groups.get(k) ?? [];
+      list.push(r);
+      groups.set(k, list);
+    });
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([account, list]) => ({
+        account,
+        clientName: clientNameByAccount.get(account.trim().toLowerCase()) ?? null,
+        rows: list.slice().sort((x, y) => x.campaign_name.localeCompare(y.campaign_name)),
+      }));
+  };
 
   // Default: last 30 days
   const today = new Date();
