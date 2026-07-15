@@ -227,7 +227,7 @@ export default function CampaignsPage() {
   const totalLeads = filtered.reduce((s, c) => s + c.leads, 0);
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col h-full gap-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -344,10 +344,9 @@ export default function CampaignsPage() {
       </AnimatePresence>
 
       {/* Grouped Table */}
-      <div className="space-y-4">
+      <div className="flex-1 overflow-auto min-h-0 space-y-4">
         {grouped.map(group => (
-          <div key={group.clientId} className="glass-card rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
+          <div key={group.clientId} className="glass-card rounded-xl" style={{ minWidth: `${1256 + customColumns.length * 110}px` }}>
             {/* Client Header */}
             {(() => {
               const isUnassigned = group.clientId === '__unassigned__';
@@ -392,7 +391,7 @@ export default function CampaignsPage() {
 
                 {/* Table header - visible on desktop only */}
                 <div
-                  className="hidden lg:grid gap-x-0 px-0 py-3 bg-[hsl(var(--table-header-bg))] text-[hsl(var(--table-header-text))] text-[13px] font-bold uppercase tracking-wide border-y border-border [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/60"
+                  className="hidden lg:grid gap-x-0 px-0 py-3 bg-[hsl(var(--table-header-bg))] text-[hsl(var(--table-header-text))] text-[13px] font-bold uppercase tracking-wide border-y border-border sticky top-0 z-10 shadow-sm [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/60"
                   style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
@@ -800,7 +799,6 @@ export default function CampaignsPage() {
                 </div>
               </div>
             ))}
-            </div>
           </div>
         ))}
 
