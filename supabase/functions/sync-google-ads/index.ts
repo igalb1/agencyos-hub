@@ -1,9 +1,16 @@
+// Sync Google Ads campaigns for the authenticated user.
+// - Refreshes access token from the encrypted refresh_token if expired.
+// - Discovers accessible customers; expands manager (MCC) accounts to their leaf children.
+// - For each leaf account, pulls campaign performance for the requested date range.
+// - Upserts into google_ads_campaigns and mirrors into org-wide clients + campaigns.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const GADS_VERSION = "v21";
 
 interface SyncRequest {
   date_range_start?: string;
@@ -12,20 +19,15 @@ interface SyncRequest {
   user_id?: string;
 }
 
-const GADS_VERSION = "v21";
-
-function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 async function parseJsonSafe(res: Response, label: string): Promise<any> {
   const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`${label} returned non-JSON [${res.status}]: ${text.slice(0, 300)}`);
-  }
+  try { return JSON.parse(text); }
+  catch { throw new Error(`${label} non-JSON [${res.status}]: ${text.slice(0, 300)}`); }
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+async function refreshAccessToken(refreshToken: string): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -38,27 +40,23 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
   });
   const json = await parseJsonSafe(res, "Token refresh");
   if (!res.ok || !json.access_token) {
-    throw new Error(`Token refresh failed: ${JSON.stringify(json)}`);
+    throw new Error(`Token refresh failed: ${json.error_description ?? json.error ?? "unknown"}`);
   }
-  return json;
+  return json.access_token as string;
 }
 
-interface GadsCustomer { id: string; descriptiveName?: string; currencyCode?: string; manager?: boolean; }
-
 async function listAccessibleCustomers(accessToken: string, devToken: string): Promise<string[]> {
-  const res = await fetch(`https://googleads.googleapis.com/${GADS_VERSION}/customers:listAccessibleCustomers`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "developer-token": devToken,
-    },
-  });
+  const res = await fetch(
+    `https://googleads.googleapis.com/${GADS_VERSION}/customers:listAccessibleCustomers`,
+    { headers: { Authorization: `Bearer ${accessToken}`, "developer-token": devToken } },
+  );
   const data = await parseJsonSafe(res, "listAccessibleCustomers");
-  if (!res.ok) throw new Error(`listAccessibleCustomers failed [${res.status}]: ${JSON.stringify(data)}`);
+  if (!res.ok) throw new Error(`listAccessibleCustomers [${res.status}]: ${JSON.stringify(data).slice(0, 300)}`);
   const names: string[] = data.resourceNames ?? [];
   return names.map((n) => n.replace("customers/", ""));
 }
 
-async function searchStream<T = Record<string, unknown>>(
+async function gaqlSearch<T = Record<string, unknown>>(
   accessToken: string, devToken: string, customerId: string, query: string, loginCustomerId?: string,
 ): Promise<T[]> {
   const headers: Record<string, string> = {
@@ -73,15 +71,15 @@ async function searchStream<T = Record<string, unknown>>(
     { method: "POST", headers, body: JSON.stringify({ query }) },
   );
   const data = await parseJsonSafe(res, "searchStream");
-  if (!res.ok) throw new Error(`searchStream failed [${res.status}]: ${JSON.stringify(data)}`);
-  const out: T[] = [];
+  if (!res.ok) throw new Error(`searchStream [${res.status}]: ${JSON.stringify(data).slice(0, 300)}`);
   const chunks = Array.isArray(data) ? data : [data];
+  const out: T[] = [];
   for (const c of chunks) for (const r of (c.results ?? [])) out.push(r as T);
   return out;
 }
 
-interface CustomerRow { customer: { id: string; descriptiveName?: string; currencyCode?: string; manager?: boolean }; }
 interface CampaignRow {
+  customer?: { id?: string; descriptiveName?: string; currencyCode?: string };
   campaign: { id: string; name: string; status?: string; advertisingChannelType?: string };
   campaignBudget?: { amountMicros?: string };
   metrics?: {
@@ -127,68 +125,70 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    const { data: tokensRows, error: tokenErr } = await admin.rpc("get_integration_tokens", {
+    // Load tokens (encrypted in DB, returned decrypted via SECURITY DEFINER RPC).
+    const { data: tokenRows, error: tokenErr } = await admin.rpc("get_integration_tokens", {
       _user_id: userId, _provider: "google_ads",
     });
     if (tokenErr) throw new Error(`Token fetch failed: ${tokenErr.message}`);
-    const tokens = (tokensRows as Array<{ access_token: string; refresh_token: string | null; token_expires_at: string | null; account_name: string | null }>)?.[0];
-    if (!tokens?.access_token) throw new Error("Google Ads not connected");
+    const tokens = (tokenRows as Array<{
+      access_token: string; refresh_token: string | null;
+      token_expires_at: string | null; account_name: string | null;
+    }>)?.[0];
+    if (!tokens?.refresh_token) throw new Error("Google Ads not connected — reconnect required");
 
-    let accessToken = tokens.access_token;
-    const expired = tokens.token_expires_at && new Date(tokens.token_expires_at).getTime() < Date.now() + 60_000;
-    if (expired) {
-      if (!tokens.refresh_token) throw new Error("Access token expired and no refresh token available; please reconnect");
-      const refreshed = await refreshAccessToken(tokens.refresh_token);
-      accessToken = refreshed.access_token;
-      const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
-      await admin.rpc("set_integration_tokens", {
-        _user_id: userId, _provider: "google_ads",
-        _access_token: accessToken, _refresh_token: tokens.refresh_token,
-        _account_id: "", _account_name: tokens.account_name ?? "Google Ads",
-        _token_expires_at: newExpiry,
-      });
-    }
+    // Always refresh: access tokens are short-lived and often stale in DB.
+    const accessToken = await refreshAccessToken(tokens.refresh_token);
+    await admin.rpc("set_integration_tokens", {
+      _user_id: userId, _provider: "google_ads",
+      _access_token: accessToken, _refresh_token: tokens.refresh_token,
+      _account_id: "", _account_name: tokens.account_name ?? "Google Ads",
+      _token_expires_at: new Date(Date.now() + 3300 * 1000).toISOString(),
+    });
 
-    const accessible = await listAccessibleCustomers(accessToken, devToken);
-    if (accessible.length === 0) throw new Error("No accessible Google Ads accounts");
+    const topLevel = await listAccessibleCustomers(accessToken, devToken);
+    if (topLevel.length === 0) throw new Error("No accessible Google Ads accounts");
 
     let totalSynced = 0;
-    const accountIdsForLog: string[] = [];
+    const syncedAccountIds = new Set<string>();
 
-    // For each accessible customer, fetch its child accounts (if manager) and campaigns.
-    for (const topId of accessible) {
-      let leafIds: { id: string; loginId: string }[] = [];
+    // Look up user's org id once for mirroring.
+    const { data: memberRow } = await admin
+      .from("organization_members").select("organization_id")
+      .eq("user_id", userId).eq("status", "active").limit(1).maybeSingle();
+    const orgId = memberRow?.organization_id as string | undefined;
+
+    for (const topId of topLevel) {
+      let leaves: { id: string; login: string }[] = [];
       try {
-        const custQuery = `
-          SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.manager
-          FROM customer WHERE customer.id = ${topId}
-        `;
-        const rows = await searchStream<CustomerRow>(accessToken, devToken, topId, custQuery);
-        const isManager = rows[0]?.customer?.manager === true;
+        const custRows = await gaqlSearch<{ customer: { manager?: boolean } }>(
+          accessToken, devToken, topId,
+          `SELECT customer.id, customer.manager FROM customer WHERE customer.id = ${topId}`,
+        );
+        const isManager = custRows[0]?.customer?.manager === true;
         if (isManager) {
-          const childQuery = `
-            SELECT customer_client.id, customer_client.descriptive_name,
-                   customer_client.currency_code, customer_client.manager, customer_client.level
-            FROM customer_client WHERE customer_client.level <= 2
-          `;
-          const clients = await searchStream<{ customerClient: { id: string; manager?: boolean } }>(
-            accessToken, devToken, topId, childQuery, topId,
+          const children = await gaqlSearch<{ customerClient: { id: string; manager?: boolean; status?: string } }>(
+            accessToken, devToken, topId,
+            `SELECT customer_client.id, customer_client.manager, customer_client.status, customer_client.level
+             FROM customer_client WHERE customer_client.level <= 2`,
+            topId,
           );
-          leafIds = clients
-            .filter((c) => c.customerClient?.manager !== true && c.customerClient?.id)
-            .map((c) => ({ id: String(c.customerClient.id), loginId: topId }));
+          leaves = children
+            .filter((c) =>
+              c.customerClient?.manager !== true &&
+              c.customerClient?.status !== "CANCELED" &&
+              c.customerClient?.id && String(c.customerClient.id) !== topId,
+            )
+            .map((c) => ({ id: String(c.customerClient.id), login: topId }));
         } else {
-          leafIds = [{ id: topId, loginId: topId }];
+          leaves = [{ id: topId, login: topId }];
         }
       } catch (e) {
-        console.warn(`Skipping customer ${topId}:`, e instanceof Error ? e.message : e);
+        console.warn(`Discover ${topId} failed:`, e instanceof Error ? e.message : e);
         continue;
       }
 
-      for (const leaf of leafIds) {
+      for (const leaf of leaves) {
         try {
-          const startCmp = start.replace(/-/g, "");
-          const endCmp = end.replace(/-/g, "");
           const query = `
             SELECT
               customer.id, customer.descriptive_name, customer.currency_code,
@@ -200,119 +200,128 @@ Deno.serve(async (req) => {
             WHERE segments.date BETWEEN '${start}' AND '${end}'
               AND campaign.status != 'REMOVED'
           `;
-          // Note: BETWEEN literal dates accepted by GAQL
-          const rowsList = await searchStream<CampaignRow & CustomerRow>(
-            accessToken, devToken, leaf.id, query, leaf.loginId,
+          const rows = await gaqlSearch<CampaignRow>(
+            accessToken, devToken, leaf.id, query, leaf.login,
           );
-          if (rowsList.length === 0) continue;
+          if (rows.length === 0) continue;
 
-          accountIdsForLog.push(leaf.id);
+          syncedAccountIds.add(leaf.id);
+          const acctName = rows[0]?.customer?.descriptiveName ?? `Account ${leaf.id}`;
+          const currency = rows[0]?.customer?.currencyCode ?? null;
 
-          // Aggregate metrics per campaign across days (since query returns per-day rows when segments.date is selected; here we did not select it, so aggregation is already done)
-          const acctName = rowsList[0]?.customer?.descriptiveName ?? `Account ${leaf.id}`;
-          const currency = rowsList[0]?.customer?.currencyCode ?? null;
-
-          const upsertRows = rowsList.map((r) => {
-            const impressions = Number(r.metrics?.impressions ?? 0);
-            const clicks = Number(r.metrics?.clicks ?? 0);
-            const costMicros = Number(r.metrics?.costMicros ?? 0);
-            const budgetMicros = Number(r.campaignBudget?.amountMicros ?? 0);
-            return {
-              user_id: userId,
-              google_customer_id: String(leaf.id),
-              account_name: acctName,
-              campaign_id: String(r.campaign.id),
+          // Aggregate per campaign_id across days (segments.date creates one row per day).
+          const agg = new Map<string, {
+            campaign_id: string; campaign_name: string; status: string | null;
+            channel: string | null; budget_micros: number;
+            impressions: number; clicks: number; costMicros: number;
+            conversions: number; conversionValue: number;
+          }>();
+          for (const r of rows) {
+            const cid = String(r.campaign.id);
+            const cur = agg.get(cid) ?? {
+              campaign_id: cid,
               campaign_name: r.campaign.name,
               status: r.campaign.status ?? null,
-              advertising_channel_type: r.campaign.advertisingChannelType ?? null,
-              currency_code: currency,
-              budget_amount: budgetMicros / 1_000_000,
-              impressions,
-              clicks,
-              cost: costMicros / 1_000_000,
-              conversions: Number(r.metrics?.conversions ?? 0),
-              conversion_value: Number(r.metrics?.conversionsValue ?? 0),
-              ctr: Number(r.metrics?.ctr ?? (impressions > 0 ? clicks / impressions : 0)),
-              date_range_start: start,
-              date_range_end: end,
-              last_synced_at: new Date().toISOString(),
+              channel: r.campaign.advertisingChannelType ?? null,
+              budget_micros: Number(r.campaignBudget?.amountMicros ?? 0),
+              impressions: 0, clicks: 0, costMicros: 0,
+              conversions: 0, conversionValue: 0,
             };
-          });
+            cur.impressions += Number(r.metrics?.impressions ?? 0);
+            cur.clicks += Number(r.metrics?.clicks ?? 0);
+            cur.costMicros += Number(r.metrics?.costMicros ?? 0);
+            cur.conversions += Number(r.metrics?.conversions ?? 0);
+            cur.conversionValue += Number(r.metrics?.conversionsValue ?? 0);
+            agg.set(cid, cur);
+          }
 
-          const { error: upErr } = await admin.from("google_ads_campaigns").upsert(upsertRows, {
+          const upserts = Array.from(agg.values()).map((c) => ({
+            user_id: userId,
+            login_customer_id: leaf.login,
+            google_customer_id: leaf.id,
+            account_name: acctName,
+            campaign_id: c.campaign_id,
+            campaign_name: c.campaign_name,
+            status: c.status,
+            advertising_channel_type: c.channel,
+            currency_code: currency,
+            budget_amount: c.budget_micros / 1_000_000,
+            impressions: c.impressions,
+            clicks: c.clicks,
+            cost: c.costMicros / 1_000_000,
+            conversions: c.conversions,
+            conversion_value: c.conversionValue,
+            ctr: c.impressions > 0 ? c.clicks / c.impressions : 0,
+            date_range_start: start,
+            date_range_end: end,
+            last_synced_at: new Date().toISOString(),
+          }));
+
+          const { error: upErr } = await admin.from("google_ads_campaigns").upsert(upserts, {
             onConflict: "user_id,google_customer_id,campaign_id,date_range_start,date_range_end",
           });
           if (upErr) throw new Error(`Upsert failed: ${upErr.message}`);
-          totalSynced += upsertRows.length;
+          totalSynced += upserts.length;
 
-          // Mirror into org-wide campaigns + clients
-          try {
-            const { data: memberRow } = await admin
-              .from("organization_members").select("organization_id")
-              .eq("user_id", userId).limit(1).maybeSingle();
-            const orgId = memberRow?.organization_id as string | undefined;
-            if (orgId) {
-              const fallbackName = `Google Ads - ${acctName}`;
+          // Mirror to org-wide clients + campaigns.
+          if (orgId) {
+            try {
               let clientId: string | null = null;
-              if (acctName) {
-                const { data: match } = await admin.from("clients").select("id")
-                  .eq("organization_id", orgId).ilike("name", acctName).maybeSingle();
-                if (match?.id) clientId = match.id;
-              }
+              const { data: match } = await admin.from("clients").select("id")
+                .eq("organization_id", orgId).ilike("name", acctName).maybeSingle();
+              if (match?.id) clientId = match.id as string;
               if (!clientId) {
-                const { data: match2 } = await admin.from("clients").select("id")
-                  .eq("organization_id", orgId).eq("name", fallbackName).maybeSingle();
-                if (match2?.id) clientId = match2.id;
-              }
-              if (!clientId) {
-                const { data: newClient } = await admin.from("clients").insert({
+                const { data: created } = await admin.from("clients").insert({
                   organization_id: orgId,
-                  name: acctName || fallbackName,
+                  name: acctName,
                   industry: "Google Ads",
                   color: "#4285F4",
                   status: "active",
                 }).select("id").single();
-                clientId = newClient?.id ?? null;
+                clientId = created?.id ?? null;
               }
-              for (const r of upsertRows) {
-                const campaignPayload = {
+              for (const c of upserts) {
+                const payload = {
                   organization_id: orgId,
                   client_id: clientId,
-                  name: r.campaign_name,
+                  name: c.campaign_name,
                   platform: "Google",
-                  status: r.status === "ENABLED" ? "Live" : r.status === "PAUSED" ? "Paused" : "Planned",
-                  budget: Number(r.budget_amount ?? 0),
-                  spend: Number(r.cost ?? 0),
-                  impressions: Number(r.impressions ?? 0),
-                  clicks: Number(r.clicks ?? 0),
-                  conversions: Math.round(Number(r.conversions ?? 0)),
-                  leads: Math.round(Number(r.conversions ?? 0)),
-                  start_date: r.date_range_start,
-                  end_date: r.date_range_end,
+                  status: c.status === "ENABLED" ? "Live"
+                    : c.status === "PAUSED" ? "Paused" : "Planned",
+                  budget: Number(c.budget_amount ?? 0),
+                  spend: Number(c.cost ?? 0),
+                  impressions: Number(c.impressions ?? 0),
+                  clicks: Number(c.clicks ?? 0),
+                  conversions: Math.round(Number(c.conversions ?? 0)),
+                  leads: Math.round(Number(c.conversions ?? 0)),
+                  start_date: c.date_range_start,
+                  end_date: c.date_range_end,
                 };
                 const { data: existing } = await admin.from("campaigns").select("id")
-                  .eq("organization_id", orgId).eq("platform", "Google").eq("name", r.campaign_name).maybeSingle();
+                  .eq("organization_id", orgId).eq("platform", "Google")
+                  .eq("name", c.campaign_name).maybeSingle();
                 if (existing?.id) {
-                  await admin.from("campaigns").update(campaignPayload).eq("id", existing.id);
+                  await admin.from("campaigns").update(payload).eq("id", existing.id);
                 } else {
-                  await admin.from("campaigns").insert(campaignPayload);
+                  await admin.from("campaigns").insert(payload);
                 }
               }
+            } catch (mirrorErr) {
+              console.warn("Mirror failed:", mirrorErr instanceof Error ? mirrorErr.message : mirrorErr);
             }
-          } catch (mirrorErr) {
-            console.warn("Mirror to org campaigns failed:", mirrorErr instanceof Error ? mirrorErr.message : mirrorErr);
           }
         } catch (e) {
-          console.warn(`Sync failed for leaf ${leaf.id}:`, e instanceof Error ? e.message : e);
+          console.warn(`Sync leaf ${leaf.id} failed:`, e instanceof Error ? e.message : e);
         }
       }
     }
 
     await admin.from("google_ads_sync_log").insert({
       user_id: userId,
-      google_customer_id: accountIdsForLog.join(","),
+      google_customer_id: Array.from(syncedAccountIds).join(","),
       status: "success",
       campaigns_synced: totalSynced,
+      accounts_synced: syncedAccountIds.size,
       date_range_start: start,
       date_range_end: end,
       triggered_by: triggeredBy,
@@ -321,7 +330,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       campaigns_synced: totalSynced,
-      accounts_synced: accountIdsForLog.length,
+      accounts_synced: syncedAccountIds.size,
       date_range: { start, end },
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error: unknown) {
@@ -333,7 +342,7 @@ Deno.serve(async (req) => {
         await admin.from("google_ads_sync_log").insert({
           user_id: userId, status: "error", error_message: message, triggered_by: triggeredBy,
         });
-      } catch (_) { /* ignore */ }
+      } catch { /* ignore */ }
     }
     return new Response(JSON.stringify({ success: false, error: message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

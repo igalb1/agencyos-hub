@@ -1,3 +1,5 @@
+// Start Google Ads OAuth flow.
+// Returns a signed authorization URL the client should open in the top-level window.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { signState, validateRedirectUrl, getAllowedRedirectOrigins } from "../_shared/oauth-state.ts";
 
@@ -18,7 +20,7 @@ Deno.serve(async (req) => {
 
   try {
     const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID");
-    if (!clientId) throw new Error("GOOGLE_ADS_CLIENT_ID is not configured");
+    if (!clientId) throw new Error("GOOGLE_ADS_CLIENT_ID not configured");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -26,14 +28,14 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: cErr } = await supabase.auth.getClaims(token);
-    if (cErr || !claims?.claims?.sub) {
+    const { data: userRes, error: uErr } = await supabase.auth.getUser();
+    if (uErr || !userRes?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -52,7 +54,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const state = await signState({ user_id: claims.claims.sub, redirect_url: safe });
+    const state = await signState({ user_id: userRes.user.id, redirect_url: safe });
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: `${Deno.env.get("SUPABASE_URL")}/functions/v1/google-ads-callback`,
@@ -63,10 +65,11 @@ Deno.serve(async (req) => {
       include_granted_scopes: "true",
       state,
     });
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    return new Response(JSON.stringify({ url: authUrl }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+
+    return new Response(
+      JSON.stringify({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return new Response(JSON.stringify({ error: msg }), {

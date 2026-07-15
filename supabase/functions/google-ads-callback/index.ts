@@ -1,3 +1,4 @@
+// Exchange OAuth code for tokens, encrypt via set_integration_tokens, redirect back to app.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { verifyState, validateRedirectUrl, getAllowedRedirectOrigins } from "../_shared/oauth-state.ts";
 
@@ -11,7 +12,6 @@ Deno.serve(async (req) => {
     const oauthError = url.searchParams.get("error");
 
     if (!stateParam) return new Response("Missing state", { status: 400 });
-
     const state = await verifyState<{ user_id: string; redirect_url: string }>(stateParam);
     if (!state?.user_id) return new Response("Invalid state", { status: 400 });
 
@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const redirectUri = `${supabaseUrl}/functions/v1/google-ads-callback`;
 
+    // Exchange code -> tokens
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -46,28 +47,27 @@ Deno.serve(async (req) => {
     const tokenJson = await tokenRes.json();
     if (!tokenRes.ok || !tokenJson.access_token) {
       console.error("Google Ads token exchange failed:", tokenJson);
-      return redirectWith({ google_ads_error: `token_exchange_failed: ${JSON.stringify(tokenJson)}` });
+      return redirectWith({ google_ads_error: `token_exchange: ${tokenJson.error ?? "unknown"}` });
     }
 
     const accessToken: string = tokenJson.access_token;
     const refreshToken: string | null = tokenJson.refresh_token ?? null;
-    const expiresIn: number = tokenJson.expires_in ?? 3600;
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + (tokenJson.expires_in ?? 3600) * 1000).toISOString();
 
     // Fetch user email for display
     let accountName = "Google Ads";
     try {
-      const uiRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      const ui = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (uiRes.ok) {
-        const ui = await uiRes.json();
-        accountName = ui.email || ui.name || accountName;
+      if (ui.ok) {
+        const j = await ui.json();
+        accountName = j.email ?? j.name ?? accountName;
       }
-    } catch (_) { /* non-fatal */ }
+    } catch { /* non-fatal */ }
 
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { error: setErr } = await supabase.rpc("set_integration_tokens", {
+    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { error: setErr } = await admin.rpc("set_integration_tokens", {
       _user_id: state.user_id,
       _provider: "google_ads",
       _access_token: accessToken,
@@ -85,6 +85,8 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("google-ads-callback error:", message);
-    return Response.redirect(`${SAFE_FALLBACK}?google_ads_error=${encodeURIComponent(message)}`, 302);
+    return Response.redirect(
+      `${SAFE_FALLBACK}?google_ads_error=${encodeURIComponent(message)}`, 302,
+    );
   }
 });

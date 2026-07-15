@@ -26,6 +26,7 @@ export interface GoogleAdsSyncLogEntry {
   id: string;
   status: string;
   campaigns_synced: number | null;
+  accounts_synced: number | null;
   date_range_start: string | null;
   date_range_end: string | null;
   error_message: string | null;
