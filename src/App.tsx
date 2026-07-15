@@ -22,6 +22,7 @@ import QAChecklistPage from "@/pages/QAChecklist";
 import QAChecklistNewPage from "@/pages/QAChecklistNew";
 import QAChecklistViewPage from "@/pages/QAChecklistView";
 import AuditPage from "@/pages/AuditPage";
+import AssistantPage from "@/pages/AssistantPage";
 import BillingPage from "@/pages/BillingPage";
 import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
@@ -39,6 +40,7 @@ import RefundPage from "@/pages/RefundPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import NotFound from "./pages/NotFound.tsx";
 import SupportBot from "@/components/support/SupportBot";
+import AssistantFAB from "@/components/assistant/AssistantFAB";
 import SupportAdminPage from "@/pages/SupportAdminPage";
 import { CookieConsent } from "@/components/CookieConsent";
 
@@ -90,6 +92,8 @@ function ProtectedRoutes() {
         <Route path="/qa/new" element={<QAChecklistNewPage />} />
         <Route path="/qa/:id" element={<QAChecklistViewPage />} />
         <Route path="/audit" element={<AuditPage />} />
+        <Route path="/assistant" element={<AssistantPage />} />
+        <Route path="/assistant/:threadId" element={<AssistantPage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
