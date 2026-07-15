@@ -323,6 +323,18 @@ export default function IntegrationsPage() {
                 {liSync.syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                 {isRtl ? 'סנכרן עכשיו' : 'Sync now'}
               </Button>
+              <div className="space-y-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-muted-foreground">{isRtl ? 'חיפוש קמפיין' : 'Search campaign'}</label>
+                <div className="relative">
+                  <Search size={14} className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground', isRtl ? 'right-2' : 'left-2')} />
+                  <Input
+                    value={liSearch}
+                    onChange={(e) => setLiSearch(e.target.value)}
+                    placeholder={isRtl ? 'סנן לפי שם קמפיין…' : 'Filter by campaign name…'}
+                    className={cn('h-8 text-sm', isRtl ? 'pr-7' : 'pl-7')}
+                  />
+                </div>
+              </div>
             </div>
 
             {liSync.lastSync?.status === 'error' && liSync.lastSync.error_message && (
@@ -346,9 +358,9 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(liSync.campaigns, c => c.linkedin_account_id ?? '').map(group => {
+                    {groupByAccount(filterBySearch(liSync.campaigns, liSearch), c => c.linkedin_account_id ?? '').map(group => {
                       const liKey = `li-${group.account}`;
-                      const isCollapsed = liCollapsedAccounts.has(liKey);
+                      const isCollapsed = liSearch.trim() ? false : liCollapsedAccounts.has(liKey);
                       return (
                       <React.Fragment key={liKey}>
                         <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setLiCollapsedAccounts, liKey)}>
