@@ -384,7 +384,7 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(filterBySearch(liSync.campaigns, liSearch), c => c.linkedin_account_id ?? '').map(group => {
+                    {liGroups.map(group => {
                       const liKey = `li-${group.account}`;
                       const isCollapsed = liSearch.trim() ? false : liCollapsedAccounts.has(liKey);
                       return (
