@@ -153,6 +153,11 @@ export default function IntegrationsPage() {
     return rows.filter(r => (r.campaign_name ?? '').toLowerCase().includes(term));
   };
 
+  const liGroups = groupByAccount(filterBySearch(liSync.campaigns, liSearch), c => c.linkedin_account_id ?? '');
+  const fbGroups = groupByAccount(filterBySearch(fbSync.campaigns, fbSearch), c => c.account_name ?? c.facebook_account_id ?? '');
+  const gaGroups = groupByAccount(filterBySearch(gaSync.campaigns, gaSearch), c => c.account_name ?? c.google_customer_id ?? '');
+
+
   const toggleAccountCollapse = (set: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
     set(prev => {
       const next = new Set(prev);
@@ -335,7 +340,28 @@ export default function IntegrationsPage() {
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setLiCollapsedAccounts(new Set(liGroups.map(g => `li-${g.account}`)))}
+                  disabled={liGroups.length === 0}
+                >
+                  {isRtl ? 'מזער הכל' : 'Collapse all'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setLiCollapsedAccounts(new Set())}
+                  disabled={liGroups.length === 0}
+                >
+                  {isRtl ? 'הרחב הכל' : 'Expand all'}
+                </Button>
+              </div>
             </div>
+
 
             {liSync.lastSync?.status === 'error' && liSync.lastSync.error_message && (
               <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
@@ -358,7 +384,7 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(filterBySearch(liSync.campaigns, liSearch), c => c.linkedin_account_id ?? '').map(group => {
+                    {liGroups.map(group => {
                       const liKey = `li-${group.account}`;
                       const isCollapsed = liSearch.trim() ? false : liCollapsedAccounts.has(liKey);
                       return (
@@ -531,7 +557,28 @@ export default function IntegrationsPage() {
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setFbCollapsedAccounts(new Set(fbGroups.map(g => `fb-${g.account}`)))}
+                  disabled={fbGroups.length === 0}
+                >
+                  {isRtl ? 'מזער הכל' : 'Collapse all'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setFbCollapsedAccounts(new Set())}
+                  disabled={fbGroups.length === 0}
+                >
+                  {isRtl ? 'הרחב הכל' : 'Expand all'}
+                </Button>
+              </div>
             </div>
+
 
             {fbSync.lastSync?.status === 'error' && fbSync.lastSync.error_message && (
               <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
@@ -554,7 +601,7 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(filterBySearch(fbSync.campaigns, fbSearch), c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
+                    {fbGroups.map(group => {
                       const fbKey = `fb-${group.account}`;
                       const isCollapsed = fbSearch.trim() ? false : fbCollapsedAccounts.has(fbKey);
                       return (
@@ -706,7 +753,28 @@ export default function IntegrationsPage() {
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setGaCollapsedAccounts(new Set(gaGroups.map(g => `ga-${g.account}`)))}
+                  disabled={gaGroups.length === 0}
+                >
+                  {isRtl ? 'מזער הכל' : 'Collapse all'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setGaCollapsedAccounts(new Set())}
+                  disabled={gaGroups.length === 0}
+                >
+                  {isRtl ? 'הרחב הכל' : 'Expand all'}
+                </Button>
+              </div>
             </div>
+
 
             {gaSync.lastSync?.status === 'error' && gaSync.lastSync.error_message && (
               <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
@@ -729,7 +797,7 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(filterBySearch(gaSync.campaigns, gaSearch), c => c.account_name ?? c.google_customer_id ?? '').map(group => {
+                    {gaGroups.map(group => {
                       const gaKey = `ga-${group.account}`;
                       const isCollapsed = gaSearch.trim() ? false : gaCollapsedAccounts.has(gaKey);
                       return (
