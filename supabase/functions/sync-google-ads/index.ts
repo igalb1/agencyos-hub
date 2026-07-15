@@ -278,34 +278,39 @@ Deno.serve(async (req) => {
         if (orgId) {
           try {
             let clientId: string | null = null;
-            const { data: match } = await admin.from("clients").select("id")
-              .eq("organization_id", orgId).ilike("name", acctName).maybeSingle();
-            if (match?.id) clientId = match.id as string;
-            if (!clientId) {
-              const { data: created } = await admin.from("clients").insert({
-                organization_id: orgId,
-                name: acctName,
-                industry: "Google Ads",
-                color: "#4285F4",
-                status: "active",
-              }).select("id").single();
-              clientId = created?.id ?? null;
-            }
+            // Match against EXISTING clients only (normalized). Do NOT auto-create
+            // — the user wants Google campaigns attached to clients they already manage.
+            const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+            const target = norm(acctName);
+            const { data: allClients } = await admin.from("clients")
+              .select("id,name").eq("organization_id", orgId);
+            const exact = (allClients ?? []).find((c) => norm(c.name as string) === target);
+            const partial = exact ?? (allClients ?? []).find((c) => {
+              const n = norm(c.name as string);
+              return n.includes(target) || target.includes(n);
+            });
+            if (partial?.id) clientId = partial.id as string;
+            // If no matching client exists, leave client_id null so the campaign
+            // appears unassigned in the UI and can be linked manually.
 
             const names = upserts.map((c) => c.campaign_name);
             const { data: existingRows } = await admin.from("campaigns")
-              .select("id,name")
+              .select("id,name,client_id")
               .eq("organization_id", orgId).eq("platform", "Google")
               .in("name", names);
-            const existingByName = new Map<string, string>();
-            for (const r of existingRows ?? []) existingByName.set(r.name as string, r.id as string);
+            const existingByName = new Map<string, { id: string; client_id: string | null }>();
+            for (const r of existingRows ?? []) {
+              existingByName.set(r.name as string, {
+                id: r.id as string,
+                client_id: (r.client_id as string | null) ?? null,
+              });
+            }
 
             const toInsert: any[] = [];
             const updates: Promise<any>[] = [];
             for (const c of upserts) {
-              const payload = {
+              const payload: any = {
                 organization_id: orgId,
-                client_id: clientId,
                 name: c.campaign_name,
                 platform: "Google",
                 status: c.status === "ENABLED" ? "Live"
@@ -319,10 +324,14 @@ Deno.serve(async (req) => {
                 start_date: c.date_range_start,
                 end_date: c.date_range_end,
               };
-              const existingId = existingByName.get(c.campaign_name);
-              if (existingId) {
-                updates.push(admin.from("campaigns").update(payload).eq("id", existingId));
+              const existing = existingByName.get(c.campaign_name);
+              if (existing) {
+                // Preserve manual client assignment if the user already linked it;
+                // otherwise fill in the matched client (if any).
+                payload.client_id = existing.client_id ?? clientId;
+                updates.push(admin.from("campaigns").update(payload).eq("id", existing.id));
               } else {
+                payload.client_id = clientId;
                 toInsert.push(payload);
               }
             }
