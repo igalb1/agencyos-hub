@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 
 export interface FacebookAdsCampaign {
   id: string;
+  account_name: string | null;
+  facebook_account_id: string | null;
   campaign_id: string;
   campaign_name: string;
   status: string | null;

@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/table';
 import { GoogleSheetsCard } from '@/components/integrations/GoogleSheetsCard';
 import { useClientSheetSync } from '@/hooks/useClientSheetSync';
+import { useOrgData } from '@/hooks/useOrgData';
+import React from 'react';
 
 interface Integration {
   id: string;
@@ -64,6 +66,34 @@ export default function IntegrationsPage() {
   const googleAds = useGoogleAdsConnect();
   const gaSync = useGoogleAdsSync();
   const sheetSync = useClientSheetSync();
+  const { clients } = useOrgData();
+
+  // Match Google/Facebook account_name → the client we mirrored it into.
+  const clientNameByAccount = React.useMemo(() => {
+    const m = new Map<string, string>();
+    clients.forEach(c => m.set(c.name.trim().toLowerCase(), c.name));
+    return m;
+  }, [clients]);
+
+  const groupByAccount = <T extends { campaign_name: string }>(
+    rows: T[],
+    accountKey: (r: T) => string,
+  ): Array<{ account: string; clientName: string | null; rows: T[] }> => {
+    const groups = new Map<string, T[]>();
+    rows.forEach(r => {
+      const k = accountKey(r) || (isRtl ? 'ללא חשבון' : 'Unknown account');
+      const list = groups.get(k) ?? [];
+      list.push(r);
+      groups.set(k, list);
+    });
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([account, list]) => ({
+        account,
+        clientName: clientNameByAccount.get(account.trim().toLowerCase()) ?? null,
+        rows: list.slice().sort((x, y) => x.campaign_name.localeCompare(y.campaign_name)),
+      }));
+  };
 
   // Default: last 30 days
   const today = new Date();
@@ -262,20 +292,37 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {liSync.campaigns.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
-                            {c.status ?? '—'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(c.cost_in_local_currency, c.currency_code)}</TableCell>
-                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
-                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
-                      </TableRow>
+                    {groupByAccount(liSync.campaigns, c => c.linkedin_account_id ?? '').map(group => (
+                      <React.Fragment key={`li-${group.account}`}>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={7} className="py-2 text-xs font-semibold text-muted-foreground">
+                            <span>{isRtl ? 'חשבון' : 'Account'}: {group.account}</span>
+                            {group.clientName && (
+                              <span className="mx-2 opacity-60">•</span>
+                            )}
+                            {group.clientName && (
+                              <span>{isRtl ? 'לקוח' : 'Client'}: {group.clientName}</span>
+                            )}
+                            <span className="mx-2 opacity-60">•</span>
+                            <span>{group.rows.length} {isRtl ? 'קמפיינים' : 'campaigns'}</span>
+                          </TableCell>
+                        </TableRow>
+                        {group.rows.map(c => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
+                                {c.status ?? '—'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(c.cost_in_local_currency, c.currency_code)}</TableCell>
+                            <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                            <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -412,20 +459,32 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fbSync.campaigns.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
-                            {c.status ?? '—'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(c.spend, c.currency_code)}</TableCell>
-                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
-                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
-                      </TableRow>
+                    {groupByAccount(fbSync.campaigns, c => c.account_name ?? c.facebook_account_id ?? '').map(group => (
+                      <React.Fragment key={`fb-${group.account}`}>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={7} className="py-2 text-xs font-semibold text-muted-foreground">
+                            <span>{isRtl ? 'חשבון' : 'Account'}: {group.account}</span>
+                            {group.clientName && (<><span className="mx-2 opacity-60">•</span><span>{isRtl ? 'לקוח' : 'Client'}: {group.clientName}</span></>)}
+                            <span className="mx-2 opacity-60">•</span>
+                            <span>{group.rows.length} {isRtl ? 'קמפיינים' : 'campaigns'}</span>
+                          </TableCell>
+                        </TableRow>
+                        {group.rows.map(c => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
+                                {c.status ?? '—'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(c.spend, c.currency_code)}</TableCell>
+                            <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                            <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -546,20 +605,32 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {gaSync.campaigns.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={c.status === 'ENABLED' ? 'default' : 'outline'} className="text-xs">
-                            {c.status ?? '—'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(c.cost, c.currency_code)}</TableCell>
-                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
-                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
-                      </TableRow>
+                    {groupByAccount(gaSync.campaigns, c => c.account_name ?? c.google_customer_id ?? '').map(group => (
+                      <React.Fragment key={`ga-${group.account}`}>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={7} className="py-2 text-xs font-semibold text-muted-foreground">
+                            <span>{isRtl ? 'חשבון' : 'Account'}: {group.account}</span>
+                            {group.clientName && (<><span className="mx-2 opacity-60">•</span><span>{isRtl ? 'לקוח' : 'Client'}: {group.clientName}</span></>)}
+                            <span className="mx-2 opacity-60">•</span>
+                            <span>{group.rows.length} {isRtl ? 'קמפיינים' : 'campaigns'}</span>
+                          </TableCell>
+                        </TableRow>
+                        {group.rows.map(c => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === 'ENABLED' ? 'default' : 'outline'} className="text-xs">
+                                {c.status ?? '—'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(c.cost, c.currency_code)}</TableCell>
+                            <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                            <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
