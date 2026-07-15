@@ -599,6 +599,7 @@ export type Database = {
           id: string
           impressions: number
           last_synced_at: string
+          login_customer_id: string | null
           status: string | null
           updated_at: string
           user_id: string
@@ -622,6 +623,7 @@ export type Database = {
           id?: string
           impressions?: number
           last_synced_at?: string
+          login_customer_id?: string | null
           status?: string | null
           updated_at?: string
           user_id: string
@@ -645,6 +647,7 @@ export type Database = {
           id?: string
           impressions?: number
           last_synced_at?: string
+          login_customer_id?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string
@@ -653,6 +656,7 @@ export type Database = {
       }
       google_ads_sync_log: {
         Row: {
+          accounts_synced: number | null
           campaigns_synced: number | null
           created_at: string
           date_range_end: string | null
@@ -665,6 +669,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          accounts_synced?: number | null
           campaigns_synced?: number | null
           created_at?: string
           date_range_end?: string | null
@@ -677,6 +682,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          accounts_synced?: number | null
           campaigns_synced?: number | null
           created_at?: string
           date_range_end?: string | null
