@@ -292,20 +292,37 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {liSync.campaigns.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.campaign_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
-                            {c.status ?? '—'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(c.cost_in_local_currency, c.currency_code)}</TableCell>
-                        <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
-                        <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
-                      </TableRow>
+                    {groupByAccount(liSync.campaigns, c => c.linkedin_account_id ?? '').map(group => (
+                      <React.Fragment key={`li-${group.account}`}>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={7} className="py-2 text-xs font-semibold text-muted-foreground">
+                            <span>{isRtl ? 'חשבון' : 'Account'}: {group.account}</span>
+                            {group.clientName && (
+                              <span className="mx-2 opacity-60">•</span>
+                            )}
+                            {group.clientName && (
+                              <span>{isRtl ? 'לקוח' : 'Client'}: {group.clientName}</span>
+                            )}
+                            <span className="mx-2 opacity-60">•</span>
+                            <span>{group.rows.length} {isRtl ? 'קמפיינים' : 'campaigns'}</span>
+                          </TableCell>
+                        </TableRow>
+                        {group.rows.map(c => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium">{c.campaign_name}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === 'ACTIVE' ? 'default' : 'outline'} className="text-xs">
+                                {c.status ?? '—'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{c.impressions.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(c.cost_in_local_currency, c.currency_code)}</TableCell>
+                            <TableCell className="text-right">{c.conversions.toFixed(1)}</TableCell>
+                            <TableCell className="text-right">{(c.ctr * 100).toFixed(2)}%</TableCell>
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
