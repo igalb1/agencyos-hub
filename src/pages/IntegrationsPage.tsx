@@ -488,17 +488,33 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(fbSync.campaigns, c => c.account_name ?? c.facebook_account_id ?? '').map(group => (
-                      <React.Fragment key={`fb-${group.account}`}>
-                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    {groupByAccount(fbSync.campaigns, c => c.account_name ?? c.facebook_account_id ?? '').map(group => {
+                      const fbKey = `fb-${group.account}`;
+                      const isCollapsed = fbCollapsedAccounts.has(fbKey);
+                      return (
+                      <React.Fragment key={fbKey}>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40 cursor-pointer" onClick={() => toggleAccountCollapse(setFbCollapsedAccounts, fbKey)}>
                           <TableCell colSpan={7} className="py-2 text-xs font-semibold text-muted-foreground">
-                            <span>{isRtl ? 'חשבון' : 'Account'}: {group.account}</span>
-                            {group.clientName && (<><span className="mx-2 opacity-60">•</span><span>{isRtl ? 'לקוח' : 'Client'}: {group.clientName}</span></>)}
-                            <span className="mx-2 opacity-60">•</span>
-                            <span>{group.rows.length} {isRtl ? 'קמפיינים' : 'campaigns'}</span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => { e.stopPropagation(); toggleAccountCollapse(setFbCollapsedAccounts, fbKey); }}
+                                  aria-label={isCollapsed ? (isRtl ? 'הרחב חשבון' : 'Expand account') : (isRtl ? 'מזער חשבון' : 'Minimize account')}
+                                >
+                                  {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                </Button>
+                                <span>{isRtl ? 'חשבון' : 'Account'}: {group.account}</span>
+                                {group.clientName && (<><span className="mx-2 opacity-60">•</span><span>{isRtl ? 'לקוח' : 'Client'}: {group.clientName}</span></>)}
+                                <span className="mx-2 opacity-60">•</span>
+                                <span>{group.rows.length} {isRtl ? 'קמפיינים' : 'campaigns'}</span>
+                              </div>
+                            </div>
                           </TableCell>
                         </TableRow>
-                        {group.rows.map(c => (
+                        {!isCollapsed && group.rows.map(c => (
                           <TableRow key={c.id}>
                             <TableCell className="font-medium">{c.campaign_name}</TableCell>
                             <TableCell>
@@ -514,7 +530,8 @@ export default function IntegrationsPage() {
                           </TableRow>
                         ))}
                       </React.Fragment>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
