@@ -101,12 +101,24 @@ export default function IntegrationsPage() {
   const [liDateFrom, setLiDateFrom] = useState<Date>(thirtyAgo);
   const [liDateTo, setLiDateTo] = useState<Date>(today);
   const [liCollapsed, setLiCollapsed] = useState<boolean>(false);
+  const [liCollapsedAccounts, setLiCollapsedAccounts] = useState<Set<string>>(new Set());
   const [fbDateFrom, setFbDateFrom] = useState<Date>(thirtyAgo);
   const [fbDateTo, setFbDateTo] = useState<Date>(today);
   const [fbCollapsed, setFbCollapsed] = useState<boolean>(false);
+  const [fbCollapsedAccounts, setFbCollapsedAccounts] = useState<Set<string>>(new Set());
   const [gaDateFrom, setGaDateFrom] = useState<Date>(thirtyAgo);
   const [gaDateTo, setGaDateTo] = useState<Date>(today);
   const [gaCollapsed, setGaCollapsed] = useState<boolean>(false);
+  const [gaCollapsedAccounts, setGaCollapsedAccounts] = useState<Set<string>>(new Set());
+
+  const toggleAccountCollapse = (set: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) => {
+    set(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const categories = ['ads', 'crm', 'analytics', 'communication'] as const;
 
