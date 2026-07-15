@@ -392,7 +392,7 @@ export default function CampaignsPage() {
 
                 {/* Table header - visible on desktop only */}
                 <div
-                  className="hidden lg:grid gap-x-0 px-0 py-3 bg-[hsl(var(--table-header-bg))] text-[hsl(var(--table-header-text))] text-[13px] font-bold uppercase tracking-wide border-y border-border [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/60"
+                  className="hidden lg:grid gap-x-0 px-0 py-3 bg-[hsl(var(--table-header-bg))] text-[hsl(var(--table-header-text))] text-[13px] font-bold uppercase tracking-wide border-y border-border sticky top-0 z-10 shadow-sm [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/60"
                   style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
