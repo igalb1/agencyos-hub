@@ -392,7 +392,7 @@ export default function CampaignsPage() {
 
                 {/* Table header - visible on desktop only */}
                 <div
-                  className="hidden lg:grid gap-x-3 px-5 py-2 bg-muted/10 text-[11px] font-medium text-muted-foreground border-b border-border/20"
+                  className="hidden lg:grid gap-x-0 px-0 py-2.5 bg-muted/40 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground border-y border-border [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/40"
                   style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
@@ -434,7 +434,7 @@ export default function CampaignsPage() {
                 </div>
 
                 {/* Campaign rows */}
-                <div className="divide-y divide-border/30">
+                <div className="divide-y divide-border">
                   {project.campaigns.map(campaign => {
                     const pace = calcPacing(campaign.spend, campaign.budget, campaign.startDate, campaign.endDate);
                     const statusStyle = getStatusColor(campaign.status);
@@ -450,9 +450,11 @@ export default function CampaignsPage() {
                       <div key={campaign.id}>
                         <div
                           className={cn(
-                            "grid grid-cols-[1fr_auto] items-center gap-x-3 px-5 py-3 hover:bg-muted/20 transition-colors cursor-pointer group",
-                            "lg:[grid-template-columns:var(--cols)]",
-                            selected.has(campaign.id) && "bg-primary/5"
+                            "grid grid-cols-[1fr_auto] items-center gap-x-3 px-5 py-3 hover:bg-muted/30 transition-colors cursor-pointer group",
+                            "lg:[grid-template-columns:var(--cols)] lg:gap-x-0 lg:px-0 lg:py-3.5",
+                            "lg:[&>*]:px-3 lg:[&>*+*]:border-s lg:[&>*+*]:border-border/20",
+                            "lg:even:bg-muted/10",
+                            selected.has(campaign.id) && "!bg-primary/10"
                           )}
                           style={{ ['--cols' as any]: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                           onClick={() => ads.length > 0 && toggleExpand(campaign.id)}
