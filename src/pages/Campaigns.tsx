@@ -392,7 +392,7 @@ export default function CampaignsPage() {
 
                 {/* Table header - visible on desktop only */}
                 <div
-                  className="hidden lg:grid gap-x-0 px-0 py-2.5 bg-muted/40 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground border-y border-border [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/40"
+                  className="hidden lg:grid gap-x-0 px-0 py-3 bg-[hsl(var(--table-header-bg))] text-[hsl(var(--table-header-text))] text-[13px] font-bold uppercase tracking-wide border-y border-border [&>*]:px-3 [&>*+*]:border-s [&>*+*]:border-border/60"
                   style={{ gridTemplateColumns: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
                 >
                   <span></span>
@@ -450,10 +450,10 @@ export default function CampaignsPage() {
                       <div key={campaign.id}>
                         <div
                           className={cn(
-                            "grid grid-cols-[1fr_auto] items-center gap-x-3 px-5 py-3 hover:bg-muted/30 transition-colors cursor-pointer group",
-                            "lg:[grid-template-columns:var(--cols)] lg:gap-x-0 lg:px-0 lg:py-3.5",
-                            "lg:[&>*]:px-3 lg:[&>*+*]:border-s lg:[&>*+*]:border-border/20",
-                            "lg:even:bg-muted/10",
+                            "grid grid-cols-[1fr_auto] items-center gap-x-3 px-5 py-3.5 hover:bg-muted/30 transition-colors cursor-pointer group",
+                            "lg:[grid-template-columns:var(--cols)] lg:gap-x-0 lg:px-0 lg:py-4",
+                            "lg:[&>*]:px-3 lg:[&>*+*]:border-s lg:[&>*+*]:border-border/40",
+                            "lg:even:bg-muted/20",
                             selected.has(campaign.id) && "!bg-primary/10"
                           )}
                           style={{ ['--cols' as any]: `36px minmax(200px,2fr) 110px 100px 100px 120px 120px 80px 80px 100px 140px 130px ${customColumns.map(() => '110px ').join('')}40px` }}
