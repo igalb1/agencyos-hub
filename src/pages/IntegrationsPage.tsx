@@ -797,7 +797,7 @@ export default function IntegrationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupByAccount(filterBySearch(gaSync.campaigns, gaSearch), c => c.account_name ?? c.google_customer_id ?? '').map(group => {
+                    {gaGroups.map(group => {
                       const gaKey = `ga-${group.account}`;
                       const isCollapsed = gaSearch.trim() ? false : gaCollapsedAccounts.has(gaKey);
                       return (
