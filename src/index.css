@@ -63,6 +63,10 @@
     --qa-critical: 0 84% 60%;
     --qa-high: 28 87% 60%;
     --qa-medium: 142 76% 46%;
+
+    /* Table header tokens */
+    --table-header-bg: 220 20% 92%;
+    --table-header-text: 0 0% 0%;
   }
 
   .light {
