@@ -16,6 +16,7 @@ export const translations = {
   settings: { he: 'הגדרות', en: 'Settings' },
   qa: { he: 'בקרת איכות', en: 'QA Checklist' },
   audit: { he: 'Audit', en: 'Audit' },
+  assistant: { he: 'עוזר AI', en: 'AI Assistant' },
   creative: { he: 'קריאייטיב', en: 'Creative' },
   // KPIs
   totalBudget: { he: 'תקציב כולל', en: 'Total Budget' },

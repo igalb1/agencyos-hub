@@ -4,7 +4,7 @@ import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, FolderKanban, Megaphone, Image, GanttChart,
-  CheckSquare, BarChart3, Plug, FileText, CalendarDays,
+  CheckSquare, BarChart3, Plug, FileText, CalendarDays, Sparkles,
   Sun, Moon, Languages, ChevronLeft, ChevronRight, X, Shield, Settings, ShieldCheck, Search
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -21,6 +21,7 @@ const navItems = [
   { key: 'performance' as const, icon: BarChart3, path: '/performance' },
   { key: 'qa' as const, icon: ShieldCheck, path: '/qa' },
   { key: 'audit' as const, icon: Search, path: '/audit' },
+  { key: 'assistant' as const, icon: Sparkles, path: '/assistant' },
   { key: 'integrations' as const, icon: Plug, path: '/integrations' },
   { key: 'reports' as const, icon: FileText, path: '/reports' },
   { key: 'calendar' as const, icon: CalendarDays, path: '/calendar' },
