@@ -340,7 +340,28 @@ export default function IntegrationsPage() {
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setLiCollapsedAccounts(new Set(liGroups.map(g => `li-${g.account}`)))}
+                  disabled={liGroups.length === 0}
+                >
+                  {isRtl ? 'מזער הכל' : 'Collapse all'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-2"
+                  onClick={() => setLiCollapsedAccounts(new Set())}
+                  disabled={liGroups.length === 0}
+                >
+                  {isRtl ? 'הרחב הכל' : 'Expand all'}
+                </Button>
+              </div>
             </div>
+
 
             {liSync.lastSync?.status === 'error' && liSync.lastSync.error_message && (
               <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
