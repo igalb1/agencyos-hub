@@ -93,6 +93,7 @@ export default function CampaignsPage() {
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
+  const [hideZeroSpend, setHideZeroSpend] = useState(false);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
