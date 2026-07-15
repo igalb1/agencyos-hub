@@ -29,15 +29,15 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
-async function runTool(name: string, args: any, admin: any, userId: string) {
+async function runTool(name: string, args: any, db: any) {
   const lim = Math.min(Number(args?.limit) || 50, 200);
   try {
     if (name === "list_clients") {
-      const { data } = await admin.from("clients").select("id,name,status,industry,contact_email").eq("user_id", userId).limit(lim);
+      const { data } = await db.from("clients").select("id,name,status,industry,budget,spend,leads").limit(lim);
       return data || [];
     }
     if (name === "list_campaigns") {
-      let q = admin.from("campaigns").select("id,name,client_id,platform,status,budget,spend,leads,cpl,start_date,end_date").eq("user_id", userId);
+      let q = db.from("campaigns").select("id,name,client_id,platform,status,budget,spend,leads,impressions,clicks,conversions,start_date,end_date");
       if (args?.client_id) q = q.eq("client_id", args.client_id);
       if (args?.platform) q = q.ilike("platform", `%${args.platform}%`);
       if (args?.status) q = q.eq("status", args.status);
@@ -46,21 +46,21 @@ async function runTool(name: string, args: any, admin: any, userId: string) {
       return data || [];
     }
     if (name === "list_ads") {
-      let q = admin.from("campaign_ads").select("id,name,campaign_id,status,platform,creative_type,notes").eq("user_id", userId);
+      let q = db.from("campaign_ads").select("id,name,campaign_id,status,format");
       if (args?.campaign_id) q = q.eq("campaign_id", args.campaign_id);
       if (args?.search) q = q.ilike("name", `%${args.search}%`);
       const { data } = await q.limit(lim);
       return data || [];
     }
     if (name === "list_qa") {
-      let q = admin.from("qa_checklists").select("id,title,campaign_id,client_id,status,progress,total_items,completed_items,updated_at").eq("user_id", userId);
+      let q = db.from("qa_checklists").select("id,campaign_name,client_name,campaign_id,client_id,status,progress,critical_complete,updated_at");
       if (args?.campaign_id) q = q.eq("campaign_id", args.campaign_id);
       if (args?.status) q = q.eq("status", args.status);
       const { data } = await q.order("updated_at", { ascending: false }).limit(lim);
       return data || [];
     }
     if (name === "list_tasks") {
-      let q = admin.from("tasks").select("id,title,status,priority,due_date,client_id,campaign_id,assigned_to").eq("user_id", userId);
+      let q = db.from("tasks").select("id,title,status,priority,due_date,client_id,campaign_id,assignee");
       if (args?.status) q = q.eq("status", args.status);
       if (args?.client_id) q = q.eq("client_id", args.client_id);
       if (args?.campaign_id) q = q.eq("campaign_id", args.campaign_id);
@@ -70,7 +70,7 @@ async function runTool(name: string, args: any, admin: any, userId: string) {
     if (name === "sync_summary") {
       const out: any = {};
       for (const [plat, table] of [["google", "google_ads_campaigns"], ["facebook", "facebook_ads_campaigns"], ["linkedin", "linkedin_ads_campaigns"]] as const) {
-        const { data } = await admin.from(table).select("id,spend,impressions,clicks").eq("user_id", userId);
+        const { data } = await db.from(table).select("id,spend,impressions,clicks");
         const rows = data || [];
         out[plat] = {
           campaigns: rows.length,
@@ -83,7 +83,7 @@ async function runTool(name: string, args: any, admin: any, userId: string) {
     }
     if (name === "list_platform_campaigns") {
       const table = args.platform === "google" ? "google_ads_campaigns" : args.platform === "facebook" ? "facebook_ads_campaigns" : "linkedin_ads_campaigns";
-      let q = admin.from(table).select("id,name,account_name,status,spend,impressions,clicks,ctr,cpc").eq("user_id", userId);
+      let q = db.from(table).select("id,name,account_name,status,spend,impressions,clicks");
       if (args?.search) q = q.ilike("name", `%${args.search}%`);
       const { data } = await q.limit(lim);
       return data || [];
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
         for (const tc of toolCalls) {
           let args: any = {};
           try { args = JSON.parse(tc.function?.arguments || "{}"); } catch {}
-          const result = await runTool(tc.function?.name, args, admin, user.id);
+          const result = await runTool(tc.function?.name, args, userClient);
           chatMessages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result).slice(0, 8000) });
         }
         continue;
