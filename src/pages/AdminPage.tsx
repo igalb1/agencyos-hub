@@ -6,7 +6,7 @@ import { t } from '@/lib/i18n';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, Building2, CreditCard, Search, KeyRound, Loader2 } from 'lucide-react';
+import { Shield, Users, Building2, Search, KeyRound, Loader2 } from 'lucide-react';
 import { Headset } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -24,25 +24,13 @@ interface OrgRow {
 
 // AdminUser type imported from UserRow
 
-interface SubRow {
-  id: string;
-  user_id: string;
-  product_id: string;
-  price_id: string;
-  status: string;
-  environment: string;
-  current_period_end: string | null;
-  paddle_subscription_id: string;
-}
-
 export default function AdminPage() {
   const { isSuperAdmin } = useAuth();
   const { lang } = useApp();
   const { toast } = useToast();
-  const [tab, setTab] = useState<'orgs' | 'users' | 'subs'>('orgs');
+  const [tab, setTab] = useState<'orgs' | 'users'>('orgs');
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [subs, setSubs] = useState<SubRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
@@ -54,13 +42,11 @@ export default function AdminPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const [orgRes, usersRes, subRes] = await Promise.all([
+    const [orgRes, usersRes] = await Promise.all([
       supabase.from('organizations').select('*').order('created_at', { ascending: false }),
       supabase.rpc('admin_get_users'),
-      supabase.from('subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
     if (orgRes.data) setOrgs(orgRes.data as OrgRow[]);
-    if (subRes.data) setSubs(subRes.data as SubRow[]);
     if (usersRes.data) setUsers(usersRes.data as unknown as AdminUser[]);
     setLoading(false);
   };
@@ -95,14 +81,6 @@ export default function AdminPage() {
     starter: 'bg-blue-500/15 text-blue-400',
     pro: 'bg-purple-500/15 text-purple-400',
     business: 'bg-amber-500/15 text-amber-400',
-  };
-
-  const statusColors: Record<string, string> = {
-    active: 'bg-emerald-500/15 text-emerald-400',
-    trialing: 'bg-blue-500/15 text-blue-400',
-    canceled: 'bg-red-500/15 text-red-400',
-    past_due: 'bg-amber-500/15 text-amber-400',
-    paused: 'bg-muted text-muted-foreground',
   };
 
   const filteredOrgs = orgs.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
@@ -143,7 +121,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
           <Building2 size={20} className="text-primary" />
           <div>
@@ -158,19 +136,12 @@ export default function AdminPage() {
             <p className="text-xs text-muted-foreground">משתמשים</p>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-          <CreditCard size={20} className="text-primary" />
-          <div>
-            <p className="text-2xl font-bold text-foreground">{subs.filter(s => s.status === 'active').length}</p>
-            <p className="text-xs text-muted-foreground">מנויים פעילים</p>
-          </div>
-        </div>
       </div>
 
       {/* Tabs + Search */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex gap-1 bg-muted rounded-lg p-1">
-          {(['orgs', 'users', 'subs'] as const).map(t => (
+          {(['orgs', 'users'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -178,7 +149,7 @@ export default function AdminPage() {
                 tab === t ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {t === 'orgs' ? 'ארגונים' : t === 'users' ? 'משתמשים' : 'מנויים'}
+              {t === 'orgs' ? 'ארגונים' : 'משתמשים'}
             </button>
           ))}
         </div>
@@ -244,38 +215,6 @@ export default function AdminPage() {
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">לא נמצאו משתמשים</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {tab === 'subs' && (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-start p-3 font-medium text-muted-foreground">מוצר</th>
-                    <th className="text-start p-3 font-medium text-muted-foreground">סטטוס</th>
-                    <th className="text-start p-3 font-medium text-muted-foreground">סביבה</th>
-                    <th className="text-start p-3 font-medium text-muted-foreground">סיום תקופה</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subs.map(s => (
-                    <tr key={s.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="p-3 font-medium text-foreground">{s.product_id}</td>
-                      <td className="p-3">
-                        <Badge className={statusColors[s.status] || 'bg-muted text-muted-foreground'}>{s.status}</Badge>
-                      </td>
-                      <td className="p-3 text-muted-foreground">{s.environment === 'sandbox' ? 'בדיקה' : 'פעיל'}</td>
-                      <td className="p-3 text-muted-foreground">
-                        {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('he-IL') : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                  {subs.length === 0 && (
-                    <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">אין מנויים</td></tr>
                   )}
                 </tbody>
               </table>
