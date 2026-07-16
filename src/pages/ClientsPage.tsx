@@ -320,7 +320,7 @@ export default function ClientsPage() {
               </div>
               <div className="flex gap-3 mt-5">
                 <button
-                  onClick={() => { setLimitDialogOpen(false); navigate('/settings/billing'); }}
+                  onClick={() => { setLimitDialogOpen(false); navigate('/settings'); }}
                   className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
                 >
                   {lang === 'he' ? 'שדרג תוכנית' : 'Upgrade plan'}

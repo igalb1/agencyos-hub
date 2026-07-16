@@ -71,11 +71,6 @@ export default function PrivacyPage() {
         <h2>6. Data sharing</h2>
         <p>We share personal data only with:</p>
         <ul>
-          <li>
-            <strong>Paddle.com Market Limited</strong> — our Merchant of Record. Paddle processes payments,
-            manages subscriptions, handles invoicing and tax compliance, and provides buyer support. See{" "}
-            <a href="https://www.paddle.com/legal/privacy" target="_blank" rel="noopener noreferrer">Paddle's Privacy Notice</a>.
-          </li>
           <li><strong>Cloud infrastructure providers</strong> — for hosting, database, and storage (e.g. Supabase, Lovable Cloud).</li>
           <li><strong>Email and analytics providers</strong> — to deliver transactional email and improve the product.</li>
           <li><strong>Authorities</strong> — when required by law, court order, or to protect rights and safety.</li>
