@@ -64,11 +64,17 @@ export function useFacebookAdsConnect() {
       });
       if (error) throw error;
       if (data?.url) {
-        const target = window.top ?? window;
-        try {
-          target.location.href = data.url;
-        } catch {
-          window.open(data.url, '_blank', 'noopener,noreferrer');
+        // Facebook blocks being loaded inside iframes (ERR_BLOCKED_BY_RESPONSE
+        // in the Lovable preview). Open in a new tab whenever we're framed,
+        // otherwise navigate the current window.
+        const inIframe = window.self !== window.top;
+        if (inIframe) {
+          const w = window.open(data.url, '_blank', 'noopener,noreferrer');
+          if (!w) {
+            toast.error('הדפדפן חסם את החלון. אפשר חלונות קופצים ונסה שוב.');
+          }
+        } else {
+          window.location.href = data.url;
         }
       }
     } catch (e: unknown) {
