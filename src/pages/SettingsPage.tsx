@@ -11,8 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { User, Palette, Languages, Shield, Save, CreditCard, ChevronLeft, Lock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { User, Palette, Languages, Shield, Save, Lock } from 'lucide-react';
 import TeamSettingsCard from '@/components/settings/TeamSettingsCard';
 
 export default function SettingsPage() {
@@ -243,18 +242,6 @@ export default function SettingsPage() {
                 <span className="text-muted-foreground">{isRtl ? 'תוכנית' : 'Plan'}</span>
                 <span className="font-medium capitalize">{organization.plan}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{isRtl ? 'סיום תקופת ניסיון' : 'Trial Ends'}</span>
-                <span className="font-medium">{new Date(organization.trial_ends_at).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US')}</span>
-              </div>
-              <Separator className="my-2" />
-              <Button asChild variant="outline" className="w-full gap-2">
-                <Link to="/settings/billing">
-                  <CreditCard size={16} />
-                  {isRtl ? 'חיוב, מנוי וחשבוניות' : 'Billing, subscription & invoices'}
-                  <ChevronLeft size={16} className={isRtl ? '' : 'rotate-180'} />
-                </Link>
-              </Button>
             </>
           )}
         </CardContent>

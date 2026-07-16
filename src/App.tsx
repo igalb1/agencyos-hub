@@ -23,20 +23,16 @@ import QAChecklistNewPage from "@/pages/QAChecklistNew";
 import QAChecklistViewPage from "@/pages/QAChecklistView";
 import AuditPage from "@/pages/AuditPage";
 import AssistantPage from "@/pages/AssistantPage";
-import BillingPage from "@/pages/BillingPage";
 import AdminPage from "@/pages/AdminPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPassword from "@/pages/ResetPassword";
 import AcceptInvitePage from "@/pages/AcceptInvitePage";
-import TrialExpired from "@/pages/TrialExpired";
 import SelectWorkspace from "@/pages/SelectWorkspace";
 import PendingApproval from "@/pages/PendingApproval";
 import AccessDenied from "@/pages/AccessDenied";
 import Index from "@/pages/Index";
-import PricingPage from "@/pages/PricingPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
-import RefundPage from "@/pages/RefundPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import NotFound from "./pages/NotFound.tsx";
 import SupportBot from "@/components/support/SupportBot";
@@ -47,7 +43,7 @@ import { CookieConsent } from "@/components/CookieConsent";
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { session, loading, trialExpired, organizations, organization, pendingMemberships, isSuperAdmin } = useAuth();
+  const { session, loading, organizations, pendingMemberships, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -73,7 +69,6 @@ function ProtectedRoutes() {
   if (organizations.length > 1 && !justChose) {
     return <Navigate to="/select-workspace" replace />;
   }
-  if (trialExpired) return <TrialExpired />;
 
   return (
     <AppLayout>
@@ -97,7 +92,6 @@ function ProtectedRoutes() {
         <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/settings/billing" element={<BillingPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -131,10 +125,8 @@ const App = () => (
             <Routes>
               {/* Public marketing & legal pages */}
               <Route path="/" element={<Index />} />
-              <Route path="/pricing" element={<PricingPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/refund" element={<RefundPage />} />
               <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
               {/* Auth */}

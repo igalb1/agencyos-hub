@@ -58,21 +58,5 @@ export function useEffectivePlan(): EffectivePlan {
     fetchPlan();
   }, [fetchPlan]);
 
-  // Realtime: refresh when subscription changes
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`${user.id}:sub-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
-        () => fetchPlan()
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
-
   return { ...data, loading, refresh: fetchPlan };
 }

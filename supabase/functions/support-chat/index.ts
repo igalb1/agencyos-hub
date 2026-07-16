@@ -14,8 +14,6 @@ AgencyOS features include:
 - Tasks & Timeline (Kanban + calendar)
 - Ads integrations: Google Ads, LinkedIn Ads (live performance data)
 - Reports & Performance dashboards
-- Billing via Paddle (free trial 28 days, then paid plans)
-- 14-day free trial, plans on /pricing page
 
 Guidelines:
 - Detect the user's language (Hebrew or English) and reply in the same language.

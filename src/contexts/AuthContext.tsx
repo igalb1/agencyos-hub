@@ -159,20 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { subscription?.unsubscribe(); };
   }, [fetchOrganization]);
 
-  // Realtime: subscription changes -> refresh org
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`${user.id}:org-sub`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${user.id}` },
-        () => fetchOrganization(user.id)
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user, fetchOrganization]);
-
   const signOut = async () => {
     try {
       localStorage.removeItem(ACTIVE_ORG_KEY);

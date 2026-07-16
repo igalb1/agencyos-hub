@@ -30,9 +30,6 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               <Languages size={14} />
               {isHe ? "EN" : "עב"}
             </button>
-            <Link to="/pricing" className="hover:text-primary transition-colors">
-              {isHe ? "תמחור" : "Pricing"}
-            </Link>
             <Link
               to="/auth"
               className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
@@ -61,11 +58,6 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             <h4 className="font-semibold mb-2">{isHe ? "מוצר" : "Product"}</h4>
             <ul className="space-y-1 text-muted-foreground">
               <li>
-                <Link to="/pricing" className="hover:text-primary">
-                  {isHe ? "תמחור" : "Pricing"}
-                </Link>
-              </li>
-              <li>
                 <Link to="/auth" className="hover:text-primary">
                   {isHe ? "התחברות" : "Sign in"}
                 </Link>
@@ -83,11 +75,6 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               <li>
                 <Link to="/privacy" className="hover:text-primary">
                   {isHe ? "מדיניות פרטיות" : "Privacy Policy"}
-                </Link>
-              </li>
-              <li>
-                <Link to="/refund" className="hover:text-primary">
-                  {isHe ? "מדיניות החזרים" : "Refund Policy"}
                 </Link>
               </li>
             </ul>

@@ -56,27 +56,7 @@ export default function TermsPage() {
           to use the Service in accordance with your subscription plan.
         </p>
 
-        <h2>8. Payments and Merchant of Record</h2>
-        <p>
-          Our order process is conducted by our online reseller <strong>Paddle.com Market Limited</strong>.
-          Paddle is the Merchant of Record for all our orders. Paddle provides all customer service inquiries
-          and handles returns, refunds, billing, taxes, currency conversion, and chargebacks.
-        </p>
-        <p>
-          By purchasing a subscription, you also agree to Paddle's{" "}
-          <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener noreferrer">
-            Checkout Buyer Terms
-          </a>. Subscriptions renew automatically at the end of each billing period until cancelled. You can cancel
-          at any time from your account billing page; access continues until the end of the paid period.
-        </p>
-
-        <h2>9. Refunds</h2>
-        <p>
-          Refunds are governed by our <a href="/refund">Refund Policy</a>. We offer a 30-day money-back
-          guarantee on initial subscription purchases.
-        </p>
-
-        <h2>10. Third-party services and Google Ads</h2>
+        <h2>8. Third-party services and Google Ads</h2>
         <p>
           When you connect a third-party account (such as Google Ads), you authorize the Service to access that
           data via OAuth solely to provide the analytics and management features of AgencyOS, in accordance with
@@ -134,8 +114,6 @@ export default function TermsPage() {
         <h2>18. Contact</h2>
         <p>
           For questions about these Terms, contact: <a href="mailto:support@agencyos.solutions">support@agencyos.solutions</a>.
-          For billing, refund, or invoice questions, please use Paddle's buyer portal at{" "}
-          <a href="https://paddle.net" target="_blank" rel="noopener noreferrer">paddle.net</a>.
         </p>
       </article>
     </PublicLayout>
